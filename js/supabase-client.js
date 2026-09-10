@@ -51,8 +51,6 @@
   }
   function installLoginView() {
     const authActions = document.querySelector(".auth-actions"); if (!authActions) return;
-    const google = document.getElementById("authGoogleButton"); const microsoft = document.getElementById("authMicrosoftButton");
-    if (google) google.remove(); if (microsoft) microsoft.remove();
     /* const style = document.createElement("style"); style.id = "supabase-auth-styles";
     style.textContent = ".supabase-auth-form{display:grid;gap:12px;margin-top:4px}.supabase-auth-label{display:grid;gap:6px;font-size:12px;font-weight:700;color:#475569;text-align:left}.supabase-auth-input{width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:12px;padding:12px 14px;font:inherit;background:#fff;color:#0f172a;outline:none}.supabase-auth-input:focus{border-color:#00a1de;box-shadow:0 0 0 3px rgba(0,161,222,.12)}.supabase-auth-submit{width:100%;justify-content:center;border:0;cursor:pointer}.supabase-auth-submit[disabled]{opacity:.65;cursor:wait}.supabase-auth-forgot{border:0;background:none;color:#007da9;font:inherit;font-size:13px;font-weight:700;cursor:pointer;padding:4px}.supabase-auth-forgot:hover{text-decoration:underline}#authMessage.is-success{color:#16794b}#authMessage.is-error{color:#b42318}";
     document.head.appendChild(style);
@@ -63,6 +61,7 @@
     const emailButton = document.getElementById("supabaseEmailButton");
     emailButton.addEventListener("click", function() {
       form.hidden = !form.hidden;
+      emailButton.setAttribute("aria-expanded", String(!form.hidden));
       if (!form.hidden) emailInput.focus();
     });
     form.addEventListener("submit", async function(event) {

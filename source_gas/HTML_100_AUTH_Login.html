@@ -50,6 +50,22 @@
         </span>
         <span>Continuar con Microsoft</span>
       </a>
+      <button id="supabaseEmailButton" class="provider-button" type="button" aria-expanded="false">
+        <span class="material-symbols-rounded" aria-hidden="true">mail</span>
+        <span>Ingresar por correo y contraseña de Supabase</span>
+      </button>
+      <form id="supabaseEmailLogin" class="supabase-auth-form" hidden novalidate>
+        <label class="supabase-auth-label">Correo electrónico
+          <input id="authEmail" class="supabase-auth-input" type="email" autocomplete="username" inputmode="email" placeholder="nombre@empresa.com" required>
+        </label>
+        <label class="supabase-auth-label">Contraseña
+          <input id="authPassword" class="supabase-auth-input" type="password" autocomplete="current-password" placeholder="Ingresa tu contraseña" required minlength="6">
+        </label>
+        <button id="authEmailSubmit" class="provider-button supabase-auth-submit" type="submit">
+          <span class="material-symbols-rounded" aria-hidden="true">login</span><span>Ingresar</span>
+        </button>
+        <button id="authForgotPassword" class="supabase-auth-forgot" type="button">¿Olvidaste tu contraseña?</button>
+      </form>
     </div>
 
     <div id="authMessage" class="inline-message" role="status" hidden></div>

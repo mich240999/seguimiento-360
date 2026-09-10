@@ -92,6 +92,7 @@ const APP_STORAGE = Object.freeze({
 
     secureRpc("obtenerContextoAplicacion", [], "SISTEMA")
       .then(function(context) {
+        context = normalizeApplicationContext(context);
         APP_STATE.realContext = context;
         APP_STATE.context = context;
         APP_STATE.rolePreview = null;
@@ -215,6 +216,16 @@ const APP_STORAGE = Object.freeze({
     }
 
     updateAutomaticRefreshInterface();
+  }
+
+  function normalizeApplicationContext(context) {
+    context = context || {};
+    context.usuario = context.usuario || context.sesion || {};
+    context.modulos = Array.isArray(context.modulos) ? context.modulos :
+      (Array.isArray(context.modulosPermitidos) ? context.modulosPermitidos : []);
+    context.seguridad = context.seguridad || {};
+    context.seguridad.permisos = context.seguridad.permisos || context.permisos || {};
+    return context;
   }
 
   /**
