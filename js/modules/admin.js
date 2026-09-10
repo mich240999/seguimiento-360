@@ -1149,7 +1149,7 @@ const ADMIN_STATE = {
 
     const isSuperadmin = String(APP_STATE.context && APP_STATE.context.usuario &&
       APP_STATE.context.usuario.rol || "").toUpperCase() === "SUPERADMIN";
-    const settings = (ADMIN_STATE.settings || []).filter(function(setting) {
+    const settings = (Array.isArray(ADMIN_STATE.settings) ? ADMIN_STATE.settings : []).filter(function(setting) {
       return isSuperadmin || ["APP_REFRESH_ENABLED", "APP_REFRESH_SECONDS"].indexOf(setting.clave) === -1;
     }).slice().sort(function(a, b) {
       const order = {
