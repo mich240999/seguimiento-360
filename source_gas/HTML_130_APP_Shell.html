@@ -1,0 +1,201 @@
+<!--
+  SGT360 — Estructura de navegación
+
+  Responsabilidad:
+  Define sidebar, topbar, área de contenido, dashboard y contenedores globales.
+
+  Este archivo se incluye desde HTML_000_APP_Index o desde una vista relacionada.
+-->
+
+<div id="appShell" class="app-shell" hidden>
+  <aside id="appSidebar" class="app-sidebar">
+    <div class="sidebar-brand">
+      <div id="brandLogoFallback" class="sidebar-logo">
+        <img src="img/calidda-logo.png" alt="Cálidda" style="width:100%; height:100%; object-fit:contain;">
+      </div>
+      <img id="brandLogo" class="sidebar-logo-image" src="img/calidda-logo.png" alt="Cálidda" hidden>
+      <div class="sidebar-brand-copy">
+        <strong id="appNameSidebar">Seguimiento 360</strong>
+        <span id="appEnvironment">DESARROLLO</span>
+      </div>
+      <button
+        id="sidebarCollapseButton"
+        class="icon-button sidebar-collapse-button has-tooltip desktop-only"
+        type="button"
+        aria-label="Minimizar barra lateral"
+        aria-expanded="true"
+        title="Minimizar menú"
+        data-tooltip="Minimizar menú"
+        data-tooltip-position="right">
+        <span id="sidebarCollapseIcon" class="material-symbols-rounded">chevron_left</span>
+      </button>
+      <button id="sidebarCloseButton" class="icon-button sidebar-close" type="button" aria-label="Cerrar menú">
+        <span class="material-symbols-rounded">close</span>
+      </button>
+    </div>
+
+    <nav id="moduleNavigation" class="module-navigation" aria-label="Módulos"></nav>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-user-avatar" id="sidebarUserAvatar">U</div>
+      <div class="sidebar-user-copy">
+        <strong id="sidebarUserName">Usuario</strong>
+        <span id="sidebarUserRole">ROL</span>
+      </div>
+      <button
+        id="logoutButton"
+        class="icon-button has-tooltip"
+        type="button"
+        aria-label="Cerrar sesión"
+        title="Cerrar sesión"
+        data-tooltip="Cerrar sesión"
+        data-tooltip-position="top">
+        <span class="material-symbols-rounded">logout</span>
+      </button>
+    </div>
+  </aside>
+
+  <div id="sidebarBackdrop" class="sidebar-backdrop" hidden></div>
+
+  <main class="app-main">
+    <header class="topbar">
+      <button id="sidebarOpenButton" class="icon-button mobile-only" type="button" aria-label="Abrir menú">
+        <span class="material-symbols-rounded">menu</span>
+      </button>
+      <div class="topbar-title">
+        <p id="currentModuleEyebrow" class="eyebrow">GENERAL</p>
+        <h1 id="currentModuleTitle">Inicio</h1>
+      </div>
+      <div class="topbar-actions">
+        <label id="rolePreviewControl" class="role-preview-control" for="rolePreviewSelect" hidden>
+          <span class="role-preview-label">Visualizar como:</span>
+          <span class="role-preview-select-wrap">
+            <span class="material-symbols-rounded" aria-hidden="true">visibility</span>
+            <select id="rolePreviewSelect" aria-label="Visualizar la aplicación como otro rol">
+              <option value="">Mi vista</option>
+            </select>
+          </span>
+        </label>
+        <div class="sync-indicator" title="Última sincronización">
+          <span class="status-dot status-dot--ok"></span>
+          <span id="lastSyncLabel">Sincronizando</span>
+        </div>
+        <button
+          id="refreshButton"
+          class="icon-button has-tooltip"
+          type="button"
+          aria-label="Actualizar"
+          title="Actualizar"
+          data-tooltip="Actualizar"
+          data-tooltip-position="bottom">
+          <span class="material-symbols-rounded">refresh</span>
+        </button>
+        <button id="profileButton" class="profile-button" type="button" aria-label="Perfil">
+          <span id="topbarUserInitials">U</span>
+        </button>
+      </div>
+    </header>
+
+    <div id="rolePreviewBanner" class="role-preview-banner" role="status" hidden>
+      <div class="role-preview-banner-copy">
+        <span class="material-symbols-rounded" aria-hidden="true">visibility</span>
+        <div>
+          <strong>Vista previa del rol <span id="rolePreviewName">—</span></strong>
+          <small>Solo visualización: tu sesión y tus permisos reales no cambian.</small>
+        </div>
+      </div>
+      <label id="rolePreviewUserControl" class="role-preview-user-control" hidden>
+        <span>Usuario de referencia</span>
+        <select id="rolePreviewUserSelect" aria-label="Usuario de referencia para la simulación"></select>
+      </label>
+      <div class="role-preview-banner-actions">
+        <button id="rolePreviewDetailsButton" class="button button--secondary button--compact" type="button">
+          <span class="material-symbols-rounded">fact_check</span>
+          Ver accesos
+        </button>
+        <button id="rolePreviewExitButton" class="button button--ghost button--compact" type="button">
+          <span class="material-symbols-rounded">close</span>
+          Volver a mi vista
+        </button>
+      </div>
+    </div>
+
+    <section id="appContent" class="app-content">
+      <div id="dashboardView" class="view-panel">
+        <div class="hero-card">
+          <div>
+            <p class="eyebrow">BIENVENIDO</p>
+            <h2 id="dashboardGreeting">Tu centro de seguimiento está listo.</h2>
+          </div>
+          <div class="hero-icon" aria-hidden="true">
+            <span class="material-symbols-rounded">travel_explore</span>
+          </div>
+        </div>
+      </div>
+
+      <div id="dynamicModuleView" class="view-panel" hidden></div>
+    </section>
+  </main>
+</div>
+
+<div id="globalLoader" class="global-loader" role="status" aria-live="polite" aria-busy="true">
+  <div class="loader-ambient loader-ambient--one" aria-hidden="true"></div>
+  <div class="loader-ambient loader-ambient--two" aria-hidden="true"></div>
+
+  <section class="loader-panel" aria-labelledby="loaderTitle" aria-describedby="loaderMessage">
+    <div class="loader-brand-stage" aria-hidden="true">
+      <span class="loader-orbit loader-orbit--outer"></span>
+      <span class="loader-orbit loader-orbit--inner"></span>
+      <div class="loader-logo-frame">
+        <img id="loaderLogo" class="loader-logo-image" alt="" hidden>
+        <span id="loaderFallbackIcon" class="material-symbols-rounded loader-fallback-icon">home_work</span>
+      </div>
+    </div>
+
+    <div class="loader-copy">
+      <span id="loaderBrandName" class="loader-eyebrow">CÁLIDDA 360</span>
+      <h1 id="loaderTitle">Preparando la aplicación</h1>
+      <p id="loaderSubtitle">Estamos configurando tu espacio de trabajo.</p>
+    </div>
+
+    <div class="loader-progress" aria-hidden="true">
+      <span class="loader-progress-bar"></span>
+    </div>
+
+    <div class="loader-status-row">
+      <span class="loader-status-pulse" aria-hidden="true"></span>
+      <span id="loaderMessage">Validando acceso seguro…</span>
+    </div>
+
+    <div id="loaderSteps" class="loader-steps" aria-hidden="true">
+      <span class="is-active" data-loader-step="1"></span>
+      <span data-loader-step="2"></span>
+      <span data-loader-step="3"></span>
+    </div>
+
+    <div class="loader-footer">
+      <span class="material-symbols-rounded" aria-hidden="true">shield_lock</span>
+      <span id="loaderSecurityText">Conexión protegida</span>
+      <span id="loaderVersion" class="loader-version" hidden></span>
+    </div>
+  </section>
+</div>
+
+<div
+  id="appLoader"
+  class="app-loader"
+  role="status"
+  aria-live="polite"
+  aria-busy="false"
+  aria-labelledby="appLoaderTitle"
+  aria-describedby="appLoaderMessage"
+  hidden>
+  <section class="app-loader-card">
+    <span class="app-loader-spinner" aria-hidden="true"></span>
+    <div class="app-loader-copy">
+      <strong id="appLoaderTitle">Procesando solicitud</strong>
+      <span id="appLoaderMessage">Actualizando la información…</span>
+    </div>
+  </section>
+</div>
+

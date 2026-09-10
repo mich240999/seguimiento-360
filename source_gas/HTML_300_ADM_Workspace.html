@@ -1,0 +1,415 @@
+<!--
+  SGT360 — Consola administrativa
+
+  Responsabilidad:
+  Define los acordeones y paneles de usuarios, roles, módulos, permisos, catálogos y
+  configuración.
+
+  Este archivo se incluye desde HTML_000_APP_Index o desde una vista relacionada.
+-->
+
+<template id="administrationTemplate">
+  <section class="admin-workspace">
+    <div class="section-header">
+      <div>
+        <p id="adminWorkspaceEyebrow" class="eyebrow">CENTRO DE CONTROL</p>
+        <h2 id="adminWorkspaceTitle">Administración</h2>
+        <p id="adminWorkspaceDescription">Administra seguridad, estructura comercial y configuración de la aplicación desde bloques independientes.</p>
+      </div>
+      <button class="button button--primary" type="button" data-admin-action="refresh">
+        <span class="material-symbols-rounded">sync</span>
+        Actualizar
+      </button>
+    </div>
+
+    <div id="adminMetrics" class="metric-grid"></div>
+
+    <div class="admin-layout">
+      <div id="adminAccordion" class="admin-accordion">
+        <section class="admin-section-group" data-admin-group="security" aria-labelledby="adminSecurityTitle">
+          <header class="admin-section-heading">
+            <span class="admin-section-heading-icon material-symbols-rounded" aria-hidden="true">admin_panel_settings</span>
+            <span class="admin-section-heading-copy">
+              <strong id="adminSecurityTitle">Seguridad y accesos</strong>
+              <small>Usuarios, roles y permisos que controlan el ingreso y las operaciones disponibles.</small>
+            </span>
+          </header>
+          <div class="admin-section-items">
+        <section class="accordion-item" data-section="users">
+          <button class="accordion-trigger" type="button" aria-expanded="false">
+            <span class="accordion-icon material-symbols-rounded">group</span>
+            <span class="accordion-label">
+              <strong>Usuarios</strong>
+              <small>Altas, datos, roles y estados</small>
+            </span>
+            <span class="accordion-count" data-count="users">—</span>
+            <span class="material-symbols-rounded accordion-chevron">expand_more</span>
+          </button>
+          <div class="accordion-panel" hidden>
+            <div class="toolbar">
+              <label class="search-field">
+                <span class="material-symbols-rounded">search</span>
+                <input id="adminUsersSearch" type="search" placeholder="Buscar por nombre, correo o documento">
+              </label>
+              <button class="button button--secondary" type="button" data-admin-action="new-user">
+                <span class="material-symbols-rounded">person_add</span>
+                Nuevo usuario
+              </button>
+            </div>
+            <div id="adminUsersContent" class="data-region"></div>
+          </div>
+        </section>
+
+        <section class="accordion-item" data-section="roles">
+          <button class="accordion-trigger" type="button" aria-expanded="false">
+            <span class="accordion-icon material-symbols-rounded">badge</span>
+            <span class="accordion-label">
+              <strong>Roles</strong>
+              <small>Roles protegidos y roles configurables con código técnico estable</small>
+            </span>
+            <span class="accordion-count" data-count="roles">—</span>
+            <span class="material-symbols-rounded accordion-chevron">expand_more</span>
+          </button>
+          <div class="accordion-panel" hidden>
+            <div class="toolbar toolbar--end">
+              <button class="button button--secondary" type="button" data-admin-action="new-role">
+                <span class="material-symbols-rounded">add_moderator</span>
+                Nuevo rol
+              </button>
+            </div>
+            <div id="adminRolesContent" class="data-region"></div>
+          </div>
+        </section>
+
+        <section class="accordion-item" data-section="permissions">
+          <button class="accordion-trigger" type="button" aria-expanded="false">
+            <span class="accordion-icon material-symbols-rounded">shield_person</span>
+            <span class="accordion-label">
+              <strong>Permisos y delegación</strong>
+              <small>Visualizar módulo, acciones, campos y alcance</small>
+            </span>
+            <span class="material-symbols-rounded accordion-chevron">expand_more</span>
+          </button>
+          <div class="accordion-panel" hidden>
+            <div class="toolbar">
+              <label class="select-field">
+                <span>Rol</span>
+                <select id="adminPermissionRole"></select>
+              </label>
+              <button class="button button--primary" type="button" data-admin-action="save-permissions">
+                <span class="material-symbols-rounded">save</span>
+                Guardar permisos
+              </button>
+            </div>
+            <div id="adminPermissionsContent" class="permission-region"></div>
+          </div>
+        </section>
+          </div>
+        </section>
+
+        <section class="admin-section-group" data-admin-group="structure" aria-labelledby="adminStructureTitle">
+          <header class="admin-section-heading">
+            <span class="admin-section-heading-icon material-symbols-rounded" aria-hidden="true">account_tree</span>
+            <span class="admin-section-heading-copy">
+              <strong id="adminStructureTitle">Estructura comercial</strong>
+              <small>Tablas maestras independientes para proveedores, oficinas de venta y grupos de vendedores.</small>
+            </span>
+          </header>
+          <div class="admin-section-items">
+            <section class="accordion-item" data-section="providers">
+              <button class="accordion-trigger" type="button" aria-expanded="false">
+                <span class="accordion-icon material-symbols-rounded">storefront</span>
+                <span class="accordion-label">
+                  <strong>Proveedores</strong>
+                  <small>Registro y asignación de las oficinas disponibles para cada proveedor</small>
+                </span>
+                <span class="accordion-count" data-count="providers">—</span>
+                <span class="material-symbols-rounded accordion-chevron">expand_more</span>
+              </button>
+              <div class="accordion-panel" hidden>
+                <div class="assignment-import-note">
+                  <span class="material-symbols-rounded">info</span>
+                  <div>
+                    <strong>Proveedores y oficinas asignadas</strong>
+                    <p>Al crear un proveedor debes seleccionar una o varias oficinas activas. La carga CSV realiza UPSERT y no elimina registros ausentes.</p>
+                  </div>
+                </div>
+                <article class="organization-card organization-card--single">
+                  <div class="organization-card-head">
+                    <div>
+                      <strong>Proveedores</strong>
+                      <small>Administra los datos del proveedor y las oficinas que tendrá disponibles</small>
+                    </div>
+                    <div class="organization-card-actions">
+                      <button class="button button--ghost button--compact" type="button" data-admin-action="template-providers" title="Descargar plantilla de proveedores">
+                        <span class="material-symbols-rounded">download</span>
+                        Plantilla
+                      </button>
+                      <button class="button button--secondary button--compact" type="button" data-admin-action="import-providers">
+                        <span class="material-symbols-rounded">upload_file</span>
+                        Importar
+                      </button>
+                      <button class="button button--ghost button--compact" type="button" data-admin-action="template-provider-offices" title="Descargar plantilla de relación proveedor-oficina">
+                        <span class="material-symbols-rounded">account_tree</span>
+                        Relaciones
+                      </button>
+                      <button class="button button--secondary button--compact" type="button" data-admin-action="import-provider-offices" title="Importar relación proveedor-oficina">
+                        <span class="material-symbols-rounded">upload_file</span>
+                        Asignar oficinas
+                      </button>
+                      <button class="button button--secondary button--compact" type="button" data-admin-action="new-provider">
+                        <span class="material-symbols-rounded">add_business</span>
+                        Nuevo
+                      </button>
+                    </div>
+                  </div>
+                  <div id="adminProvidersContent" class="data-region"></div>
+                </article>
+              </div>
+            </section>
+
+            <section class="accordion-item" data-section="offices-groups">
+              <button class="accordion-trigger" type="button" aria-expanded="false">
+                <span class="accordion-icon material-symbols-rounded">lan</span>
+                <span class="accordion-label">
+                  <strong>Oficinas y grupos</strong>
+                  <small>Oficinas independientes y grupos vinculados obligatoriamente a una oficina</small>
+                </span>
+                <span class="accordion-count" data-count="offices-groups">—</span>
+                <span class="material-symbols-rounded accordion-chevron">expand_more</span>
+              </button>
+              <div class="accordion-panel" hidden>
+                <div class="assignment-import-note">
+                  <span class="material-symbols-rounded">info</span>
+                  <div>
+                    <strong>Maestros de oficinas y grupos</strong>
+                    <p>Las oficinas son independientes y pueden asignarse a varios proveedores. Cada grupo debe pertenecer a una oficina activa.</p>
+                  </div>
+                </div>
+                <div class="organization-grid organization-grid--two">
+                  <article class="organization-card">
+                    <div class="organization-card-head">
+                      <div>
+                        <strong>Oficinas</strong>
+                        <small>Maestro independiente reutilizable por uno o varios proveedores</small>
+                      </div>
+                      <div class="organization-card-actions">
+                        <button class="button button--ghost button--compact" type="button" data-admin-action="template-offices" title="Descargar plantilla de oficinas">
+                          <span class="material-symbols-rounded">download</span>
+                          Plantilla
+                        </button>
+                        <button class="button button--secondary button--compact" type="button" data-admin-action="import-offices">
+                          <span class="material-symbols-rounded">upload_file</span>
+                          Importar
+                        </button>
+                        <button class="button button--secondary button--compact" type="button" data-admin-action="new-office">
+                          <span class="material-symbols-rounded">add_location_alt</span>
+                          Nueva
+                        </button>
+                      </div>
+                    </div>
+                    <div id="adminOfficesContent" class="data-region"></div>
+                  </article>
+
+                  <article class="organization-card">
+                    <div class="organization-card-head">
+                      <div>
+                        <strong>Grupos</strong>
+                        <small>Cada grupo pertenece obligatoriamente a una oficina</small>
+                      </div>
+                      <div class="organization-card-actions">
+                        <button class="button button--ghost button--compact" type="button" data-admin-action="template-groups" title="Descargar plantilla de grupos">
+                          <span class="material-symbols-rounded">download</span>
+                          Plantilla
+                        </button>
+                        <button class="button button--secondary button--compact" type="button" data-admin-action="import-groups">
+                          <span class="material-symbols-rounded">upload_file</span>
+                          Importar
+                        </button>
+                        <button class="button button--secondary button--compact" type="button" data-admin-action="new-group">
+                          <span class="material-symbols-rounded">group_add</span>
+                          Nuevo
+                        </button>
+                      </div>
+                    </div>
+                    <div id="adminGroupsContent" class="data-region"></div>
+                  </article>
+                </div>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section class="admin-section-group" data-admin-group="configuration" aria-labelledby="adminConfigurationTitle">
+          <header class="admin-section-heading">
+            <span class="admin-section-heading-icon material-symbols-rounded" aria-hidden="true">settings_suggest</span>
+            <span class="admin-section-heading-copy">
+              <strong id="adminConfigurationTitle">Configuración de la aplicación</strong>
+              <small>Módulos, navegación, catálogos, recursos visuales y parámetros funcionales.</small>
+            </span>
+          </header>
+          <div class="admin-section-items">
+        <section class="accordion-item" data-section="modules">
+          <button class="accordion-trigger" type="button" aria-expanded="false">
+            <span class="accordion-icon material-symbols-rounded">dashboard_customize</span>
+            <span class="accordion-label">
+              <strong>Módulos y navegación</strong>
+              <small>Constructor de módulos simples y sus campos</small>
+            </span>
+            <span class="accordion-count" data-count="modules">—</span>
+            <span class="material-symbols-rounded accordion-chevron">expand_more</span>
+          </button>
+          <div class="accordion-panel" hidden>
+            <div class="toolbar toolbar--end">
+              <button class="button button--secondary" type="button" data-admin-action="new-module">
+                <span class="material-symbols-rounded">add_box</span>
+                Nuevo módulo
+              </button>
+            </div>
+            <div id="adminModulesContent" class="module-builder-grid"></div>
+          </div>
+        </section>
+
+        <section class="accordion-item" data-section="catalogs">
+          <button class="accordion-trigger" type="button" aria-expanded="false">
+            <span class="accordion-icon material-symbols-rounded">lists</span>
+            <span class="accordion-label">
+              <strong>Catálogos</strong>
+              <small>Listas y valores reutilizables</small>
+            </span>
+            <span class="accordion-count" data-count="catalogs">—</span>
+            <span class="material-symbols-rounded accordion-chevron">expand_more</span>
+          </button>
+          <div class="accordion-panel" hidden>
+            <div class="toolbar toolbar--end">
+              <button class="button button--secondary" type="button" data-admin-action="new-catalog">
+                <span class="material-symbols-rounded">playlist_add</span>
+                Nuevo catálogo
+              </button>
+            </div>
+            <div id="adminCatalogsContent" class="data-region"></div>
+          </div>
+        </section>
+
+        <section class="accordion-item" data-section="visual-resources">
+          <button class="accordion-trigger" type="button" aria-expanded="false">
+            <span class="accordion-icon material-symbols-rounded">palette</span>
+            <span class="accordion-label">
+              <strong>Recursos visuales</strong>
+              <small>Logos, favicon, banners e imágenes</small>
+            </span>
+            <span class="accordion-count" data-count="resources">—</span>
+            <span class="material-symbols-rounded accordion-chevron">expand_more</span>
+          </button>
+          <div class="accordion-panel" hidden>
+            <div class="toolbar toolbar--end">
+              <button class="button button--secondary" type="button" data-admin-action="new-resource">
+                <span class="material-symbols-rounded">add_photo_alternate</span>
+                Nuevo recurso
+              </button>
+            </div>
+            <div id="adminResourcesContent" class="data-region"></div>
+          </div>
+        </section>
+
+        <section class="accordion-item" data-section="settings">
+          <button class="accordion-trigger" type="button" aria-expanded="false">
+            <span class="accordion-icon material-symbols-rounded">tune</span>
+            <span class="accordion-label">
+              <strong>Configuración</strong>
+              <small>Intervalos, apariencia y parámetros funcionales</small>
+            </span>
+            <span class="material-symbols-rounded accordion-chevron">expand_more</span>
+          </button>
+          <div class="accordion-panel" hidden>
+            <div id="adminSettingsContent" class="settings-grid"></div>
+          </div>
+        </section>
+          </div>
+        </section>
+
+        <section class="admin-section-group" data-admin-group="audit" aria-labelledby="adminAuditTitle">
+          <header class="admin-section-heading">
+            <span class="admin-section-heading-icon material-symbols-rounded" aria-hidden="true">manage_search</span>
+            <span class="admin-section-heading-copy">
+              <strong id="adminAuditTitle">Auditoría</strong>
+              <small>Sesiones activas, accesos, eventos operativos y modificaciones de permisos.</small>
+            </span>
+          </header>
+          <div class="admin-section-items">
+            <section class="accordion-item" data-section="audit">
+              <button class="accordion-trigger" type="button" aria-expanded="false">
+                <span class="accordion-icon material-symbols-rounded">key</span>
+                <span class="accordion-label">
+                  <strong>Sesiones activas</strong>
+                  <small>Consulta sesiones abiertas, vigentes, vencidas y cierre forzado</small>
+                </span>
+                <span class="accordion-count" data-count="sessions">—</span>
+                <span class="material-symbols-rounded accordion-chevron">expand_more</span>
+              </button>
+              <div class="accordion-panel" hidden>
+                <div class="toolbar">
+                  <label class="search-field">
+                    <span class="material-symbols-rounded">search</span>
+                    <input id="adminSessionsSearch" type="search" placeholder="Buscar por usuario, correo, rol, proveedor o módulo">
+                  </label>
+                  <label class="select-field">
+                    <span>Estado</span>
+                    <select id="adminSessionsState">
+                      <option value="ACTIVAS">Abiertas</option>
+                      <option value="VIGENTES">Vigentes</option>
+                      <option value="VENCIDAS">Abiertas vencidas</option>
+                      <option value="CERRADAS">Cerradas</option>
+                      <option value="EXPIRADAS">Expiradas</option>
+                      <option value="BLOQUEADAS">Bloqueadas</option>
+                      <option value="TODAS">Todas</option>
+                    </select>
+                  </label>
+                  <button class="button button--ghost" type="button" data-admin-action="refresh-sessions">
+                    <span class="material-symbols-rounded">refresh</span>
+                    Actualizar sesiones
+                  </button>
+                  <button class="button button--ghost" type="button" data-admin-action="expire-sessions">
+                    <span class="material-symbols-rounded">auto_delete</span>
+                    Limpiar expiradas
+                  </button>
+                </div>
+                <div id="adminSessionsContent" class="data-region"></div>
+              </div>
+            </section>
+
+            <section class="accordion-item" data-section="audit">
+              <button class="accordion-trigger" type="button" aria-expanded="false">
+                <span class="accordion-icon material-symbols-rounded">history</span>
+                <span class="accordion-label">
+                  <strong>Registros de auditoría</strong>
+                  <small>Consulta consolidada y ordenada de los eventos más recientes</small>
+                </span>
+                <span class="accordion-count" data-count="audit">—</span>
+                <span class="material-symbols-rounded accordion-chevron">expand_more</span>
+              </button>
+              <div class="accordion-panel" hidden>
+                <div class="toolbar">
+                  <label class="search-field">
+                    <span class="material-symbols-rounded">search</span>
+                    <input id="adminAuditSearch" type="search" placeholder="Buscar por usuario, módulo, acción o resultado">
+                  </label>
+                  <label class="select-field">
+                    <span>Tipo</span>
+                    <select id="adminAuditType">
+                      <option value="TODOS">Todos</option>
+                      <option value="ACCESOS">Accesos</option>
+                      <option value="EVENTOS">Eventos</option>
+                      <option value="PERMISOS">Permisos</option>
+                    </select>
+                  </label>
+                </div>
+                <div id="adminAuditContent" class="data-region"></div>
+              </div>
+            </section>
+          </div>
+        </section>
+      </div>
+    </div>
+  </section>
+</template>

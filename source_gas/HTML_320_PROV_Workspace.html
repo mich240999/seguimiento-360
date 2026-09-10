@@ -1,0 +1,48 @@
+<!-- SGT360 — Workspace especializado de proveedores -->
+<template id="providersWorkspaceTemplate">
+  <section class="providers-workspace" aria-labelledby="providersWorkspaceTitle">
+    <header class="providers-header">
+      <div class="providers-header-copy">
+        <p class="eyebrow">MAESTRO GENERAL</p>
+        <h2 id="providersWorkspaceTitle">Proveedores</h2>
+        <p>Consulta la razón social, el nombre comercial y el código interno permanente. El canal de ventas por oficina es opcional: úsalo solo si el proveedor también vende.</p>
+      </div>
+      <div class="providers-actions">
+        <button id="providersTemplateButton" class="button button--ghost" type="button">
+          <span class="material-symbols-rounded">download</span> Plantilla masiva
+        </button>
+        <button id="providersImportButton" class="button button--secondary" type="button">
+          <span class="material-symbols-rounded">upload_file</span> Carga masiva
+        </button>
+        <button id="providersExportButton" class="button button--secondary" type="button">
+          <span class="material-symbols-rounded">file_download</span> Exportar
+        </button>
+        <button id="providersNewButton" class="button button--primary" type="button">
+          <span class="material-symbols-rounded">add_business</span> Nuevo proveedor
+        </button>
+        <input id="providersImportInput" type="file" accept=".csv,text/csv" hidden>
+      </div>
+    </header>
+
+    <div id="providersSummary" class="providers-summary"></div>
+
+    <section class="providers-panel">
+      <div class="providers-toolbar">
+        <label class="search-field">
+          <span class="material-symbols-rounded">search</span>
+          <input id="providersSearch" type="search" placeholder="Buscar por código interno, razón social, nombre comercial, código SAP o RUC">
+        </label>
+        <label class="select-field">
+          <span>Estado</span>
+          <select id="providersStatusFilter">
+            <option value="TODOS">Todos</option>
+            <option value="ACTIVO" selected>Activos</option>
+            <option value="INACTIVO">Inactivos</option>
+          </select>
+        </label>
+      </div>
+      <div id="providersContent" class="providers-table-wrap"></div>
+      <div id="providersPagination" class="providers-pagination"></div>
+    </section>
+  </section>
+</template>

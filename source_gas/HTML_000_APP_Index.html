@@ -1,0 +1,50 @@
+<!--
+  SGT360 — Documento principal — Paso 30D
+
+  Responsabilidad:
+  Compone la pantalla de acceso, el shell de la aplicación, estilos y scripts.
+
+  Este archivo se incluye desde HTML_000_APP_Index o desde una vista relacionada.
+-->
+
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <base target="_top">
+    <meta charset="UTF-8">
+    <script>
+      window.__C360_LOADER_CONFIG__ = <?!= loaderConfigJson ?>;
+
+      (function(config) {
+        var source = String(
+          config && config.faviconSource || ""
+        ).trim();
+
+        if (!source) return;
+
+        var link = document.createElement("link");
+        link.rel = "icon";
+        link.type = "image/png";
+        link.href = source;
+        document.head.appendChild(link);
+      })(window.__C360_LOADER_CONFIG__);
+    </script>
+    <?!= include('HTML_120_APP_Styles'); ?>
+    <?!= include('HTML_125_PROV_Styles'); ?>
+  </head>
+  <body class="is-loading">
+    <?!= include('HTML_100_AUTH_Login'); ?>
+    <?!= include('HTML_130_APP_Shell'); ?>
+    <?!= include('HTML_300_ADM_Workspace'); ?>
+    <?!= include('HTML_320_PROV_Workspace'); ?>
+    <?!= include('HTML_340_MP_Workspace'); ?>
+    <?!= include('HTML_360_SALES_Workspace'); ?>
+    <?!= include('HTML_900_UI_Components'); ?>
+    <?!= include('HTML_140_APP_Scripts'); ?>
+    <?!= include('HTML_310_ADM_Scripts'); ?>
+    <?!= include('HTML_330_PROV_Scripts'); ?>
+    <?!= include('HTML_350_MP_Scripts'); ?>
+    <?!= include('HTML_370_SALES_Scripts'); ?>
+    <?!= include('HTML_410_MOD_Scripts'); ?>
+  </body>
+</html>

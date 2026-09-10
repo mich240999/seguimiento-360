@@ -1,0 +1,359 @@
+<!--
+  SGT360 — Controlador de módulos dinámicos
+
+  Responsabilidad:
+  Renderiza tablas y formularios configurables, catálogos, paginación y cambios de
+  estado.
+
+  Este archivo se incluye desde HTML_000_APP_Index o desde una vista relacionada.
+-->
+
+<script>
+  const DYNAMIC_STATE = {
+    module: null,
+    definition: null,
+    rows: [],
+    pagination: null,
+    currentRecord: null,
+    filters: { texto: "", estado: "", pagina: 1, tamano: 50 }
+  };
+
+  /**
+   * Abre un módulo construido mediante metadatos.
+   */
+  function openDynamicModule(module) {
+    DYNAMIC_STATE.module = module;
+    DYNAMIC_STATE.definition = null;
+    DYNAMIC_STATE.rows = [];
+    DYNAMIC_STATE.filters = {
+      texto: "",
+      estado: "",
+      pagina: 1,
+      tamano: Number(APP_STATE.context && APP_STATE.context.interfaz && APP_STATE.context.interfaz.pageSize) || 50
+    };
+
+    setActiveView("dynamicModuleView");
+    setModuleHeading(module.grupoMenu || "MÓDULO", module.nombre);
+    renderDynamicModuleFrame();
+    refreshDynamicModule(false);
+  }
+
+  /**
+   * Construye la estructura visual del módulo dinámico.
+   */
+
+  function dynamicPermission(resource) {
+    const moduleCode = DYNAMIC_STATE.module &&
+      DYNAMIC_STATE.module.codigo || "";
+    return hasActivePermission(moduleCode, resource) ||
+      hasActivePermission(moduleCode, "ADMINISTRAR");
+  }
+
+  function ensureWritableDynamicView() {
+    if (isRolePreviewActive()) {
+      toast(
+        "Vista simulada de solo lectura",
+        "Vuelve a tu vista para realizar cambios.",
+        true
+      );
+      return false;
+    }
+    return true;
+  }
+
+  function renderDynamicModuleFrame() {
+    const view = document.getElementById("dynamicModuleView");
+    const module = DYNAMIC_STATE.module;
+    const canCreate = dynamicPermission("CREAR");
+
+    view.innerHTML = '<section class="dynamic-workspace">' +
+      '<div class="section-header"><div><p class="eyebrow">' +
+      escapeHtml(module.grupoMenu || "MÓDULO") +
+      '</p><h2>' + escapeHtml(module.nombre) + '</h2><p>' +
+      escapeHtml(
+        module.descripcion ||
+        "Consulta y administra la información configurada."
+      ) +
+      '</p></div>' +
+      (canCreate ?
+        '<button id="dynamicNewButton" class="button button--primary" type="button"><span class="material-symbols-rounded">add</span>Nuevo registro</button>' :
+        "") +
+      '</div>' +
+      '<div class="toolbar"><label class="search-field"><span class="material-symbols-rounded">search</span><input id="dynamicSearchInput" type="search" placeholder="Buscar en el módulo"></label>' +
+      '<label class="select-field"><span>Estado</span><select id="dynamicStatusFilter"><option value="">Todos</option><option value="ACTIVO">Activo</option><option value="INACTIVO">Inactivo</option></select></label>' +
+      '<button id="dynamicRefreshButton" class="button button--secondary" type="button"><span class="material-symbols-rounded">refresh</span>Actualizar</button></div>' +
+      '<div id="dynamicDataRegion" class="data-region">' +
+      loadingHtml(5) + '</div>' +
+      '<div id="dynamicPagination" class="toolbar toolbar--end"></div>' +
+      '</section>';
+
+    on("dynamicNewButton", "click", function() {
+      if (!ensureWritableDynamicView()) return;
+      openDynamicRecordEditor(null);
+    });
+    on("dynamicRefreshButton", "click", function() {
+      refreshDynamicModule(false);
+    });
+    on("dynamicSearchInput", "input", debounce(function(event) {
+      DYNAMIC_STATE.filters.texto = event.target.value;
+      DYNAMIC_STATE.filters.pagina = 1;
+      refreshDynamicModule(true);
+    }, 360));
+    on("dynamicStatusFilter", "change", function(event) {
+      DYNAMIC_STATE.filters.estado = event.target.value;
+      DYNAMIC_STATE.filters.pagina = 1;
+      refreshDynamicModule(true);
+    });
+  }
+
+  /**
+   * Actualiza los registros del módulo dinámico.
+   */
+  function refreshDynamicModule(silent) {
+    if (!DYNAMIC_STATE.module || APP_STATE.module !== DYNAMIC_STATE.module.codigo) return;
+    if (APP_STATE.requestPending) return;
+    APP_STATE.requestPending = true;
+    const region = document.getElementById("dynamicDataRegion");
+    if (region && !silent) region.innerHTML = loadingHtml(5);
+
+    secureRpc("listarRegistrosModuloDinamico", [DYNAMIC_STATE.module.codigo, DYNAMIC_STATE.filters], DYNAMIC_STATE.module.codigo)
+      .then(function(result) {
+        DYNAMIC_STATE.definition = result.definicion;
+        DYNAMIC_STATE.rows = result.registros || [];
+        DYNAMIC_STATE.pagination = result.paginacion || null;
+        renderDynamicData();
+        markSync();
+        APP_STATE.requestPending = false;
+        if (!silent) toast("Listado actualizado", "La información del módulo está al día.");
+      })
+      .catch(function(error) {
+        APP_STATE.requestPending = false;
+        if (region) region.innerHTML = '<div class="empty-state"><span class="material-symbols-rounded">error</span><strong>No fue posible cargar</strong><p>' + escapeHtml(error.message) + "</p></div>";
+      });
+  }
+
+  /**
+   * Renderiza la tabla y los datos del módulo dinámico.
+   */
+  function renderDynamicData() {
+    const region = document.getElementById("dynamicDataRegion");
+    if (!region || !DYNAMIC_STATE.definition) return;
+    const fields = (DYNAMIC_STATE.definition.campos || []).filter(function(field) {
+      return field.visibleTabla;
+    });
+    const columns = fields.map(function(field) {
+      return {
+        key: field.campo,
+        label: field.etiqueta,
+        render: function(row) {
+          return renderDynamicCell(field, row[field.campo]);
+        }
+      };
+    });
+
+    const canEdit = dynamicPermission("EDITAR");
+    const canChangeStatus = dynamicPermission("CAMBIAR_ESTADO");
+    if (canEdit || canChangeStatus) {
+      columns.push({
+        key: "actions",
+        label: "",
+        render: function(row) {
+          const buttons = [];
+          if (canEdit) {
+            buttons.push(
+              '<button class="table-button" type="button" data-dynamic-edit="' +
+              escapeHtml(row.__ID) +
+              '" title="Editar"><span class="material-symbols-rounded">edit</span></button>'
+            );
+          }
+          if (canChangeStatus) {
+            buttons.push(
+              '<button class="table-button" type="button" data-dynamic-status="' +
+              escapeHtml(row.__ID) +
+              '" title="Cambiar estado"><span class="material-symbols-rounded">toggle_on</span></button>'
+            );
+          }
+          return '<div class="table-actions">' + buttons.join("") + "</div>";
+        }
+      });
+    }
+
+    region.innerHTML = tableHtml(columns, DYNAMIC_STATE.rows);
+    region.querySelectorAll("[data-dynamic-edit]").forEach(function(button) {
+      button.addEventListener("click", function() {
+        if (!ensureWritableDynamicView()) return;
+        loadDynamicRecordForEdit(button.dataset.dynamicEdit);
+      });
+    });
+    region.querySelectorAll("[data-dynamic-status]").forEach(function(button) {
+      button.addEventListener("click", function() {
+        if (!ensureWritableDynamicView()) return;
+        openDynamicStatusDialog(button.dataset.dynamicStatus);
+      });
+    });
+    renderDynamicPagination();
+  }
+
+  /**
+   * Renderiza dinámico cell.
+   */
+  function renderDynamicCell(field, value) {
+    if (value === null || value === undefined || value === "") return "—";
+    if (field.tipo === "CHECKBOX") return value === true || String(value).toUpperCase() === "TRUE" ? '<span class="chip chip--active">Sí</span>' : '<span class="chip chip--inactive">No</span>';
+    if (field.campo === DYNAMIC_STATE.definition.modulo.campoEstado) return statusChip({ estado: value });
+    if (field.tipo === "DATE" || field.tipo === "DATETIME") {
+      const date = new Date(value);
+      if (!Number.isNaN(date.getTime())) return escapeHtml(date.toLocaleString("es-PE", field.tipo === "DATE" ? { year: "numeric", month: "2-digit", day: "2-digit" } : undefined));
+    }
+    return escapeHtml(formatValue(value));
+  }
+
+  /**
+   * Renderiza dinámico paginación.
+   */
+  function renderDynamicPagination() {
+    const region = document.getElementById("dynamicPagination");
+    const pagination = DYNAMIC_STATE.pagination;
+    if (!region || !pagination) return;
+    region.innerHTML = '<span>Mostrando página ' + pagination.pagina + ' de ' + pagination.totalPaginas + ' · ' + pagination.total + ' registros</span>' +
+      '<button id="dynamicPrevPage" class="button button--ghost" type="button" ' + (pagination.pagina <= 1 ? "disabled" : "") + '><span class="material-symbols-rounded">chevron_left</span>Anterior</button>' +
+      '<button id="dynamicNextPage" class="button button--ghost" type="button" ' + (pagination.pagina >= pagination.totalPaginas ? "disabled" : "") + '>Siguiente<span class="material-symbols-rounded">chevron_right</span></button>';
+    on("dynamicPrevPage", "click", function() { DYNAMIC_STATE.filters.pagina -= 1; refreshDynamicModule(true); });
+    on("dynamicNextPage", "click", function() { DYNAMIC_STATE.filters.pagina += 1; refreshDynamicModule(true); });
+  }
+
+  /**
+   * Carga un registro dinámico antes de abrir su edición.
+   */
+  function loadDynamicRecordForEdit(id) {
+    setLoader(true, "Cargando registro…");
+    secureRpc("obtenerRegistroModuloDinamico", [DYNAMIC_STATE.module.codigo, id], DYNAMIC_STATE.module.codigo)
+      .then(function(result) {
+        setLoader(false);
+        DYNAMIC_STATE.definition = result.definicion;
+        openDynamicRecordEditor(result.registro);
+      })
+      .catch(function(error) { setLoader(false); toast("No fue posible abrir", error.message, true); });
+  }
+
+  /**
+   * Abre el editor de un registro dinámico.
+   */
+  function openDynamicRecordEditor(record) {
+    record = record || {};
+    const requiredPermission = record.__ID ? "EDITAR" : "CREAR";
+    if (!dynamicPermission(requiredPermission)) {
+      toast("Acceso denegado", "No tienes permiso para esta operación.", true);
+      return;
+    }
+    if (!ensureWritableDynamicView()) return;
+    const definition = DYNAMIC_STATE.definition;
+    if (!definition) { toast("Definición no disponible", "Actualiza el módulo antes de crear un registro.", true); return; }
+    const isNew = !record.__ID;
+    DYNAMIC_STATE.currentRecord = record;
+    const fields = (definition.campos || []).filter(function(field) { return field.visibleFormulario; });
+    const body = '<form id="dynamicRecordForm" class="form-grid">' +
+      '<input type="hidden" name="__ES_NUEVO" value="' + (isNew ? "true" : "false") + '">' +
+      fields.map(function(field) { return dynamicFieldHtml(field, record[field.campo]); }).join("") +
+      "</form>";
+    openSideSheet({
+      eyebrow: isNew ? "NUEVO REGISTRO" : "EDITAR REGISTRO",
+      title: DYNAMIC_STATE.module.nombre,
+      body: body,
+      footer: '<button class="button button--ghost" type="button" data-sheet-close>Cancelar</button><button id="saveDynamicRecordButton" class="button button--primary" type="button">Guardar</button>'
+    });
+    bindSideSheetCloseButtons();
+    populateDynamicCatalogFields(record);
+    on("saveDynamicRecordButton", "click", saveDynamicRecord);
+  }
+
+  /**
+   * Completa dinámico catálogo campos.
+   */
+  function populateDynamicCatalogFields(record) {
+    const selects = Array.from(document.querySelectorAll("[data-dynamic-catalog]"));
+    selects.forEach(function(select) {
+      const catalog = select.dataset.dynamicCatalog;
+      if (!catalog) return;
+      const fieldName = select.name;
+      const currentValue = record && record[fieldName] !== undefined ? String(record[fieldName]) : "";
+      secureRpc("listarValoresCatalogoModuloDinamico", [DYNAMIC_STATE.module.codigo, catalog], DYNAMIC_STATE.module.codigo)
+        .then(function(values) {
+          select.innerHTML = '<option value="">Selecciona</option>' + (values || []).map(function(value) {
+            return '<option value="' + escapeHtml(value.codigo) + '" ' + (value.codigo === currentValue ? "selected" : "") + '>' + escapeHtml(value.nombre) + "</option>";
+          }).join("");
+        })
+        .catch(function(error) {
+          select.innerHTML = '<option value="' + escapeHtml(currentValue) + '">' + escapeHtml(currentValue || "Catálogo no disponible") + "</option>";
+        });
+    });
+  }
+
+  /**
+   * Construye campo HTML.
+   */
+  function dynamicFieldHtml(field, value) {
+    const required = field.obligatorio ? " required" : "";
+    const disabled = field.editable ? "" : " disabled";
+    const help = field.ayuda ? '<small>' + escapeHtml(field.ayuda) + "</small>" : "";
+    const name = escapeHtml(field.campo);
+    const label = escapeHtml(field.etiqueta);
+    const safeValue = escapeHtml(value === null || value === undefined ? "" : value);
+
+    if (field.tipo === "TEXTAREA") return '<label class="field field--full"><span>' + label + '</span><textarea name="' + name + '"' + required + disabled + '>' + safeValue + "</textarea>" + help + "</label>";
+    if (field.tipo === "CHECKBOX") return '<label class="checkbox-field"><input type="checkbox" name="' + name + '" ' + (value === true || String(value).toUpperCase() === "TRUE" ? "checked" : "") + disabled + '> ' + label + "</label>";
+    if (field.tipo === "SELECT") return '<label class="field"><span>' + label + '</span><select name="' + name + '" data-dynamic-catalog="' + escapeHtml(field.catalogo || "") + '"' + required + disabled + '><option value="' + safeValue + '">' + (safeValue || "Selecciona") + "</option></select>" + help + "</label>";
+    const inputType = { NUMBER: "number", DATE: "date", DATETIME: "datetime-local", EMAIL: "email", PHONE: "tel" }[field.tipo] || "text";
+    return '<label class="field"><span>' + label + '</span><input type="' + inputType + '" name="' + name + '" value="' + safeValue + '"' + required + disabled + '>' + help + "</label>";
+  }
+
+  /**
+   * Valida y guarda un registro del módulo dinámico.
+   */
+  function saveDynamicRecord() {
+    if (!ensureWritableDynamicView()) return;
+    const form = document.getElementById("dynamicRecordForm");
+    if (!form.reportValidity()) return;
+    const data = {};
+    (DYNAMIC_STATE.definition.campos || []).forEach(function(field) {
+      const element = form.elements[field.campo];
+      if (!element || element.disabled) return;
+      data[field.campo] = field.tipo === "CHECKBOX" ? element.checked : element.value;
+    });
+    data.__ES_NUEVO = form.elements.__ES_NUEVO.value === "true";
+    if (!data.__ES_NUEVO) {
+      const currentId = (DYNAMIC_STATE.currentRecord || {}).__ID;
+      if (currentId) data[DYNAMIC_STATE.definition.modulo.campoClave] = currentId;
+    }
+
+    setLoader(true, "Guardando registro…");
+    secureRpc("guardarRegistroModuloDinamico", [DYNAMIC_STATE.module.codigo, data], DYNAMIC_STATE.module.codigo)
+      .then(function() { closeSideSheet(); setLoader(false); toast("Registro guardado", "La información fue actualizada."); refreshDynamicModule(true); })
+      .catch(function(error) { setLoader(false); toast("No fue posible guardar", error.message, true); });
+  }
+
+  /**
+   * Abre el diálogo para cambiar el estado de un registro.
+   */
+  function openDynamicStatusDialog(id) {
+    if (!dynamicPermission("CAMBIAR_ESTADO")) {
+      toast("Acceso denegado", "No tienes permiso para cambiar estados.", true);
+      return;
+    }
+    if (!ensureWritableDynamicView()) return;
+    openModal({
+      eyebrow: "CAMBIAR ESTADO",
+      title: DYNAMIC_STATE.module.nombre,
+      body: '<label class="field"><span>Nuevo estado</span><select id="dynamicNewStatus"><option value="ACTIVO">Activo</option><option value="INACTIVO">Inactivo</option></select></label>',
+      footer: '<button class="button button--ghost" type="button" data-modal-close>Cancelar</button><button id="saveDynamicStatusButton" class="button button--primary" type="button">Guardar estado</button>'
+    });
+    bindModalCloseButtons();
+    on("saveDynamicStatusButton", "click", function() {
+      const status = document.getElementById("dynamicNewStatus").value;
+      setLoader(true, "Actualizando estado…");
+      secureRpc("cambiarEstadoRegistroModuloDinamico", [DYNAMIC_STATE.module.codigo, id, status], DYNAMIC_STATE.module.codigo)
+        .then(function() { closeModal(); setLoader(false); toast("Estado actualizado", "El cambio fue registrado."); refreshDynamicModule(true); })
+        .catch(function(error) { setLoader(false); toast("No fue posible cambiar", error.message, true); });
+    });
+  }
+</script>

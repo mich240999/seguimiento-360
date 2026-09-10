@@ -1,0 +1,2083 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Seguimiento 360 — Cálidda Gas Natural</title>
+  
+  <!-- FAVICON -->
+  <link rel="icon" type="image/png" href="https://www.calidda.com.pe/favicon.ico">
+  
+  <!-- FUENTES GOOGLE -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- ICONOS Y ESTILOS EXTERNOS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap-grid.min.css">
+  
+  <!-- ESTILOS LOCALES DEL SISTEMA -->
+  <link rel="stylesheet" href="css/app-styles.css">
+  <link rel="stylesheet" href="css/prov-styles.css">
+  
+  <!-- LIBRERÍAS EXTERNAS JS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="is-loading">
+
+  <!-- MÓDULO DE LOGIN / ACCESO -->
+  <!--
+  SGT360 — Vista de acceso
+
+  Responsabilidad:
+  Presenta los proveedores de identidad y mensajes de autenticación.
+
+  Este archivo se incluye desde HTML_000_APP_Index o desde una vista relacionada.
+-->
+
+<section id="authView" class="auth-view" aria-labelledby="authTitle">
+  <div class="auth-panel">
+    <div class="auth-brand">
+      <div class="auth-brand-mark" aria-hidden="true">
+        <img src="img/calidda-logo.png" alt="Cálidda" style="width:100%; height:100%; object-fit:contain;">
+      </div>
+      <div>
+        <p class="eyebrow">PLATAFORMA DE SEGUIMIENTO</p>
+        <h1 id="authTitle">Seguimiento 360</h1>
+      </div>
+    </div>
+
+    <div class="auth-copy">
+      <h2>Información conectada, decisiones más rápidas.</h2>
+      <p>
+        Accede con una cuenta autorizada para consultar, administrar y dar
+        seguimiento a la operación.
+      </p>
+    </div>
+
+    <div class="auth-actions">
+      <a id="authGoogleButton" class="provider-button" href="#" aria-disabled="true">
+        <span class="provider-logo provider-logo--google" aria-hidden="true">
+          <svg viewBox="0 0 24 24" role="img" focusable="false">
+            <path fill="#4285F4" d="M21.35 12.22c0-.69-.06-1.35-.18-1.99H12v3.77h5.24a4.49 4.49 0 0 1-1.94 2.94v2.45h3.14c1.84-1.69 2.91-4.19 2.91-7.17Z"/>
+            <path fill="#34A853" d="M12 21.75c2.63 0 4.84-.87 6.45-2.36l-3.14-2.45c-.87.58-1.98.93-3.31.93-2.54 0-4.69-1.72-5.46-4.03H3.29v2.53A9.75 9.75 0 0 0 12 21.75Z"/>
+            <path fill="#FBBC05" d="M6.54 13.84A5.87 5.87 0 0 1 6.23 12c0-.64.11-1.26.31-1.84V7.63H3.29A9.75 9.75 0 0 0 2.25 12c0 1.57.38 3.05 1.04 4.37l3.25-2.53Z"/>
+            <path fill="#EA4335" d="M12 6.13c1.43 0 2.72.49 3.73 1.46l2.79-2.79A9.37 9.37 0 0 0 12 2.25a9.75 9.75 0 0 0-8.71 5.38l3.25 2.53C7.31 7.85 9.46 6.13 12 6.13Z"/>
+          </svg>
+        </span>
+        <span>Continuar con Google</span>
+      </a>
+      <a id="authMicrosoftButton" class="provider-button" href="#" aria-disabled="true">
+        <span class="provider-logo provider-logo--microsoft" aria-hidden="true">
+          <svg viewBox="0 0 24 24" role="img" focusable="false">
+            <path fill="#F25022" d="M2 2h9.4v9.4H2z"/>
+            <path fill="#7FBA00" d="M12.6 2H22v9.4h-9.4z"/>
+            <path fill="#00A4EF" d="M2 12.6h9.4V22H2z"/>
+            <path fill="#FFB900" d="M12.6 12.6H22V22h-9.4z"/>
+          </svg>
+        </span>
+        <span>Continuar con Microsoft</span>
+      </a>
+    </div>
+
+    <div id="authMessage" class="inline-message" role="status" hidden></div>
+    <p class="auth-footnote">
+      El acceso depende de la autorización registrada por la organización.
+    </p>
+  </div>
+
+  <aside class="auth-visual" aria-hidden="true">
+    <div class="visual-orbit visual-orbit--one"></div>
+    <div class="visual-orbit visual-orbit--two"></div>
+    <div class="visual-card visual-card--main">
+      <span class="material-symbols-rounded">monitoring</span>
+      <strong>Seguimiento operativo</strong>
+      <small>Información actualizada y trazable</small>
+    </div>
+    <div class="visual-card visual-card--small visual-card--top">
+      <span class="status-dot status-dot--ok"></span>
+      <span>Operación conectada</span>
+    </div>
+    <div class="visual-card visual-card--small visual-card--bottom">
+      <span class="material-symbols-rounded">verified_user</span>
+      <span>Acceso protegido</span>
+    </div>
+  </aside>
+</section>
+
+
+  <!-- APP SHELL / CONTENEDOR PRINCIPAL -->
+  <!--
+  SGT360 — Estructura de navegación
+
+  Responsabilidad:
+  Define sidebar, topbar, área de contenido, dashboard y contenedores globales.
+
+  Este archivo se incluye desde HTML_000_APP_Index o desde una vista relacionada.
+-->
+
+<div id="appShell" class="app-shell" hidden>
+  <aside id="appSidebar" class="app-sidebar">
+    <div class="sidebar-brand">
+      <div id="brandLogoFallback" class="sidebar-logo">
+        <img src="img/calidda-logo.png" alt="Cálidda" style="width:100%; height:100%; object-fit:contain;">
+      </div>
+      <img id="brandLogo" class="sidebar-logo-image" src="img/calidda-logo.png" alt="Cálidda" hidden>
+      <div class="sidebar-brand-copy">
+        <strong id="appNameSidebar">Seguimiento 360</strong>
+        <span id="appEnvironment">DESARROLLO</span>
+      </div>
+      <button
+        id="sidebarCollapseButton"
+        class="icon-button sidebar-collapse-button has-tooltip desktop-only"
+        type="button"
+        aria-label="Minimizar barra lateral"
+        aria-expanded="true"
+        title="Minimizar menú"
+        data-tooltip="Minimizar menú"
+        data-tooltip-position="right">
+        <span id="sidebarCollapseIcon" class="material-symbols-rounded">chevron_left</span>
+      </button>
+      <button id="sidebarCloseButton" class="icon-button sidebar-close" type="button" aria-label="Cerrar menú">
+        <span class="material-symbols-rounded">close</span>
+      </button>
+    </div>
+
+    <nav id="moduleNavigation" class="module-navigation" aria-label="Módulos"></nav>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-user-avatar" id="sidebarUserAvatar">U</div>
+      <div class="sidebar-user-copy">
+        <strong id="sidebarUserName">Usuario</strong>
+        <span id="sidebarUserRole">ROL</span>
+      </div>
+      <button
+        id="logoutButton"
+        class="icon-button has-tooltip"
+        type="button"
+        aria-label="Cerrar sesión"
+        title="Cerrar sesión"
+        data-tooltip="Cerrar sesión"
+        data-tooltip-position="top">
+        <span class="material-symbols-rounded">logout</span>
+      </button>
+    </div>
+  </aside>
+
+  <div id="sidebarBackdrop" class="sidebar-backdrop" hidden></div>
+
+  <main class="app-main">
+    <header class="topbar">
+      <button id="sidebarOpenButton" class="icon-button mobile-only" type="button" aria-label="Abrir menú">
+        <span class="material-symbols-rounded">menu</span>
+      </button>
+      <div class="topbar-title">
+        <p id="currentModuleEyebrow" class="eyebrow">GENERAL</p>
+        <h1 id="currentModuleTitle">Inicio</h1>
+      </div>
+      <div class="topbar-actions">
+        <label id="rolePreviewControl" class="role-preview-control" for="rolePreviewSelect" hidden>
+          <span class="role-preview-label">Visualizar como:</span>
+          <span class="role-preview-select-wrap">
+            <span class="material-symbols-rounded" aria-hidden="true">visibility</span>
+            <select id="rolePreviewSelect" aria-label="Visualizar la aplicación como otro rol">
+              <option value="">Mi vista</option>
+            </select>
+          </span>
+        </label>
+        <div class="sync-indicator" title="Última sincronización">
+          <span class="status-dot status-dot--ok"></span>
+          <span id="lastSyncLabel">Sincronizando</span>
+        </div>
+        <button
+          id="refreshButton"
+          class="icon-button has-tooltip"
+          type="button"
+          aria-label="Actualizar"
+          title="Actualizar"
+          data-tooltip="Actualizar"
+          data-tooltip-position="bottom">
+          <span class="material-symbols-rounded">refresh</span>
+        </button>
+        <button id="profileButton" class="profile-button" type="button" aria-label="Perfil">
+          <span id="topbarUserInitials">U</span>
+        </button>
+      </div>
+    </header>
+
+    <div id="rolePreviewBanner" class="role-preview-banner" role="status" hidden>
+      <div class="role-preview-banner-copy">
+        <span class="material-symbols-rounded" aria-hidden="true">visibility</span>
+        <div>
+          <strong>Vista previa del rol <span id="rolePreviewName">—</span></strong>
+          <small>Solo visualización: tu sesión y tus permisos reales no cambian.</small>
+        </div>
+      </div>
+      <label id="rolePreviewUserControl" class="role-preview-user-control" hidden>
+        <span>Usuario de referencia</span>
+        <select id="rolePreviewUserSelect" aria-label="Usuario de referencia para la simulación"></select>
+      </label>
+      <div class="role-preview-banner-actions">
+        <button id="rolePreviewDetailsButton" class="button button--secondary button--compact" type="button">
+          <span class="material-symbols-rounded">fact_check</span>
+          Ver accesos
+        </button>
+        <button id="rolePreviewExitButton" class="button button--ghost button--compact" type="button">
+          <span class="material-symbols-rounded">close</span>
+          Volver a mi vista
+        </button>
+      </div>
+    </div>
+
+    <section id="appContent" class="app-content">
+      <div id="dashboardView" class="view-panel">
+        <div class="hero-card">
+          <div>
+            <p class="eyebrow">BIENVENIDO</p>
+            <h2 id="dashboardGreeting">Tu centro de seguimiento está listo.</h2>
+          </div>
+          <div class="hero-icon" aria-hidden="true">
+            <span class="material-symbols-rounded">travel_explore</span>
+          </div>
+        </div>
+      </div>
+
+      <div id="dynamicModuleView" class="view-panel" hidden></div>
+    </section>
+  </main>
+</div>
+
+<div id="globalLoader" class="global-loader" role="status" aria-live="polite" aria-busy="true">
+  <div class="loader-ambient loader-ambient--one" aria-hidden="true"></div>
+  <div class="loader-ambient loader-ambient--two" aria-hidden="true"></div>
+
+  <section class="loader-panel" aria-labelledby="loaderTitle" aria-describedby="loaderMessage">
+    <div class="loader-brand-stage" aria-hidden="true">
+      <span class="loader-orbit loader-orbit--outer"></span>
+      <span class="loader-orbit loader-orbit--inner"></span>
+      <div class="loader-logo-frame">
+        <img id="loaderLogo" class="loader-logo-image" alt="" hidden>
+        <span id="loaderFallbackIcon" class="material-symbols-rounded loader-fallback-icon">home_work</span>
+      </div>
+    </div>
+
+    <div class="loader-copy">
+      <span id="loaderBrandName" class="loader-eyebrow">CÁLIDDA 360</span>
+      <h1 id="loaderTitle">Preparando la aplicación</h1>
+      <p id="loaderSubtitle">Estamos configurando tu espacio de trabajo.</p>
+    </div>
+
+    <div class="loader-progress" aria-hidden="true">
+      <span class="loader-progress-bar"></span>
+    </div>
+
+    <div class="loader-status-row">
+      <span class="loader-status-pulse" aria-hidden="true"></span>
+      <span id="loaderMessage">Validando acceso seguro…</span>
+    </div>
+
+    <div id="loaderSteps" class="loader-steps" aria-hidden="true">
+      <span class="is-active" data-loader-step="1"></span>
+      <span data-loader-step="2"></span>
+      <span data-loader-step="3"></span>
+    </div>
+
+    <div class="loader-footer">
+      <span class="material-symbols-rounded" aria-hidden="true">shield_lock</span>
+      <span id="loaderSecurityText">Conexión protegida</span>
+      <span id="loaderVersion" class="loader-version" hidden></span>
+    </div>
+  </section>
+</div>
+
+<div
+  id="appLoader"
+  class="app-loader"
+  role="status"
+  aria-live="polite"
+  aria-busy="false"
+  aria-labelledby="appLoaderTitle"
+  aria-describedby="appLoaderMessage"
+  hidden>
+  <section class="app-loader-card">
+    <span class="app-loader-spinner" aria-hidden="true"></span>
+    <div class="app-loader-copy">
+      <strong id="appLoaderTitle">Procesando solicitud</strong>
+      <span id="appLoaderMessage">Actualizando la información…</span>
+    </div>
+  </section>
+</div>
+
+
+
+  <!-- ESPACIOS DE TRABAJO (WORKSPACES) -->
+  <!--
+  SGT360 — Consola administrativa
+
+  Responsabilidad:
+  Define los acordeones y paneles de usuarios, roles, módulos, permisos, catálogos y
+  configuración.
+
+  Este archivo se incluye desde HTML_000_APP_Index o desde una vista relacionada.
+-->
+
+<template id="administrationTemplate">
+  <section class="admin-workspace">
+    <div class="section-header">
+      <div>
+        <p id="adminWorkspaceEyebrow" class="eyebrow">CENTRO DE CONTROL</p>
+        <h2 id="adminWorkspaceTitle">Administración</h2>
+        <p id="adminWorkspaceDescription">Administra seguridad, estructura comercial y configuración de la aplicación desde bloques independientes.</p>
+      </div>
+      <button class="button button--primary" type="button" data-admin-action="refresh">
+        <span class="material-symbols-rounded">sync</span>
+        Actualizar
+      </button>
+    </div>
+
+    <div id="adminMetrics" class="metric-grid"></div>
+
+    <div class="admin-layout">
+      <div id="adminAccordion" class="admin-accordion">
+        <section class="admin-section-group" data-admin-group="security" aria-labelledby="adminSecurityTitle">
+          <header class="admin-section-heading">
+            <span class="admin-section-heading-icon material-symbols-rounded" aria-hidden="true">admin_panel_settings</span>
+            <span class="admin-section-heading-copy">
+              <strong id="adminSecurityTitle">Seguridad y accesos</strong>
+              <small>Usuarios, roles y permisos que controlan el ingreso y las operaciones disponibles.</small>
+            </span>
+          </header>
+          <div class="admin-section-items">
+        <section class="accordion-item" data-section="users">
+          <button class="accordion-trigger" type="button" aria-expanded="false">
+            <span class="accordion-icon material-symbols-rounded">group</span>
+            <span class="accordion-label">
+              <strong>Usuarios</strong>
+              <small>Altas, datos, roles y estados</small>
+            </span>
+            <span class="accordion-count" data-count="users">—</span>
+            <span class="material-symbols-rounded accordion-chevron">expand_more</span>
+          </button>
+          <div class="accordion-panel" hidden>
+            <div class="toolbar">
+              <label class="search-field">
+                <span class="material-symbols-rounded">search</span>
+                <input id="adminUsersSearch" type="search" placeholder="Buscar por nombre, correo o documento">
+              </label>
+              <button class="button button--secondary" type="button" data-admin-action="new-user">
+                <span class="material-symbols-rounded">person_add</span>
+                Nuevo usuario
+              </button>
+            </div>
+            <div id="adminUsersContent" class="data-region"></div>
+          </div>
+        </section>
+
+        <section class="accordion-item" data-section="roles">
+          <button class="accordion-trigger" type="button" aria-expanded="false">
+            <span class="accordion-icon material-symbols-rounded">badge</span>
+            <span class="accordion-label">
+              <strong>Roles</strong>
+              <small>Roles protegidos y roles configurables con código técnico estable</small>
+            </span>
+            <span class="accordion-count" data-count="roles">—</span>
+            <span class="material-symbols-rounded accordion-chevron">expand_more</span>
+          </button>
+          <div class="accordion-panel" hidden>
+            <div class="toolbar toolbar--end">
+              <button class="button button--secondary" type="button" data-admin-action="new-role">
+                <span class="material-symbols-rounded">add_moderator</span>
+                Nuevo rol
+              </button>
+            </div>
+            <div id="adminRolesContent" class="data-region"></div>
+          </div>
+        </section>
+
+        <section class="accordion-item" data-section="permissions">
+          <button class="accordion-trigger" type="button" aria-expanded="false">
+            <span class="accordion-icon material-symbols-rounded">shield_person</span>
+            <span class="accordion-label">
+              <strong>Permisos y delegación</strong>
+              <small>Visualizar módulo, acciones, campos y alcance</small>
+            </span>
+            <span class="material-symbols-rounded accordion-chevron">expand_more</span>
+          </button>
+          <div class="accordion-panel" hidden>
+            <div class="toolbar">
+              <label class="select-field">
+                <span>Rol</span>
+                <select id="adminPermissionRole"></select>
+              </label>
+              <button class="button button--primary" type="button" data-admin-action="save-permissions">
+                <span class="material-symbols-rounded">save</span>
+                Guardar permisos
+              </button>
+            </div>
+            <div id="adminPermissionsContent" class="permission-region"></div>
+          </div>
+        </section>
+          </div>
+        </section>
+
+        <section class="admin-section-group" data-admin-group="structure" aria-labelledby="adminStructureTitle">
+          <header class="admin-section-heading">
+            <span class="admin-section-heading-icon material-symbols-rounded" aria-hidden="true">account_tree</span>
+            <span class="admin-section-heading-copy">
+              <strong id="adminStructureTitle">Estructura comercial</strong>
+              <small>Tablas maestras independientes para proveedores, oficinas de venta y grupos de vendedores.</small>
+            </span>
+          </header>
+          <div class="admin-section-items">
+            <section class="accordion-item" data-section="providers">
+              <button class="accordion-trigger" type="button" aria-expanded="false">
+                <span class="accordion-icon material-symbols-rounded">storefront</span>
+                <span class="accordion-label">
+                  <strong>Proveedores</strong>
+                  <small>Registro y asignación de las oficinas disponibles para cada proveedor</small>
+                </span>
+                <span class="accordion-count" data-count="providers">—</span>
+                <span class="material-symbols-rounded accordion-chevron">expand_more</span>
+              </button>
+              <div class="accordion-panel" hidden>
+                <div class="assignment-import-note">
+                  <span class="material-symbols-rounded">info</span>
+                  <div>
+                    <strong>Proveedores y oficinas asignadas</strong>
+                    <p>Al crear un proveedor debes seleccionar una o varias oficinas activas. La carga CSV realiza UPSERT y no elimina registros ausentes.</p>
+                  </div>
+                </div>
+                <article class="organization-card organization-card--single">
+                  <div class="organization-card-head">
+                    <div>
+                      <strong>Proveedores</strong>
+                      <small>Administra los datos del proveedor y las oficinas que tendrá disponibles</small>
+                    </div>
+                    <div class="organization-card-actions">
+                      <button class="button button--ghost button--compact" type="button" data-admin-action="template-providers" title="Descargar plantilla de proveedores">
+                        <span class="material-symbols-rounded">download</span>
+                        Plantilla
+                      </button>
+                      <button class="button button--secondary button--compact" type="button" data-admin-action="import-providers">
+                        <span class="material-symbols-rounded">upload_file</span>
+                        Importar
+                      </button>
+                      <button class="button button--ghost button--compact" type="button" data-admin-action="template-provider-offices" title="Descargar plantilla de relación proveedor-oficina">
+                        <span class="material-symbols-rounded">account_tree</span>
+                        Relaciones
+                      </button>
+                      <button class="button button--secondary button--compact" type="button" data-admin-action="import-provider-offices" title="Importar relación proveedor-oficina">
+                        <span class="material-symbols-rounded">upload_file</span>
+                        Asignar oficinas
+                      </button>
+                      <button class="button button--secondary button--compact" type="button" data-admin-action="new-provider">
+                        <span class="material-symbols-rounded">add_business</span>
+                        Nuevo
+                      </button>
+                    </div>
+                  </div>
+                  <div id="adminProvidersContent" class="data-region"></div>
+                </article>
+              </div>
+            </section>
+
+            <section class="accordion-item" data-section="offices-groups">
+              <button class="accordion-trigger" type="button" aria-expanded="false">
+                <span class="accordion-icon material-symbols-rounded">lan</span>
+                <span class="accordion-label">
+                  <strong>Oficinas y grupos</strong>
+                  <small>Oficinas independientes y grupos vinculados obligatoriamente a una oficina</small>
+                </span>
+                <span class="accordion-count" data-count="offices-groups">—</span>
+                <span class="material-symbols-rounded accordion-chevron">expand_more</span>
+              </button>
+              <div class="accordion-panel" hidden>
+                <div class="assignment-import-note">
+                  <span class="material-symbols-rounded">info</span>
+                  <div>
+                    <strong>Maestros de oficinas y grupos</strong>
+                    <p>Las oficinas son independientes y pueden asignarse a varios proveedores. Cada grupo debe pertenecer a una oficina activa.</p>
+                  </div>
+                </div>
+                <div class="organization-grid organization-grid--two">
+                  <article class="organization-card">
+                    <div class="organization-card-head">
+                      <div>
+                        <strong>Oficinas</strong>
+                        <small>Maestro independiente reutilizable por uno o varios proveedores</small>
+                      </div>
+                      <div class="organization-card-actions">
+                        <button class="button button--ghost button--compact" type="button" data-admin-action="template-offices" title="Descargar plantilla de oficinas">
+                          <span class="material-symbols-rounded">download</span>
+                          Plantilla
+                        </button>
+                        <button class="button button--secondary button--compact" type="button" data-admin-action="import-offices">
+                          <span class="material-symbols-rounded">upload_file</span>
+                          Importar
+                        </button>
+                        <button class="button button--secondary button--compact" type="button" data-admin-action="new-office">
+                          <span class="material-symbols-rounded">add_location_alt</span>
+                          Nueva
+                        </button>
+                      </div>
+                    </div>
+                    <div id="adminOfficesContent" class="data-region"></div>
+                  </article>
+
+                  <article class="organization-card">
+                    <div class="organization-card-head">
+                      <div>
+                        <strong>Grupos</strong>
+                        <small>Cada grupo pertenece obligatoriamente a una oficina</small>
+                      </div>
+                      <div class="organization-card-actions">
+                        <button class="button button--ghost button--compact" type="button" data-admin-action="template-groups" title="Descargar plantilla de grupos">
+                          <span class="material-symbols-rounded">download</span>
+                          Plantilla
+                        </button>
+                        <button class="button button--secondary button--compact" type="button" data-admin-action="import-groups">
+                          <span class="material-symbols-rounded">upload_file</span>
+                          Importar
+                        </button>
+                        <button class="button button--secondary button--compact" type="button" data-admin-action="new-group">
+                          <span class="material-symbols-rounded">group_add</span>
+                          Nuevo
+                        </button>
+                      </div>
+                    </div>
+                    <div id="adminGroupsContent" class="data-region"></div>
+                  </article>
+                </div>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section class="admin-section-group" data-admin-group="configuration" aria-labelledby="adminConfigurationTitle">
+          <header class="admin-section-heading">
+            <span class="admin-section-heading-icon material-symbols-rounded" aria-hidden="true">settings_suggest</span>
+            <span class="admin-section-heading-copy">
+              <strong id="adminConfigurationTitle">Configuración de la aplicación</strong>
+              <small>Módulos, navegación, catálogos, recursos visuales y parámetros funcionales.</small>
+            </span>
+          </header>
+          <div class="admin-section-items">
+        <section class="accordion-item" data-section="modules">
+          <button class="accordion-trigger" type="button" aria-expanded="false">
+            <span class="accordion-icon material-symbols-rounded">dashboard_customize</span>
+            <span class="accordion-label">
+              <strong>Módulos y navegación</strong>
+              <small>Constructor de módulos simples y sus campos</small>
+            </span>
+            <span class="accordion-count" data-count="modules">—</span>
+            <span class="material-symbols-rounded accordion-chevron">expand_more</span>
+          </button>
+          <div class="accordion-panel" hidden>
+            <div class="toolbar toolbar--end">
+              <button class="button button--secondary" type="button" data-admin-action="new-module">
+                <span class="material-symbols-rounded">add_box</span>
+                Nuevo módulo
+              </button>
+            </div>
+            <div id="adminModulesContent" class="module-builder-grid"></div>
+          </div>
+        </section>
+
+        <section class="accordion-item" data-section="catalogs">
+          <button class="accordion-trigger" type="button" aria-expanded="false">
+            <span class="accordion-icon material-symbols-rounded">lists</span>
+            <span class="accordion-label">
+              <strong>Catálogos</strong>
+              <small>Listas y valores reutilizables</small>
+            </span>
+            <span class="accordion-count" data-count="catalogs">—</span>
+            <span class="material-symbols-rounded accordion-chevron">expand_more</span>
+          </button>
+          <div class="accordion-panel" hidden>
+            <div class="toolbar toolbar--end">
+              <button class="button button--secondary" type="button" data-admin-action="new-catalog">
+                <span class="material-symbols-rounded">playlist_add</span>
+                Nuevo catálogo
+              </button>
+            </div>
+            <div id="adminCatalogsContent" class="data-region"></div>
+          </div>
+        </section>
+
+        <section class="accordion-item" data-section="visual-resources">
+          <button class="accordion-trigger" type="button" aria-expanded="false">
+            <span class="accordion-icon material-symbols-rounded">palette</span>
+            <span class="accordion-label">
+              <strong>Recursos visuales</strong>
+              <small>Logos, favicon, banners e imágenes</small>
+            </span>
+            <span class="accordion-count" data-count="resources">—</span>
+            <span class="material-symbols-rounded accordion-chevron">expand_more</span>
+          </button>
+          <div class="accordion-panel" hidden>
+            <div class="toolbar toolbar--end">
+              <button class="button button--secondary" type="button" data-admin-action="new-resource">
+                <span class="material-symbols-rounded">add_photo_alternate</span>
+                Nuevo recurso
+              </button>
+            </div>
+            <div id="adminResourcesContent" class="data-region"></div>
+          </div>
+        </section>
+
+        <section class="accordion-item" data-section="settings">
+          <button class="accordion-trigger" type="button" aria-expanded="false">
+            <span class="accordion-icon material-symbols-rounded">tune</span>
+            <span class="accordion-label">
+              <strong>Configuración</strong>
+              <small>Intervalos, apariencia y parámetros funcionales</small>
+            </span>
+            <span class="material-symbols-rounded accordion-chevron">expand_more</span>
+          </button>
+          <div class="accordion-panel" hidden>
+            <div id="adminSettingsContent" class="settings-grid"></div>
+          </div>
+        </section>
+          </div>
+        </section>
+
+        <section class="admin-section-group" data-admin-group="audit" aria-labelledby="adminAuditTitle">
+          <header class="admin-section-heading">
+            <span class="admin-section-heading-icon material-symbols-rounded" aria-hidden="true">manage_search</span>
+            <span class="admin-section-heading-copy">
+              <strong id="adminAuditTitle">Auditoría</strong>
+              <small>Sesiones activas, accesos, eventos operativos y modificaciones de permisos.</small>
+            </span>
+          </header>
+          <div class="admin-section-items">
+            <section class="accordion-item" data-section="audit">
+              <button class="accordion-trigger" type="button" aria-expanded="false">
+                <span class="accordion-icon material-symbols-rounded">key</span>
+                <span class="accordion-label">
+                  <strong>Sesiones activas</strong>
+                  <small>Consulta sesiones abiertas, vigentes, vencidas y cierre forzado</small>
+                </span>
+                <span class="accordion-count" data-count="sessions">—</span>
+                <span class="material-symbols-rounded accordion-chevron">expand_more</span>
+              </button>
+              <div class="accordion-panel" hidden>
+                <div class="toolbar">
+                  <label class="search-field">
+                    <span class="material-symbols-rounded">search</span>
+                    <input id="adminSessionsSearch" type="search" placeholder="Buscar por usuario, correo, rol, proveedor o módulo">
+                  </label>
+                  <label class="select-field">
+                    <span>Estado</span>
+                    <select id="adminSessionsState">
+                      <option value="ACTIVAS">Abiertas</option>
+                      <option value="VIGENTES">Vigentes</option>
+                      <option value="VENCIDAS">Abiertas vencidas</option>
+                      <option value="CERRADAS">Cerradas</option>
+                      <option value="EXPIRADAS">Expiradas</option>
+                      <option value="BLOQUEADAS">Bloqueadas</option>
+                      <option value="TODAS">Todas</option>
+                    </select>
+                  </label>
+                  <button class="button button--ghost" type="button" data-admin-action="refresh-sessions">
+                    <span class="material-symbols-rounded">refresh</span>
+                    Actualizar sesiones
+                  </button>
+                  <button class="button button--ghost" type="button" data-admin-action="expire-sessions">
+                    <span class="material-symbols-rounded">auto_delete</span>
+                    Limpiar expiradas
+                  </button>
+                </div>
+                <div id="adminSessionsContent" class="data-region"></div>
+              </div>
+            </section>
+
+            <section class="accordion-item" data-section="audit">
+              <button class="accordion-trigger" type="button" aria-expanded="false">
+                <span class="accordion-icon material-symbols-rounded">history</span>
+                <span class="accordion-label">
+                  <strong>Registros de auditoría</strong>
+                  <small>Consulta consolidada y ordenada de los eventos más recientes</small>
+                </span>
+                <span class="accordion-count" data-count="audit">—</span>
+                <span class="material-symbols-rounded accordion-chevron">expand_more</span>
+              </button>
+              <div class="accordion-panel" hidden>
+                <div class="toolbar">
+                  <label class="search-field">
+                    <span class="material-symbols-rounded">search</span>
+                    <input id="adminAuditSearch" type="search" placeholder="Buscar por usuario, módulo, acción o resultado">
+                  </label>
+                  <label class="select-field">
+                    <span>Tipo</span>
+                    <select id="adminAuditType">
+                      <option value="TODOS">Todos</option>
+                      <option value="ACCESOS">Accesos</option>
+                      <option value="EVENTOS">Eventos</option>
+                      <option value="PERMISOS">Permisos</option>
+                    </select>
+                  </label>
+                </div>
+                <div id="adminAuditContent" class="data-region"></div>
+              </div>
+            </section>
+          </div>
+        </section>
+      </div>
+    </div>
+  </section>
+</template>
+
+  <!-- SGT360 — Workspace especializado de proveedores -->
+<template id="providersWorkspaceTemplate">
+  <section class="providers-workspace" aria-labelledby="providersWorkspaceTitle">
+    <header class="providers-header">
+      <div class="providers-header-copy">
+        <p class="eyebrow">MAESTRO GENERAL</p>
+        <h2 id="providersWorkspaceTitle">Proveedores</h2>
+        <p>Consulta la razón social, el nombre comercial y el código interno permanente. El canal de ventas por oficina es opcional: úsalo solo si el proveedor también vende.</p>
+      </div>
+      <div class="providers-actions">
+        <button id="providersTemplateButton" class="button button--ghost" type="button">
+          <span class="material-symbols-rounded">download</span> Plantilla masiva
+        </button>
+        <button id="providersImportButton" class="button button--secondary" type="button">
+          <span class="material-symbols-rounded">upload_file</span> Carga masiva
+        </button>
+        <button id="providersExportButton" class="button button--secondary" type="button">
+          <span class="material-symbols-rounded">file_download</span> Exportar
+        </button>
+        <button id="providersNewButton" class="button button--primary" type="button">
+          <span class="material-symbols-rounded">add_business</span> Nuevo proveedor
+        </button>
+        <input id="providersImportInput" type="file" accept=".csv,text/csv" hidden>
+      </div>
+    </header>
+
+    <div id="providersSummary" class="providers-summary"></div>
+
+    <section class="providers-panel">
+      <div class="providers-toolbar">
+        <label class="search-field">
+          <span class="material-symbols-rounded">search</span>
+          <input id="providersSearch" type="search" placeholder="Buscar por código interno, razón social, nombre comercial, código SAP o RUC">
+        </label>
+        <label class="select-field">
+          <span>Estado</span>
+          <select id="providersStatusFilter">
+            <option value="TODOS">Todos</option>
+            <option value="ACTIVO" selected>Activos</option>
+            <option value="INACTIVO">Inactivos</option>
+          </select>
+        </label>
+      </div>
+      <div id="providersContent" class="providers-table-wrap"></div>
+      <div id="providersPagination" class="providers-pagination"></div>
+    </section>
+  </section>
+</template>
+
+  <!-- SGT360 — Workspace Materiales y Precios -->
+<template id="materialsPricesWorkspaceTemplate">
+  <section class="mp-workspace" aria-labelledby="mpWorkspaceTitle">
+    <header class="providers-header mp-header">
+      <div class="providers-header-copy">
+        <p class="eyebrow">COMERCIAL</p>
+        <h2 id="mpWorkspaceTitle">Materiales y Precios</h2>
+        <p>Gestiona materiales universales, precios por proveedor y listas de precios por negocio, oficina, grupo y vigencia.</p>
+      </div>
+      <div class="providers-actions">
+        <button id="mpRefreshButton" class="button button--secondary" type="button">
+          <span class="material-symbols-rounded">refresh</span>Actualizar
+        </button>
+      </div>
+    </header>
+
+    <nav id="mpTabs" class="mp-tabs" aria-label="Secciones de Materiales y Precios">
+      <button type="button" data-mp-tab="summary">Resumen</button>
+      <button type="button" data-mp-tab="materials">Materiales</button>
+      <button type="button" data-mp-tab="prices">Precios</button>
+      <button type="button" data-mp-tab="lists">Listas</button>
+    </nav>
+
+    <div id="mpRegion" class="mp-region"></div>
+  </section>
+</template>
+
+<style>
+  .mp-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 18px}
+  .mp-tabs button{border:1px solid var(--border-color,#d8e0ea);background:#fff;border-radius:999px;padding:9px 14px;font-weight:700;color:#42526e;cursor:pointer}
+  .mp-tabs button.is-active{background:var(--primary-500,#00A1DE);border-color:var(--primary-500,#00A1DE);color:#fff}
+  .mp-region{display:block}
+  .mp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:18px}
+  .mp-card{background:#fff;border:1px solid var(--border-color,#d8e0ea);border-radius:18px;padding:16px;box-shadow:0 10px 24px rgba(20,34,65,.06)}
+  .mp-card small{display:block;color:#6b778c;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+  .mp-card strong{font-size:28px;display:block;margin-top:6px}
+  .mp-panel{background:#fff;border:1px solid var(--border-color,#d8e0ea);border-radius:20px;padding:18px;box-shadow:0 10px 24px rgba(20,34,65,.06);margin-bottom:16px}
+  .mp-form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:12px 0}
+  .mp-form-grid label{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:800;color:#42526e;text-transform:uppercase;letter-spacing:.03em}
+  .mp-form-grid input,.mp-form-grid select,.mp-form-grid textarea{border:1px solid var(--border-color,#d8e0ea);border-radius:14px;padding:12px 14px;font:inherit;text-transform:none;background:#fff}
+
+  .mp-field-label{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .mp-field-info{position:relative;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:999px;background:#eef6fb;color:#0077a8;font-size:13px;line-height:1;cursor:help;flex:0 0 auto}
+  .mp-field-info .material-symbols-rounded{font-size:16px;line-height:1}
+  .mp-field-info::after{content:attr(data-tooltip);position:absolute;right:0;top:calc(100% + 8px);width:max-content;max-width:240px;padding:9px 11px;border-radius:12px;background:#172b4d;color:#fff;font-size:12px;font-weight:600;line-height:1.35;text-transform:none;letter-spacing:0;box-shadow:0 12px 28px rgba(9,30,66,.22);opacity:0;visibility:hidden;transform:translateY(-4px);transition:opacity .15s ease,transform .15s ease,visibility .15s ease;z-index:10050;white-space:normal}
+  .mp-field-info::before{content:"";position:absolute;right:6px;top:calc(100% + 3px);border:5px solid transparent;border-bottom-color:#172b4d;opacity:0;visibility:hidden;transition:opacity .15s ease,visibility .15s ease;z-index:10051}
+  .mp-field-info:hover::after,.mp-field-info:focus::after,.mp-field-info:hover::before,.mp-field-info:focus::before{opacity:1;visibility:visible;transform:translateY(0)}
+  .mp-form-grid textarea{min-height:92px;resize:vertical}.mp-form-span-2{grid-column:span 2}
+  .mp-table-wrap{overflow:auto;border:1px solid var(--border-color,#d8e0ea);border-radius:16px}
+  .mp-table{width:100%;border-collapse:collapse;background:#fff}
+  .mp-table th,.mp-table td{padding:10px 12px;border-bottom:1px solid var(--border-color,#e8edf3);text-align:left;vertical-align:top}
+  .mp-table th{font-size:12px;text-transform:uppercase;color:#6b778c;background:#f7f9fc}
+  .mp-status{display:inline-flex;border-radius:999px;padding:4px 8px;background:#eef4ff;font-size:12px;font-weight:800}
+  .mp-status.ERROR,.mp-status.OBSERVADO_POR_SISTEMA,.mp-status.RECHAZADO{background:#ffebe6;color:#bf2600}
+  .mp-status.ADVERTENCIA,.mp-status.EN_REVISION,.mp-status.OBSERVADO_POR_REVISOR{background:#fff4d6;color:#8a5a00}
+  .mp-status.OK,.mp-status.APROBADO,.mp-status.PUBLICADO,.mp-status.ACTIVO{background:#e3fcef;color:#006644}
+  .mp-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .mp-detail-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:14px}
+  .mp-note{padding:12px;border-radius:14px;background:#f7f9fc;color:#42526e}
+  .mp-note strong{font-weight:800}
+  .mp-observation{margin-top:14px;padding:14px 16px;border-radius:16px;background:#f7f9fc;border:1px solid #e7edf4;color:#42526e;line-height:1.55}
+  .mp-hidden{display:none!important}
+  .mp-modal-backdrop{position:fixed;inset:0;background:rgba(9,30,66,.38);z-index:9999;display:flex;align-items:stretch;justify-content:flex-end}
+  .mp-modal{width:min(760px,100%);background:#fff;box-shadow:-18px 0 40px rgba(9,30,66,.2);padding:22px;overflow:auto}
+  .mp-modal--wide{width:min(1040px,100%)}
+  .mp-modal-header{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;border-bottom:1px solid var(--border-color,#e8edf3);padding-bottom:14px;margin-bottom:18px}
+  .mp-modal-close{border:0;background:#f4f6f8;border-radius:999px;width:38px;height:38px;cursor:pointer}
+  .mp-upload-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:12px 0}
+  .mp-upload-summary div{background:#f7f9fc;border-radius:14px;padding:10px}
+  .mp-upload-summary small{display:block;color:#6b778c;font-weight:700}
+  .mp-upload-summary strong{font-size:22px}
+  .mp-inline-loader{display:flex;align-items:center;gap:10px;background:#f7f9fc;border-radius:14px;padding:12px;color:#42526e}
+  .mp-toolbar{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}
+
+  .mp-section-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;min-height:74px}
+  .mp-section-title h3{margin:0 0 6px}
+  .mp-section-title p{margin:0;color:#6b778c}
+  .mp-section-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:flex-end}
+  .mp-section-search{margin-top:14px;max-width:460px}
+  .mp-section-search .search-field{width:100%}
+
+  .mp-filter-row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;max-width:none}
+  .mp-filter-row .search-field{min-width:min(420px,100%);flex:1 1 320px}
+  .mp-filter-control{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:800;color:#42526e;text-transform:uppercase;letter-spacing:.03em;min-width:150px}
+  .mp-filter-control select{border:1px solid var(--border-color,#d8e0ea);border-radius:14px;padding:10px 12px;font:inherit;text-transform:none;background:#fff}
+  .mp-price-filter-bar{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-top:14px}
+  .mp-price-filter-bar .mp-section-search{margin-top:0;flex:1 1 620px}
+  .mp-price-filter-bar #mpDownloadPrices{margin-left:auto;align-self:flex-end}
+  .mp-material-bulk-result{margin-top:10px}
+
+  .mp-material-header{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:start}
+  .mp-material-search-row{margin-top:14px;max-width:460px}
+  .mp-material-search-row .search-field{width:100%}
+  .mp-combo-help{margin-top:12px;padding:14px 16px;border-radius:16px;background:#fff;border:1px dashed #c8d7e6;color:#42526e;line-height:1.55}
+  .mp-combo-help strong{color:#23384d}
+  .mp-toolbar-copy h3{margin:0 0 4px}
+  .mp-toolbar-copy p{margin:0;color:#6b778c}
+  .mp-toolbar-actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+  .mp-toolbar .search-field{min-width:min(320px,100%)}
+  .mp-modern-form{display:grid;gap:18px}
+  .mp-upload-hero{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap;padding:16px 18px;border-radius:18px;background:linear-gradient(135deg,#f7fbff 0%,#f2f6fb 100%);border:1px solid #e6eef7}
+  .mp-upload-hero p{margin:6px 0 0;color:#51637a;max-width:620px}
+  .mp-upload-badges{display:flex;gap:8px;flex-wrap:wrap}
+  .mp-badge{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:999px;background:#fff;border:1px solid #d9e6f2;color:#1f3b57;font-size:12px;font-weight:800}
+  .mp-modal-section{border:1px solid #e7edf4;border-radius:18px;padding:16px;background:#fff}
+  .mp-modal-section h4{margin:0 0 4px;font-size:16px}
+  .mp-modal-section p{margin:0 0 14px;color:#6b778c}
+  .mp-upload-layout{display:grid;grid-template-columns:minmax(0,1.75fr) minmax(260px,.95fr);gap:16px;align-items:start}
+  .mp-upload-sidebar{display:grid;gap:16px}
+  .mp-file-field input[type="file"]{padding:14px;background:#f9fbfd;border-style:dashed}
+  .mp-scope-card,.mp-help-card{padding:16px;border-radius:18px;background:#f7f9fc;border:1px solid #e5edf6;color:#42526e;line-height:1.6}
+  .mp-scope-card strong,.mp-help-card strong{display:block;margin-bottom:8px;color:#23384d}
+  .mp-help-card ul{margin:0;padding-left:18px}
+  .mp-help-card li + li{margin-top:6px}
+  .mp-upload-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+  @media(max-width:920px){.mp-upload-layout{grid-template-columns:1fr}.mp-toolbar-actions{justify-content:flex-start}.mp-toolbar .search-field{min-width:100%}.mp-material-header{grid-template-columns:1fr}.mp-material-search-row{max-width:100%}}
+  @media(max-width:720px){.mp-detail-head{display:block}.mp-actions{margin-top:10px}.mp-table th,.mp-table td{white-space:nowrap}.mp-modal{width:100%}.mp-upload-hero{display:block}}
+
+  .mp-price-alert{display:flex;align-items:flex-start;gap:10px;margin:12px 0;padding:12px 14px;border-radius:14px;background:#fff7ed;color:#9a3412;border:1px solid #fed7aa;font-size:13px;font-weight:700}
+  .mp-price-alert[hidden]{display:none!important}.mp-price-alert .material-symbols-rounded{font-size:20px}
+</style>
+
+  <!--
+  SGT360 — Workspace Registro de ventas al contado
+  Paso 29X: gestión de entrega enfocada al proveedor, estados dinámicos y anulación por responsable.
+-->
+<style>
+  .sales-workspace { display: grid; gap: 18px; }
+  .sales-main-header { align-items: flex-start; gap: 16px; }
+  .sales-card { background: var(--surface, #fff); border: 1px solid var(--border, #e5e7eb); border-radius: 18px; padding: 18px; box-shadow: 0 10px 30px rgba(15,23,42,.06); }
+  .sales-card h3 { margin: 0 0 6px; }
+  .sales-list-head { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 14px; }
+  .sales-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .sales-form-grid .span-2 { grid-column: 1 / -1; }
+  .sales-radio-row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .sales-radio-row label { display: inline-flex; align-items: center; gap: 6px; padding: 9px 12px; border: 1px solid var(--border, #e5e7eb); border-radius: 999px; background: #fff; cursor: pointer; }
+  .sales-step-intro { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 18px; }
+  .sales-step-intro > .material-symbols-rounded { width: 42px; height: 42px; display: inline-grid; place-items: center; border-radius: 14px; background: rgba(0,161,222,.12); color: var(--primary, #00A1DE); }
+  .sales-step-intro h3, .sales-modal-heading h3 { margin: 0 0 4px; }
+  .sales-step-intro p, .sales-modal-heading p { margin: 0; color: #64748b; }
+  .sales-type-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+  .sales-type-card { text-align: left; border: 1px solid var(--border, #e5e7eb); background: #fff; border-radius: 18px; padding: 18px; display: grid; gap: 8px; cursor: pointer; transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease; }
+  .sales-type-card:hover { transform: translateY(-1px); border-color: var(--primary, #00A1DE); box-shadow: 0 12px 26px rgba(15,23,42,.08); }
+  .sales-type-card .material-symbols-rounded { color: var(--primary, #00A1DE); font-size: 30px; }
+  .sales-type-card small { color: #64748b; }
+  .sales-modal-heading { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border, #e5e7eb); }
+  .sales-items-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+  .sales-items-table th, .sales-items-table td { padding: 8px; border-bottom: 1px solid var(--border, #e5e7eb); text-align: left; vertical-align: top; }
+  .sales-items-table th { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: #64748b; }
+  .sales-summary-line { display: flex; justify-content: space-between; gap: 12px; font-weight: 700; margin-top: 12px; }
+  .sales-warning { padding: 10px 12px; border-radius: 12px; background: #fff7ed; color: #9a3412; font-size: 13px; }
+  .sales-muted { color: #64748b; font-size: 13px; }
+  .sales-badge { display: inline-flex; align-items: center; border-radius: 999px; padding: 4px 9px; font-size: 12px; font-weight: 700; }
+  .sales-badge--ok { background: #ecfdf5; color: #047857; }
+  .sales-badge--pending { background: #fff7ed; color: #c2410c; }
+  .sales-badge--warning { background: #fef3c7; color: #92400e; }
+
+  .sales-row-actions{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:wrap;min-width:180px}
+  .sales-row-actions .button{white-space:nowrap}
+  .sales29-actions-stack{display:flex;flex-direction:column;align-items:flex-end;gap:8px;min-width:220px}
+  .sales29-actions-row{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+  .sales29-actions-row--secondary .button{min-width:136px;justify-content:center}
+
+  .sales-validation-box{display:grid;gap:10px;border:1px solid #e5edf6;border-radius:16px;background:#f8fbff;padding:12px;margin-top:12px}
+  .sales-detail-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(240px, .7fr); gap: 16px; padding: 12px; border-radius: 16px; background: #f8fafc; margin-bottom: 14px; }
+  .sales-detail-grid p { margin: 0 0 8px; }
+  .empty-state--compact { padding: 16px; }
+
+  /* Paso 29K — comprador, receptor y datos operativos de entrega */
+  .sales29-info-note{
+    display:flex;
+    align-items:flex-start;
+    gap:9px;
+    padding:11px 13px;
+    border:1px solid #dbeafe;
+    border-radius:14px;
+    background:#f8fbff;
+    color:#475569;
+    font-size:12px;
+    font-weight:650;
+    line-height:1.45;
+  }
+  .sales29-info-note .material-symbols-rounded{
+    font-size:19px;
+    color:var(--primary,#00A1DE);
+    flex:0 0 auto;
+  }
+  .sales29-delivery-subsection-title{
+    margin:14px 0 8px;
+    color:#334155;
+    font-size:12px;
+    font-weight:900;
+    text-transform:uppercase;
+    letter-spacing:.045em;
+  }
+  .sales29-delivery-subsection-title:first-child{
+    margin-top:0;
+  }
+  .sales29-delivery-receiver-legacy{
+    margin-top:14px;
+  }
+
+
+  /* Paso 29J — estado global y estado de entrega por material */
+  .status-pill.is-info{
+    background:#eff6ff;
+    color:#1d4ed8;
+  }
+
+  .status-pill.is-muted{
+    background:#f1f5f9;
+    color:#64748b;
+  }
+
+  .sales29-sale-products-section{
+    padding:16px;
+  }
+
+  .sales29-items-table-wrap{
+    width:100%;
+    overflow-x:auto;
+    border:1px solid #e5edf6;
+    border-radius:16px;
+    background:#fff;
+  }
+
+  .sales29-sale-products-section .sales-items-table{
+    margin-top:0;
+    border:0;
+    border-radius:0;
+    min-width:820px;
+  }
+
+  .sales29-material-status{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+    gap:6px;
+    min-width:150px;
+  }
+
+  .sales29-material-status-detail{
+    display:flex !important;
+    align-items:flex-start;
+    gap:5px;
+    margin-top:0 !important;
+    color:#64748b;
+    font-size:11px;
+    line-height:1.35;
+    max-width:230px;
+  }
+
+  .sales29-material-status-detail .material-symbols-rounded{
+    font-size:15px;
+    line-height:1;
+    flex:0 0 auto;
+  }
+
+  .sales29-material-status-detail.is-observed{
+    color:#be123c;
+  }
+
+
+  /* Paso 29K — anulación lógica de material */
+  .sales29-cancel-item-btn{
+    margin-top:9px;
+  }
+
+  .sales29-cancel-item-btn .material-symbols-rounded{
+    font-size:17px;
+  }
+
+  .sales29-item-row-cancelled{
+    background:#f8fafc;
+  }
+
+  .sales29-item-row-cancelled > td:first-child > strong{
+    color:#64748b;
+    text-decoration:line-through;
+  }
+
+  .sales29-item-cancel-detail{
+    margin-top:7px;
+    display:flex;
+    flex-direction:column;
+    gap:3px;
+    max-width:230px;
+  }
+
+  .sales29-item-cancel-detail strong{
+    color:#be123c;
+    font-size:11px;
+  }
+
+  .sales29-item-cancel-detail small{
+    color:#64748b;
+    font-size:11px;
+    line-height:1.35;
+  }
+
+  .sales29-financial-grid{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:10px;
+  }
+
+  .sales29-financial-grid > div{
+    min-height:72px;
+    padding:12px 14px;
+    border:1px solid #e5edf6;
+    border-radius:14px;
+    background:#fff;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    gap:5px;
+  }
+
+  .sales29-financial-grid small{
+    color:#64748b;
+    font-size:11px;
+    font-weight:750;
+  }
+
+  .sales29-financial-grid strong{
+    color:#0f172a;
+    font-size:16px;
+  }
+
+  .sales29-financial-alert{
+    margin-top:12px;
+    padding:12px 14px;
+    display:flex;
+    gap:10px;
+    align-items:flex-start;
+    border:1px solid #fed7aa;
+    border-radius:14px;
+    background:#fff7ed;
+    color:#9a3412;
+  }
+
+  .sales29-financial-alert .material-symbols-rounded{
+    font-size:20px;
+    flex:0 0 auto;
+  }
+
+  .sales29-financial-alert > div{
+    display:flex;
+    flex-direction:column;
+    gap:3px;
+  }
+
+  .sales29-financial-alert strong{
+    font-size:12px;
+  }
+
+  .sales29-financial-alert span{
+    font-size:11px;
+    line-height:1.45;
+  }
+
+  .sales29-delivery-product-card.is-cancelled{
+    background:#f8fafc;
+    border-style:dashed;
+    opacity:.86;
+  }
+
+  .sales29-delivery-product-card.is-cancelled
+  .sales29-delivery-product-title > strong{
+    color:#64748b;
+    text-decoration:line-through;
+  }
+
+  .sales29-delivery-item-cancelled{
+    margin-top:9px;
+    padding:9px 10px;
+    display:flex;
+    align-items:flex-start;
+    gap:8px;
+    border-radius:12px;
+    background:#fff1f2;
+    color:#be123c;
+    font-size:11px;
+  }
+
+  .sales29-delivery-item-cancelled .material-symbols-rounded{
+    font-size:17px;
+  }
+
+  .sales29-delivery-item-cancelled span:last-child{
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+  }
+
+  .sales29-delivery-item-cancelled small{
+    color:#64748b;
+    line-height:1.35;
+  }
+
+  @media (max-width: 760px){
+    .sales29-financial-grid{
+      grid-template-columns:1fr;
+    }
+  }
+
+  @media (max-width: 1080px) { .sales-form-grid, .sales-type-grid, .sales-detail-grid { grid-template-columns: 1fr; } .sales-form-grid .span-2 { grid-column: auto; } .sales-list-head, .sales-modal-heading, .sales-main-header { flex-direction: column; } .sales29-actions-stack{min-width:100%;align-items:stretch}.sales29-actions-row{justify-content:flex-start}.sales29-actions-row--secondary .button{min-width:0} }
+
+  .sales-workspace .input-field{position:relative;display:flex;flex-direction:column;gap:7px;font-size:12px;font-weight:800;color:#475569;text-transform:uppercase;letter-spacing:.035em}
+  .sales-workspace .input-field input,.sales-workspace .input-field select,.sales-workspace .input-field textarea,.modal-card .sales-form-grid .input-field input,.modal-card .sales-form-grid .input-field select,.modal-card .sales-form-grid .input-field textarea{width:100%;box-sizing:border-box;border:1px solid #dbe4ef;border-radius:15px;background:#fff;padding:12px 14px;font:inherit;color:#0f172a;text-transform:none;letter-spacing:0;box-shadow:0 1px 0 rgba(15,23,42,.02);transition:border-color .16s ease,box-shadow .16s ease,background .16s ease}
+  .sales-workspace .input-field select,.modal-card .sales-form-grid .input-field select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,#64748b 50%),linear-gradient(135deg,#64748b 50%,transparent 50%);background-position:calc(100% - 18px) 52%,calc(100% - 12px) 52%;background-size:6px 6px,6px 6px;background-repeat:no-repeat;padding-right:38px}
+  .sales-workspace .input-field input:focus,.sales-workspace .input-field select:focus,.sales-workspace .input-field textarea:focus,.modal-card .sales-form-grid .input-field input:focus,.modal-card .sales-form-grid .input-field select:focus,.modal-card .sales-form-grid .input-field textarea:focus{outline:none;border-color:var(--primary,#00A1DE);box-shadow:0 0 0 4px rgba(0,161,222,.13)}
+  .sales-workspace .input-field select:disabled,.modal-card .sales-form-grid .input-field select:disabled{background-color:#f8fafc;color:#64748b;cursor:not-allowed}
+  .sales-form-grid{background:linear-gradient(180deg,#fff,#f8fbff);border:1px solid #e5edf6;border-radius:20px;padding:18px;box-shadow:0 14px 34px rgba(15,23,42,.06)}
+  .sales-form-grid hr{border:0;border-top:1px solid #e5edf6;width:100%;margin:4px 0}
+  .sales-step-intro--modern{padding:16px;border:1px solid #e5edf6;border-radius:20px;background:linear-gradient(135deg,rgba(0,161,222,.10),rgba(255,255,255,.92))}
+  .sales-type-card--modern{position:relative;overflow:hidden;min-height:138px;background:linear-gradient(180deg,#fff,#f8fbff)}
+  .sales-type-card--modern:after{content:"";position:absolute;right:-24px;bottom:-24px;width:88px;height:88px;border-radius:999px;background:rgba(0,161,222,.08)}
+  .sales-radio-row label{transition:border-color .15s ease,box-shadow .15s ease,background .15s ease}.sales-radio-row label:has(input:checked){border-color:var(--primary,#00A1DE);background:rgba(0,161,222,.08);box-shadow:0 0 0 3px rgba(0,161,222,.10)}
+  .sales-modal-heading{background:#f8fbff;border:1px solid #e5edf6;border-radius:18px;padding:14px;margin-bottom:14px}
+
+  .sales-modal-shell{display:grid;gap:16px}
+  .modal-card--wide{width:min(1080px,100%)}
+  .modal-card .sales-step-intro--modern{margin-bottom:0}
+  .sales-modern-form{display:grid;gap:16px}
+  .sales-form-section{border:1px solid #e5edf6;border-radius:22px;background:linear-gradient(180deg,#fff,#f8fbff);padding:18px;box-shadow:0 12px 30px rgba(15,23,42,.05)}
+  .sales-form-section-head{display:flex;align-items:flex-start;gap:12px;margin-bottom:14px}
+  .sales-form-section-head .material-symbols-rounded{width:40px;height:40px;display:grid;place-items:center;border-radius:14px;background:rgba(0,161,222,.10);color:var(--primary,#00A1DE)}
+  .sales-form-section-head h4{margin:0 0 4px;font-size:16px}.sales-form-section-head p{margin:0;color:#64748b;font-size:13px;line-height:1.4}
+  .modal-card .sales-form-grid{box-shadow:none;background:transparent;border:0;border-radius:0;padding:0}
+  .modal-card .sales-form-grid .input-field,.sales-modern-form .input-field{position:relative;display:flex;flex-direction:column;gap:7px;font-size:12px;font-weight:800;color:#475569;text-transform:uppercase;letter-spacing:.035em}
+  .modal-card .sales-form-grid .input-field input,.modal-card .sales-form-grid .input-field select,.modal-card .sales-form-grid .input-field textarea,.sales-modern-form .input-field input,.sales-modern-form .input-field select,.sales-modern-form .input-field textarea{width:100%;box-sizing:border-box;border:1px solid #dbe4ef;border-radius:15px;background:#fff;padding:12px 14px;font:inherit;color:#0f172a;text-transform:none;letter-spacing:0;box-shadow:0 1px 0 rgba(15,23,42,.02);transition:border-color .16s ease,box-shadow .16s ease,background .16s ease}
+  .modal-card .sales-form-grid .input-field select,.sales-modern-form .input-field select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,#64748b 50%),linear-gradient(135deg,#64748b 50%,transparent 50%);background-position:calc(100% - 18px) 52%,calc(100% - 12px) 52%;background-size:6px 6px,6px 6px;background-repeat:no-repeat;padding-right:38px}
+  .modal-card .sales-form-grid .input-field input:focus,.modal-card .sales-form-grid .input-field select:focus,.modal-card .sales-form-grid .input-field textarea:focus,.sales-modern-form .input-field input:focus,.sales-modern-form .input-field select:focus,.sales-modern-form .input-field textarea:focus{outline:none;border-color:var(--primary,#00A1DE);box-shadow:0 0 0 4px rgba(0,161,222,.13)}
+  .sales-radio-field{border:1px solid #e5edf6;border-radius:18px;background:#fff;padding:14px;margin:0}.sales-radio-field legend{padding:0 6px;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.035em;color:#475569}
+  .sales-radio-row label{background:#fff;border-color:#dbe4ef}.sales-radio-row input{accent-color:var(--primary,#00A1DE)}
+  .sales-nested-grid{background:transparent!important;border:0!important;box-shadow:none!important;padding:0!important;margin-top:0}
+  .sales-price-box{min-height:58px;display:flex;flex-direction:column;justify-content:center;border:1px solid #dbe4ef;border-radius:15px;background:#fff;padding:12px 14px;text-transform:none;letter-spacing:0}.sales-price-box strong{font-size:18px;color:#0f172a}
+  .sales-form-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}.sales-receipt-field input[type="file"]{border-style:dashed;background:#f8fbff}
+
+  /* Paso 29T — clasificación Comercial / Prueba */
+  .sales29-code-cell{display:flex;flex-direction:column;align-items:flex-start;gap:5px}
+  .sales29-row-archived{background:#f8fafc;opacity:.82}
+  .sales29-test-banner{display:flex;align-items:flex-start;gap:10px;margin-bottom:14px;padding:12px 14px;border:1px solid #bfdbfe;border-radius:14px;background:#eff6ff;color:#1e40af}
+  .sales29-test-banner.is-archived{border-color:#cbd5e1;background:#f8fafc;color:#475569}
+  .sales29-test-banner>.material-symbols-rounded,.sales29-reclassify-warning>.material-symbols-rounded{flex:0 0 auto;font-size:22px}
+  .sales29-test-banner>div,.sales29-reclassify-warning>div{display:flex;flex-direction:column;gap:3px}
+  .sales29-test-banner strong,.sales29-reclassify-warning strong{font-size:12px}
+  .sales29-test-banner span,.sales29-reclassify-warning span{font-size:11px;line-height:1.45}
+  .sales29-record-classification{border-color:#dbeafe}
+  .sales29-reclassify-warning{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border:1px solid #fed7aa;border-radius:14px;background:#fff7ed;color:#9a3412}
+  .sales29-reclassify-modal .sales-form-section{padding:18px}
+  .sales29-static-field{display:flex;align-items:center;min-height:48px;padding:10px 14px;border:1px solid #dbe4ef;border-radius:15px;background:#fff;color:#0f172a}
+  .sales29-field-note{font-size:10px;font-weight:900;color:#c2410c;text-transform:uppercase;letter-spacing:.05em}
+
+
+
+  /* Paso 29W — rendimiento y modal único */
+  .sales29-module-loading,
+  .sales29-modal-loading{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:14px;
+    min-height:180px;
+    padding:28px;
+    text-align:left;
+    color:#475569;
+  }
+
+  .sales29-module-loading .material-symbols-rounded,
+  .sales29-modal-loading .material-symbols-rounded{
+    font-size:30px;
+    animation:sales29w-spin 1s linear infinite;
+  }
+
+  .sales29-module-loading > div,
+  .sales29-modal-loading > div{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+  }
+
+  .sales29-module-loading strong,
+  .sales29-modal-loading strong{
+    color:#0f172a;
+    font-size:14px;
+  }
+
+  .sales29-module-loading span,
+  .sales29-modal-loading span{
+    font-size:12px;
+  }
+
+  @keyframes sales29w-spin{
+    to{transform:rotate(360deg);}
+  }
+
+  #modalRoot:not([hidden]) .modal-card{
+    isolation:isolate;
+  }
+
+  #modalRoot .modal-body{
+    min-height:120px;
+  }
+
+</style>
+<style>
+  #modalRoot .modal-card:has(.sales-modal-shell){border-radius:28px;border:1px solid #dbe9f5;background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%);box-shadow:0 28px 70px rgba(15,23,42,.22);overflow:hidden}
+  #modalRoot .modal-card:has(.sales-modal-shell) .modal-header{background:linear-gradient(135deg,rgba(0,161,222,.12),rgba(255,255,255,.96));border-bottom:1px solid #e5edf6;padding:22px 24px}
+  #modalRoot .modal-card:has(.sales-modal-shell) .modal-body{background:#f8fbff;padding:18px;max-height:min(78vh,760px);overflow:auto}
+  #modalRoot .modal-card:has(.sales-modal-shell) .modal-footer{background:#fff;border-top:1px solid #e5edf6;padding:14px 18px}
+  .sales-form-section{transition:box-shadow .16s ease,transform .16s ease}.sales-form-section:hover{box-shadow:0 16px 36px rgba(15,23,42,.07)}
+  .sales-modern-form .input-field select:hover,.sales-modern-form .input-field input:hover,.sales-modern-form .input-field textarea:hover{border-color:#b9d4e7}
+  .sales-price-box--amount strong{font-size:22px;letter-spacing:-.02em;color:#002B45}.sales-price-box--amount small:empty{display:none}
+</style>
+<style>
+  .sales-detail-shell{gap:14px}.sales-detail-shell .sales-items-table{background:#fff;border:1px solid #e5edf6;border-radius:16px;overflow:hidden}.sales-detail-shell .sales-items-table tr:last-child td{border-bottom:0}
+  .sales-filter-bar{align-items:end;flex-wrap:wrap}.sales-filter-bar .input-field{min-width:150px}.sales-filter-bar .search-field{min-width:min(420px,100%);flex:1}
+  .sales-items-table td small{display:block;margin-top:3px;line-height:1.35}
+</style>
+
+
+<style>
+  .sales29-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}.sales29-tab{border:1px solid #dbe4ef;background:#fff;border-radius:14px;padding:10px 14px;display:inline-flex;align-items:center;gap:8px;font:inherit;font-weight:700;color:#475569;cursor:pointer}.sales29-tab:hover{border-color:#9ccfe5;color:#002b45}.sales29-tab.is-active{background:#002b45;color:#fff;border-color:#002b45}.sales29-tab .material-symbols-rounded{font-size:19px}
+  .sales29-table th,.sales29-table td{vertical-align:middle}.sales29-progress{display:inline-flex;padding:4px 9px;border:1px solid #dbe4ef;border-radius:999px;font-size:12px;font-weight:700;background:#fff}
+  /* PASO 29B — Nueva venta más amplia y con mayor respiración visual */
+  #modalRoot .modal-card:has(.sales29-sale-modal){
+    width:min(1360px,calc(100vw - 32px));
+    max-width:none;
+  }
+  #modalRoot .modal-card:has(.sales29-sale-modal) .modal-body{
+    padding:24px;
+    max-height:min(84vh,900px);
+  }
+  #modalRoot .modal-card:has(.sales29-sale-modal) .modal-header{
+    padding:22px 28px;
+  }
+  #modalRoot .modal-card:has(.sales29-sale-modal) .modal-footer{
+    padding:16px 24px;
+  }
+
+  .sales29-sale-modal{
+    gap:20px;
+  }
+
+  .sales29-sale-modal .sales-modern-form{
+    gap:20px;
+  }
+
+  .sales29-sale-modal .sales-form-section{
+    padding:22px;
+  }
+
+  .sales29-sale-modal .sales-form-section-head{
+    margin-bottom:18px;
+  }
+
+  .sales29-form-layout{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) minmax(380px,430px);
+    gap:22px;
+    align-items:start;
+  }
+
+  .sales29-form-main{
+    display:flex;
+    flex-direction:column;
+    gap:20px;
+    min-width:0;
+  }
+
+  .sales29-sidebar{
+    position:sticky;
+    top:0;
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+    min-width:0;
+  }
+
+  .sales29-cart{
+    position:static;
+    background:#fff;
+    border:1px solid #dbe4ef;
+    border-radius:20px;
+    padding:18px;
+    box-shadow:0 12px 32px rgba(15,23,42,.07);
+    min-width:0;
+  }
+
+  .sales29-sidebar-payment{
+    margin:0;
+    padding:18px!important;
+  }
+
+  .sales29-sidebar-payment .sales-form-section-head{
+    margin-bottom:14px!important;
+  }
+
+  .sales29-sidebar-payment .sales-form-grid{
+    grid-template-columns:1fr;
+    gap:12px;
+  }
+
+  .sales29-sidebar-payment .span-2{
+    grid-column:1;
+  }
+
+  .sales29-sidebar-payment textarea{
+    min-height:88px;
+  }
+
+  .sales29-catalog-gate{
+    display:flex;
+    align-items:flex-start;
+    gap:12px;
+    padding:16px 18px;
+    margin-top:14px;
+    border:1px dashed #cbd5e1;
+    border-radius:16px;
+    background:#f8fafc;
+    color:#475569;
+  }
+
+  .sales29-catalog-gate .material-symbols-rounded{
+    color:#0f6b8f;
+    font-size:22px;
+    margin-top:1px;
+  }
+
+  .sales29-catalog-gate>div{
+    display:flex;
+    flex-direction:column;
+    gap:3px;
+  }
+
+  .sales29-catalog-gate strong{
+    color:#0f172a;
+    font-size:13px;
+  }
+
+  .sales29-catalog-gate small{
+    line-height:1.45;
+    color:#64748b;
+  }
+
+  .sales29-context-ready{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    margin-top:12px;
+    padding:8px 10px;
+    border-radius:10px;
+    background:#f0fdf4;
+    border:1px solid #dcfce7;
+    color:#166534;
+    font-size:12px;
+  }
+
+  .sales29-context-ready .material-symbols-rounded{
+    font-size:17px;
+  }
+
+  .sales29-cart-head{
+    display:flex;
+    gap:11px;
+    align-items:center;
+    padding-bottom:14px;
+    border-bottom:1px solid #edf2f7;
+  }
+
+  .sales29-cart-head>div{
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+  }
+
+  .sales29-cart-head strong{
+    font-size:15px;
+    color:#0f172a;
+  }
+
+  .sales29-cart-head small{
+    color:#64748b;
+    line-height:1.35;
+  }
+
+  .sales29-cart-save{
+    width:100%;
+    justify-content:center;
+    margin-top:0;
+    min-height:46px;
+  }
+
+  .sales29-catalog-toolbar{
+    display:grid;
+    grid-template-columns:minmax(280px,1.7fr) repeat(3,minmax(145px,.8fr));
+    gap:12px;
+    margin-bottom:16px;
+  }
+
+  .sales29-offers{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:14px;
+    max-height:560px;
+    overflow:auto;
+    padding:3px;
+  }
+
+  .sales29-offer-card{
+    border:1px solid #dbe4ef;
+    border-radius:18px;
+    background:#fff;
+    padding:16px;
+    display:flex;
+    flex-direction:column;
+    gap:11px;
+    min-width:0;
+  }
+
+  .sales29-offer-top{
+    display:flex;
+    justify-content:space-between;
+    gap:16px;
+    align-items:flex-start;
+  }
+
+  .sales29-offer-top>div{
+    min-width:0;
+  }
+
+  .sales29-offer-top h5{
+    font-size:14px;
+    line-height:1.35;
+    margin:4px 0;
+    color:#0f172a;
+  }
+
+  .sales29-offer-top p,
+  .sales29-offer-top small{
+    margin:0;
+    color:#64748b;
+    line-height:1.4;
+  }
+
+  .sales29-price{
+    white-space:nowrap;
+    font-size:18px;
+    color:#002b45;
+  }
+
+  .sales29-offer-meta{
+    display:flex;
+    flex-direction:column;
+    gap:5px;
+    font-size:12px;
+    color:#64748b;
+  }
+
+  .sales29-offer-meta span{
+    display:flex;
+    align-items:center;
+    gap:5px;
+  }
+
+  .sales29-offer-meta .material-symbols-rounded{
+    font-size:16px;
+  }
+
+  .sales29-combo{
+    background:#f0f9ff;
+    border:1px solid #cdeefa;
+    border-radius:12px;
+    padding:9px 11px;
+    font-size:12px;
+    line-height:1.4;
+    color:#0c4a6e;
+  }
+
+  /* Carrito: nombre -> combo -> proveedor -> controles */
+  .sales29-cart-lines{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+    margin-top:14px;
+  }
+
+  .sales29-cart-line{
+    border:1px solid #e5edf6;
+    border-radius:16px;
+    padding:14px;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+    background:#fff;
+    min-width:0;
+  }
+
+  .sales29-cart-product{
+    display:flex;
+    flex-direction:column;
+    gap:5px;
+    min-width:0;
+  }
+
+  .sales29-cart-product-name{
+    display:block;
+    font-size:13px;
+    line-height:1.35;
+    font-weight:750;
+    color:#0f172a;
+    overflow-wrap:anywhere;
+  }
+
+  .sales29-cart-combo{
+    display:block;
+    color:#0c4a6e!important;
+    font-size:11.5px;
+    line-height:1.4;
+    padding:7px 9px;
+    background:#f0f9ff;
+    border:1px solid #d8f1fb;
+    border-radius:10px;
+    white-space:normal;
+  }
+
+  .sales29-cart-provider{
+    display:flex;
+    align-items:center;
+    gap:5px;
+    margin-top:1px;
+    color:#64748b!important;
+    font-size:11.5px;
+    line-height:1.35;
+    white-space:normal;
+  }
+
+  .sales29-cart-provider .material-symbols-rounded{
+    font-size:15px;
+  }
+
+  .sales29-cart-line-controls{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    padding-top:10px;
+    border-top:1px solid #edf2f7;
+  }
+
+  .sales29-qty{
+    display:flex;
+    align-items:center;
+    gap:7px;
+  }
+
+  .sales29-qty button{
+    width:30px;
+    height:30px;
+    border-radius:9px;
+    border:1px solid #dbe4ef;
+    background:#fff;
+    cursor:pointer;
+    color:#334155;
+    font-size:16px;
+  }
+
+  .sales29-qty span{
+    min-width:22px;
+    text-align:center;
+    font-size:13px;
+    font-weight:700;
+  }
+
+  .sales29-line-price{
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    gap:8px;
+    font-weight:800;
+    color:#002b45;
+    white-space:nowrap;
+  }
+
+  .sales29-remove{
+    width:30px;
+    height:30px;
+    display:grid;
+    place-items:center;
+    border:0;
+    border-radius:9px;
+    background:#fff1f2;
+    color:#b91c1c;
+    cursor:pointer;
+  }
+
+  .sales29-remove:hover{
+    background:#ffe4e6;
+  }
+
+  .sales29-remove .material-symbols-rounded{
+    font-size:18px;
+  }
+
+  .sales29-cart-total{
+    margin-top:16px;
+    padding-top:14px;
+    border-top:1px solid #e5edf6;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
+  }
+
+  .sales29-cart-total span{
+    color:#64748b;
+    font-size:12px;
+  }
+
+  .sales29-cart-total strong{
+    font-size:21px;
+    color:#002b45;
+  }
+
+  .sales29-cart-empty{
+    text-align:center;
+    color:#64748b;
+    padding:34px 10px;
+  }
+
+  .sales29-cart-empty .material-symbols-rounded{
+    font-size:34px;
+  }
+  .sales29-delivery-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}.sales29-delivery-summary>div{background:#f8fbff;border:1px solid #e5edf6;border-radius:12px;padding:11px;display:flex;flex-direction:column;gap:3px}.sales29-delivery-summary small{color:#64748b}.sales29-evidence-summary{margin-top:14px;border-top:1px solid #e5edf6;padding-top:12px}
+  .sales29-modal-section{background:#fff;border:1px solid #e5edf6;border-radius:16px;padding:16px;display:grid;gap:14px}
+  .sales29-modal-section .sales-form-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+  .sales29-modal-section textarea{min-height:112px}
+  .sales29-modal-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+  .sales29-modal-summary>div{background:#f8fbff;border:1px solid #e5edf6;border-radius:12px;padding:11px;display:flex;flex-direction:column;gap:4px}
+  .sales29-modal-summary small{color:#64748b}
+  .sales29-provider-inline{display:flex;flex-direction:column;gap:4px;padding:12px 14px;border:1px solid #dbe4ef;border-radius:14px;background:#f8fbff}
+  .sales29-provider-inline strong{font-size:13px;color:#0f172a}
+  .sales29-provider-inline small{color:#64748b;line-height:1.4}
+  .sales29-provider-empty{padding:12px 14px;border-radius:14px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;line-height:1.45}
+  .sales29-inline-loader{display:flex;align-items:center;gap:8px;color:#475569;font-size:13px}
+  .sales29-inline-loader .material-symbols-rounded{font-size:18px;color:#0f6b8f}
+  .sales29-field-help{font-size:11px;color:#64748b;line-height:1.4;text-transform:none;letter-spacing:0;font-weight:500}
+  .sales29-hidden{display:none!important}
+
+  /* PASO 29F — Gestión de entrega enfocada al proveedor */
+  .sales29-delivery-client{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:12px;
+  }
+  .sales29-delivery-client>div{
+    background:#f8fbff;
+    border:1px solid #e5edf6;
+    border-radius:14px;
+    padding:12px 14px;
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    min-width:0;
+  }
+  .sales29-delivery-client small{
+    color:#64748b;
+    font-size:11px;
+  }
+  .sales29-delivery-client strong{
+    color:#0f172a;
+    font-size:13px;
+    line-height:1.4;
+    overflow-wrap:anywhere;
+  }
+  .sales29-delivery-products{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+  .sales29-delivery-product-card{
+    border:1px solid #dbe4ef;
+    border-radius:16px;
+    padding:14px 16px;
+    background:#fff;
+    display:grid;
+    gap:10px;
+  }
+  .sales29-delivery-product-head{
+    display:flex;
+    justify-content:space-between;
+    gap:16px;
+    align-items:flex-start;
+  }
+  .sales29-delivery-product-title{
+    min-width:0;
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+  }
+  .sales29-delivery-product-title strong{
+    font-size:14px;
+    line-height:1.35;
+    color:#0f172a;
+  }
+  .sales29-delivery-product-title small{
+    color:#64748b;
+    line-height:1.4;
+  }
+  .sales29-delivery-product-combo{
+    padding:8px 10px;
+    border-radius:10px;
+    background:#f0f9ff;
+    border:1px solid #d8f1fb;
+    color:#0c4a6e!important;
+    font-size:11.5px;
+  }
+  .sales29-delivery-product-provider{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    color:#475569;
+    font-size:12px;
+  }
+  .sales29-delivery-product-provider .material-symbols-rounded{
+    font-size:16px;
+    color:#0f6b8f;
+  }
+  .sales29-delivery-product-values{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:10px;
+    padding-top:10px;
+    border-top:1px solid #edf2f7;
+  }
+  .sales29-delivery-product-values>div{
+    display:flex;
+    flex-direction:column;
+    gap:3px;
+  }
+  .sales29-delivery-product-values small{
+    color:#64748b;
+    font-size:10.5px;
+  }
+  .sales29-delivery-product-values strong{
+    color:#002b45;
+    font-size:13px;
+  }
+  .sales29-delivery-status-block{
+    display:grid;
+    gap:14px;
+  }
+  .sales29-delivery-dynamic{
+    margin-top:4px;
+    padding-top:14px;
+    border-top:1px solid #edf2f7;
+  }
+  .sales29-delivery-evidence-grid{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:12px;
+  }
+  .sales29-delivery-current{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:9px 11px;
+    border-radius:11px;
+    background:#f8fafc;
+    color:#475569;
+    font-size:12px;
+  }
+  .sales29-delivery-current .material-symbols-rounded{
+    font-size:17px;
+    color:#0f6b8f;
+  }
+  .sales29-cancel-warning{
+    padding:14px 16px;
+    border:1px solid #fecaca;
+    border-radius:14px;
+    background:#fff7f7;
+    color:#7f1d1d;
+    line-height:1.5;
+  }
+  .sales29-cancel-button{
+    border-color:#fecaca!important;
+    color:#b91c1c!important;
+    background:#fff7f7!important;
+  }
+  .sales29-cancel-button:hover{
+    background:#ffe4e6!important;
+  }
+  .status-pill.is-success{background:#ecfdf5;color:#047857}.status-pill.is-warning{background:#fffbeb;color:#b45309}.status-pill.is-danger{background:#fff1f2;color:#be123c}
+  @media(max-width:1100px){
+    #modalRoot .modal-card:has(.sales29-sale-modal){width:min(960px,calc(100vw - 24px))}
+    .sales29-form-layout{grid-template-columns:1fr}
+    .sales29-sidebar{position:static}
+    .sales29-cart{position:static}
+    .sales29-catalog-toolbar{grid-template-columns:1fr 1fr}
+    .sales29-offers{grid-template-columns:1fr}
+  }
+  @media(max-width:720px){
+    #modalRoot .modal-card:has(.sales29-sale-modal) .modal-body{padding:14px}
+    .sales29-sale-modal .sales-form-section{padding:16px}
+    .sales29-catalog-toolbar,.sales29-delivery-summary,.sales29-modal-summary,.sales29-modal-section .sales-form-grid,.sales29-delivery-client,.sales29-delivery-product-values,.sales29-delivery-evidence-grid{grid-template-columns:1fr}
+    .sales29-offers{max-height:none}
+    .sales29-tab{flex:1;justify-content:center}
+    .sales29-cart-line-controls{align-items:flex-end}
+  }
+
+  /* PASO 29G — Estado/evidencias con el mismo sistema visual de formularios */
+  .sales29-delivery-status-grid{
+    grid-template-columns:minmax(220px,340px)!important;
+    align-items:end;
+  }
+  .sales29-delivery-status-block .sales-form-grid{
+    margin:0;
+  }
+  .sales29-delivery-evidence-grid.sales-form-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:12px;
+  }
+  .modal-card .sales29-delivery-evidence-grid .input-field input[type="file"],
+  .modal-card .sales29-modal-section .input-field input[type="file"]{
+    padding:7px 8px;
+    min-height:44px;
+    background:#fff;
+  }
+  .modal-card .sales29-delivery-evidence-grid .input-field input[type="file"]::file-selector-button,
+  .modal-card .sales29-modal-section .input-field input[type="file"]::file-selector-button{
+    border:1px solid #bfe6f6;
+    border-radius:10px;
+    background:#eefaff;
+    color:#006b96;
+    font-weight:800;
+    padding:8px 11px;
+    margin-right:10px;
+    cursor:pointer;
+  }
+  .modal-card .sales29-delivery-evidence-grid .input-field input[type="file"]::file-selector-button:hover,
+  .modal-card .sales29-modal-section .input-field input[type="file"]::file-selector-button:hover{
+    background:#e1f6ff;
+  }
+  .sales29-delivery-status-block .input-field>span{
+    margin-bottom:1px;
+  }
+</style>
+
+  <!--
+  SGT360 — Componentes compartidos
+
+  Responsabilidad:
+  Contiene loader, notificaciones, modales, panel lateral y elementos reutilizables
+  de interfaz.
+
+  Este archivo se incluye desde HTML_000_APP_Index o desde una vista relacionada.
+-->
+
+<div id="toastRegion" class="toast-region" aria-live="polite" aria-atomic="true"></div>
+
+<div id="modalRoot" class="modal-root" hidden>
+  <div class="modal-backdrop" data-modal-close></div>
+  <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <header class="modal-header">
+      <div>
+        <p id="modalEyebrow" class="eyebrow"></p>
+        <h2 id="modalTitle"></h2>
+      </div>
+      <button class="icon-button" type="button" data-modal-close aria-label="Cerrar">
+        <span class="material-symbols-rounded">close</span>
+      </button>
+    </header>
+    <div id="modalBody" class="modal-body"></div>
+    <footer id="modalFooter" class="modal-footer"></footer>
+  </section>
+</div>
+
+<div id="sideSheetRoot" class="side-sheet-root" hidden>
+  <div class="side-sheet-backdrop" data-sheet-close></div>
+  <aside class="side-sheet" role="dialog" aria-modal="true" aria-labelledby="sideSheetTitle">
+    <header class="side-sheet-header">
+      <div>
+        <p id="sideSheetEyebrow" class="eyebrow"></p>
+        <h2 id="sideSheetTitle"></h2>
+      </div>
+      <button class="icon-button" type="button" data-sheet-close aria-label="Cerrar">
+        <span class="material-symbols-rounded">close</span>
+      </button>
+    </header>
+    <div id="sideSheetBody" class="side-sheet-body"></div>
+    <footer id="sideSheetFooter" class="side-sheet-footer"></footer>
+  </aside>
+</div>
+
+<template id="emptyStateTemplate">
+  <div class="empty-state">
+    <span class="material-symbols-rounded">inbox</span>
+    <strong>Sin registros</strong>
+    <p>No se encontraron datos para los filtros actuales.</p>
+  </div>
+</template>
+
+
+  
+<!-- MODAL DE CONFIGURACIÓN SUPABASE -->
+<div id="modalConfigSupabase" class="s360-modal-backdrop" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(15,23,42,0.8); backdrop-filter:blur(8px); z-index:99999; align-items:center; justify-content:center;">
+  <div style="background:#1E293B; border:1px solid #475569; border-radius:16px; width:90%; max-width:520px; padding:24px; box-shadow:0 20px 40px rgba(0,0,0,0.4); color:#F8FAFC; font-family:'Inter',sans-serif;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:12px;">
+      <h3 style="font-size:1.1rem; font-weight:700; margin:0; display:flex; align-items:center; gap:8px;">
+        <i class="fas fa-database" style="color:#10B981;"></i> Configuración de Supabase
+      </h3>
+      <button onclick="document.getElementById('modalConfigSupabase').style.display='none'" style="background:none; border:none; color:#94A3B8; font-size:1.2rem; cursor:pointer;">&times;</button>
+    </div>
+    <p style="font-size:0.85rem; color:#94A3B8; margin-bottom:16px;">
+      Ingresa las credenciales de tu proyecto en Supabase para sincronizar usuarios, catálogos, materiales y pedidos en tiempo real. Si se deja en blanco, la aplicación operará en <strong>Modo Demo Interactivo</strong>.
+    </p>
+    <div style="margin-bottom:12px;">
+      <label style="display:block; font-size:0.75rem; font-weight:700; text-transform:uppercase; color:#94A3B8; margin-bottom:4px;">Project URL</label>
+      <input id="inputSupabaseUrl" type="text" placeholder="https://tu-proyecto.supabase.co" style="width:100%; padding:10px 12px; background:#0F172A; border:1px solid #334155; border-radius:8px; color:#fff; font-size:0.85rem;" />
+    </div>
+    <div style="margin-bottom:20px;">
+      <label style="display:block; font-size:0.75rem; font-weight:700; text-transform:uppercase; color:#94A3B8; margin-bottom:4px;">Anon Public Key (anon key)</label>
+      <input id="inputSupabaseKey" type="password" placeholder="eyJhbGciOiJIUzI1NiIsInR5c..." style="width:100%; padding:10px 12px; background:#0F172A; border:1px solid #334155; border-radius:8px; color:#fff; font-size:0.85rem;" />
+    </div>
+    <div style="display:flex; justify-content:flex-end; gap:10px;">
+      <button onclick="guardarCredencialesSupabase(true)" style="background:#334155; border:none; color:#F8FAFC; padding:8px 16px; border-radius:8px; font-weight:600; font-size:0.85rem; cursor:pointer;">Modo Demo</button>
+      <button onclick="guardarCredencialesSupabase(false)" style="background:#10B981; border:none; color:#fff; padding:8px 18px; border-radius:8px; font-weight:700; font-size:0.85rem; cursor:pointer; display:flex; align-items:center; gap:6px;">
+        <i class="fas fa-plug"></i> Guardar y Conectar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- BARRA INDICADORA FLOTANTE DE ESTADO SUPABASE -->
+<div id="badgeSupabaseStatus" onclick="document.getElementById('modalConfigSupabase').style.display='flex'" style="position:fixed; bottom:16px; right:16px; z-index:9999; background:rgba(30,41,59,0.92); backdrop-filter:blur(10px); border:1px solid #475569; padding:8px 14px; border-radius:30px; display:flex; align-items:center; gap:8px; cursor:pointer; font-size:0.78rem; font-family:'Inter',sans-serif; color:#F8FAFC; box-shadow:0 8px 20px rgba(0,0,0,0.35);">
+  <span id="dotSupabaseStatus" style="width:8px; height:8px; border-radius:50%; background:#F59E0B;"></span>
+  <span id="textSupabaseStatus">Modo Demo (Click p/ conectar Supabase)</span>
+  <i class="fas fa-gear" style="color:#94A3B8; font-size:0.85rem;"></i>
+</div>
+
+
+  <!-- CONFIGURACIÓN Y CLIENTE SUPABASE -->
+  <script src="js/config.js"></script>
+  <script src="js/supabase-client.js"></script>
+  <script src="js/api-adapter.js"></script>
+
+  <!-- SCRIPTS DEL NÚCLEO Y MÓDULOS -->
+  <script src="js/app-core.js"></script>
+  <script src="js/modules/admin.js"></script>
+  <script src="js/modules/providers.js"></script>
+  <script src="js/modules/materials-prices.js"></script>
+  <script src="js/modules/sales.js"></script>
+  <script src="js/modules/dynamic.js"></script>
+
+  <!-- CONTROLADOR DEL MODAL DE CONFIGURACIÓN SUPABASE -->
+  <script>
+    function actualizarIndicadorSupabase() {
+      var isConf = window.supabaseClient && window.supabaseClient.isConfigured();
+      var dot = document.getElementById("dotSupabaseStatus");
+      var txt = document.getElementById("textSupabaseStatus");
+      var urlInput = document.getElementById("inputSupabaseUrl");
+      var keyInput = document.getElementById("inputSupabaseKey");
+      
+      if (urlInput) urlInput.value = window.APP_CONFIG.SUPABASE_URL || "";
+      if (keyInput) keyInput.value = window.APP_CONFIG.SUPABASE_ANON_KEY || "";
+
+      if (isConf) {
+        if (dot) dot.style.background = "#10B981";
+        if (txt) txt.textContent = "Supabase Conectado";
+      } else {
+        if (dot) dot.style.background = "#F59E0B";
+        if (txt) txt.textContent = "Modo Demo (Configurar Supabase)";
+      }
+    }
+
+    function guardarCredencialesSupabase(limpiar) {
+      if (limpiar) {
+        window.supabaseClient.clearConfig();
+        alert("Modo Demo Interactivo activado.");
+      } else {
+        var url = (document.getElementById("inputSupabaseUrl").value || "").trim();
+        var key = (document.getElementById("inputSupabaseKey").value || "").trim();
+        if (!url || !key) {
+          alert("Por favor ingresa la URL y la Anon Key de Supabase.");
+          return;
+        }
+        window.supabaseClient.reconfigure(url, key);
+        alert("¡Credenciales guardadas! Conectado a Supabase.");
+      }
+      document.getElementById("modalConfigSupabase").style.display = "none";
+      actualizarIndicadorSupabase();
+      if (window.location.reload) window.location.reload();
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+      actualizarIndicadorSupabase();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,124 @@
+<!--
+  SGT360 — Vista de callback
+
+  Responsabilidad:
+  Procesa en el navegador el resultado OAuth y conserva el token interno.
+
+  Este archivo se incluye desde HTML_000_APP_Index o desde una vista relacionada.
+-->
+
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <base target="_top">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+      * { box-sizing: border-box; }
+      body { min-height: 100vh; margin: 0; display: grid; place-items: center; padding: 24px; color: #172a35; background: radial-gradient(circle at 10% 10%, rgba(0,161,222,.15), transparent 34%), #f5fafc; font-family: Manrope, Inter, "Segoe UI", sans-serif; }
+      .card { width: min(560px, 100%); padding: 42px; text-align: center; background: #fff; border: 1px solid #dceaf0; border-radius: 24px; box-shadow: 0 24px 70px rgba(15,72,94,.14); }
+      .icon { width: 72px; height: 72px; display: grid; place-items: center; margin: 0 auto 20px; color: #fff; background: linear-gradient(145deg, #48bce0, #006f99); border-radius: 22px; font-size: 32px; font-weight: 800; }
+      .card.is-error .icon { background: #c43d4b; }
+      h1 { margin: 0 0 10px; font-size: 30px; letter-spacing: -.045em; }
+      p { color: #607785; line-height: 1.65; }
+      .user { display: grid; gap: 4px; margin: 22px 0; padding: 16px; text-align: left; background: #f2fbfe; border: 1px solid #bdeaf6; border-radius: 13px; }
+      .user span { color: #607785; font-size: 12px; }
+      .button { min-height: 46px; display: inline-flex; align-items: center; justify-content: center; padding: 10px 20px; color: #fff; background: #0088bc; border-radius: 11px; text-decoration: none; font-weight: 750; }
+      .notice { margin-top: 16px; padding: 10px; color: #006f99; background: #e2f6fc; border-radius: 10px; font-size: 12px; }
+      .notice.is-error { color: #8e2734; background: #fff0f2; }
+    </style>
+  </head>
+  <body>
+    <main id="callbackCard" class="card">
+      <div id="callbackIcon" class="icon">✓</div>
+      <h1 id="callbackTitle">Validando acceso</h1>
+      <p id="callbackMessage">Estamos comprobando la cuenta seleccionada.</p>
+      <section id="callbackUser" class="user" hidden>
+        <strong id="callbackUserName"></strong>
+        <span id="callbackUserEmail"></span>
+        <span id="callbackUserRole"></span>
+      </section>
+      <div id="callbackNotice" class="notice" hidden></div>
+      <a id="callbackButton" class="button" href="#" target="_top">Entrar a la aplicación</a>
+    </main>
+
+    <script id="authResultData" type="application/json"><?!= authResultJson ?></script>
+    <script>
+      (function() {
+        let result = {};
+        try { result = JSON.parse(document.getElementById("authResultData").textContent || "{}"); }
+        catch (error) { result = { correcto: false, mensaje: "No fue posible interpretar la respuesta de autenticación." }; }
+
+        const card = document.getElementById("callbackCard");
+        const notice = document.getElementById("callbackNotice");
+        const button = document.getElementById("callbackButton");
+        const tokenKey = result.almacenamiento && result.almacenamiento.claveToken ||
+          "SGT360_AUTH_TOKEN_V1";
+        const sessionKey = result.almacenamiento && result.almacenamiento.claveSesion ||
+          "SGT360_AUTH_SESSION_V1";
+
+        function buildCleanReturnUrl(value) {
+          const fallback = window.location.origin + window.location.pathname;
+          try {
+            const url = new URL(String(value || fallback), window.location.href);
+            [
+              "oauth",
+              "provider",
+              "code",
+              "state",
+              "error",
+              "error_description",
+              "session_state"
+            ].forEach(function(parameter) {
+              url.searchParams.delete(parameter);
+            });
+            url.hash = "";
+            return url.toString();
+          } catch (error) {
+            return fallback;
+          }
+        }
+
+        const returnUrl = buildCleanReturnUrl(result.urlRetorno);
+        button.href = returnUrl;
+
+        try {
+          window.localStorage.removeItem(tokenKey);
+          window.localStorage.removeItem(sessionKey);
+        } catch (error) {}
+
+        if (result.correcto === true && result.sesion && result.sesion.token) {
+          try {
+            window.localStorage.setItem(tokenKey, result.sesion.token);
+            window.localStorage.setItem(sessionKey, JSON.stringify({ usuario: result.usuario || {}, sesion: result.sesion || {} }));
+            document.getElementById("callbackTitle").textContent = "Acceso autorizado";
+            document.getElementById("callbackMessage").textContent = result.mensaje || "La sesión fue creada correctamente.";
+            const user = document.getElementById("callbackUser");
+            user.hidden = false;
+            document.getElementById("callbackUserName").textContent = result.usuario && result.usuario.nombre || "Usuario autorizado";
+            document.getElementById("callbackUserEmail").textContent = result.usuario && result.usuario.correo || "";
+            document.getElementById("callbackUserRole").textContent = "Rol: " + (result.usuario && result.usuario.rol || "—");
+            notice.hidden = false;
+            notice.textContent = "La sesión fue almacenada de forma local en este navegador.";
+          } catch (error) {
+            card.classList.add("is-error");
+            document.getElementById("callbackIcon").textContent = "!";
+            document.getElementById("callbackTitle").textContent = "No se pudo guardar la sesión";
+            document.getElementById("callbackMessage").textContent = error.message;
+            notice.hidden = false;
+            notice.classList.add("is-error");
+            notice.textContent = "Revisa que el navegador permita almacenamiento local.";
+          }
+        } else {
+          card.classList.add("is-error");
+          document.getElementById("callbackIcon").textContent = "!";
+          document.getElementById("callbackTitle").textContent = "Acceso no completado";
+          document.getElementById("callbackMessage").textContent = result.mensaje || "No fue posible completar la autenticación.";
+          notice.hidden = false;
+          notice.classList.add("is-error");
+          notice.textContent = result.codigo ? "Código: " + result.codigo : "Regresa al inicio e inténtalo nuevamente.";
+        }
+      })();
+    </script>
+  </body>
+</html>

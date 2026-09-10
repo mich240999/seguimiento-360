@@ -1,0 +1,53 @@
+<!--
+  SGT360 — Componentes compartidos
+
+  Responsabilidad:
+  Contiene loader, notificaciones, modales, panel lateral y elementos reutilizables
+  de interfaz.
+
+  Este archivo se incluye desde HTML_000_APP_Index o desde una vista relacionada.
+-->
+
+<div id="toastRegion" class="toast-region" aria-live="polite" aria-atomic="true"></div>
+
+<div id="modalRoot" class="modal-root" hidden>
+  <div class="modal-backdrop" data-modal-close></div>
+  <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <header class="modal-header">
+      <div>
+        <p id="modalEyebrow" class="eyebrow"></p>
+        <h2 id="modalTitle"></h2>
+      </div>
+      <button class="icon-button" type="button" data-modal-close aria-label="Cerrar">
+        <span class="material-symbols-rounded">close</span>
+      </button>
+    </header>
+    <div id="modalBody" class="modal-body"></div>
+    <footer id="modalFooter" class="modal-footer"></footer>
+  </section>
+</div>
+
+<div id="sideSheetRoot" class="side-sheet-root" hidden>
+  <div class="side-sheet-backdrop" data-sheet-close></div>
+  <aside class="side-sheet" role="dialog" aria-modal="true" aria-labelledby="sideSheetTitle">
+    <header class="side-sheet-header">
+      <div>
+        <p id="sideSheetEyebrow" class="eyebrow"></p>
+        <h2 id="sideSheetTitle"></h2>
+      </div>
+      <button class="icon-button" type="button" data-sheet-close aria-label="Cerrar">
+        <span class="material-symbols-rounded">close</span>
+      </button>
+    </header>
+    <div id="sideSheetBody" class="side-sheet-body"></div>
+    <footer id="sideSheetFooter" class="side-sheet-footer"></footer>
+  </aside>
+</div>
+
+<template id="emptyStateTemplate">
+  <div class="empty-state">
+    <span class="material-symbols-rounded">inbox</span>
+    <strong>Sin registros</strong>
+    <p>No se encontraron datos para los filtros actuales.</p>
+  </div>
+</template>

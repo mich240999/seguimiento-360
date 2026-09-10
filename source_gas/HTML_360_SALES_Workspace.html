@@ -1,0 +1,1027 @@
+<!--
+  SGT360 — Workspace Registro de ventas al contado
+  Paso 29X: gestión de entrega enfocada al proveedor, estados dinámicos y anulación por responsable.
+-->
+<style>
+  .sales-workspace { display: grid; gap: 18px; }
+  .sales-main-header { align-items: flex-start; gap: 16px; }
+  .sales-card { background: var(--surface, #fff); border: 1px solid var(--border, #e5e7eb); border-radius: 18px; padding: 18px; box-shadow: 0 10px 30px rgba(15,23,42,.06); }
+  .sales-card h3 { margin: 0 0 6px; }
+  .sales-list-head { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 14px; }
+  .sales-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .sales-form-grid .span-2 { grid-column: 1 / -1; }
+  .sales-radio-row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .sales-radio-row label { display: inline-flex; align-items: center; gap: 6px; padding: 9px 12px; border: 1px solid var(--border, #e5e7eb); border-radius: 999px; background: #fff; cursor: pointer; }
+  .sales-step-intro { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 18px; }
+  .sales-step-intro > .material-symbols-rounded { width: 42px; height: 42px; display: inline-grid; place-items: center; border-radius: 14px; background: rgba(0,161,222,.12); color: var(--primary, #00A1DE); }
+  .sales-step-intro h3, .sales-modal-heading h3 { margin: 0 0 4px; }
+  .sales-step-intro p, .sales-modal-heading p { margin: 0; color: #64748b; }
+  .sales-type-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+  .sales-type-card { text-align: left; border: 1px solid var(--border, #e5e7eb); background: #fff; border-radius: 18px; padding: 18px; display: grid; gap: 8px; cursor: pointer; transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease; }
+  .sales-type-card:hover { transform: translateY(-1px); border-color: var(--primary, #00A1DE); box-shadow: 0 12px 26px rgba(15,23,42,.08); }
+  .sales-type-card .material-symbols-rounded { color: var(--primary, #00A1DE); font-size: 30px; }
+  .sales-type-card small { color: #64748b; }
+  .sales-modal-heading { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border, #e5e7eb); }
+  .sales-items-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+  .sales-items-table th, .sales-items-table td { padding: 8px; border-bottom: 1px solid var(--border, #e5e7eb); text-align: left; vertical-align: top; }
+  .sales-items-table th { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: #64748b; }
+  .sales-summary-line { display: flex; justify-content: space-between; gap: 12px; font-weight: 700; margin-top: 12px; }
+  .sales-warning { padding: 10px 12px; border-radius: 12px; background: #fff7ed; color: #9a3412; font-size: 13px; }
+  .sales-muted { color: #64748b; font-size: 13px; }
+  .sales-badge { display: inline-flex; align-items: center; border-radius: 999px; padding: 4px 9px; font-size: 12px; font-weight: 700; }
+  .sales-badge--ok { background: #ecfdf5; color: #047857; }
+  .sales-badge--pending { background: #fff7ed; color: #c2410c; }
+  .sales-badge--warning { background: #fef3c7; color: #92400e; }
+
+  .sales-row-actions{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:wrap;min-width:180px}
+  .sales-row-actions .button{white-space:nowrap}
+  .sales29-actions-stack{display:flex;flex-direction:column;align-items:flex-end;gap:8px;min-width:220px}
+  .sales29-actions-row{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+  .sales29-actions-row--secondary .button{min-width:136px;justify-content:center}
+
+  .sales-validation-box{display:grid;gap:10px;border:1px solid #e5edf6;border-radius:16px;background:#f8fbff;padding:12px;margin-top:12px}
+  .sales-detail-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(240px, .7fr); gap: 16px; padding: 12px; border-radius: 16px; background: #f8fafc; margin-bottom: 14px; }
+  .sales-detail-grid p { margin: 0 0 8px; }
+  .empty-state--compact { padding: 16px; }
+
+  /* Paso 29K — comprador, receptor y datos operativos de entrega */
+  .sales29-info-note{
+    display:flex;
+    align-items:flex-start;
+    gap:9px;
+    padding:11px 13px;
+    border:1px solid #dbeafe;
+    border-radius:14px;
+    background:#f8fbff;
+    color:#475569;
+    font-size:12px;
+    font-weight:650;
+    line-height:1.45;
+  }
+  .sales29-info-note .material-symbols-rounded{
+    font-size:19px;
+    color:var(--primary,#00A1DE);
+    flex:0 0 auto;
+  }
+  .sales29-delivery-subsection-title{
+    margin:14px 0 8px;
+    color:#334155;
+    font-size:12px;
+    font-weight:900;
+    text-transform:uppercase;
+    letter-spacing:.045em;
+  }
+  .sales29-delivery-subsection-title:first-child{
+    margin-top:0;
+  }
+  .sales29-delivery-receiver-legacy{
+    margin-top:14px;
+  }
+
+
+  /* Paso 29J — estado global y estado de entrega por material */
+  .status-pill.is-info{
+    background:#eff6ff;
+    color:#1d4ed8;
+  }
+
+  .status-pill.is-muted{
+    background:#f1f5f9;
+    color:#64748b;
+  }
+
+  .sales29-sale-products-section{
+    padding:16px;
+  }
+
+  .sales29-items-table-wrap{
+    width:100%;
+    overflow-x:auto;
+    border:1px solid #e5edf6;
+    border-radius:16px;
+    background:#fff;
+  }
+
+  .sales29-sale-products-section .sales-items-table{
+    margin-top:0;
+    border:0;
+    border-radius:0;
+    min-width:820px;
+  }
+
+  .sales29-material-status{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+    gap:6px;
+    min-width:150px;
+  }
+
+  .sales29-material-status-detail{
+    display:flex !important;
+    align-items:flex-start;
+    gap:5px;
+    margin-top:0 !important;
+    color:#64748b;
+    font-size:11px;
+    line-height:1.35;
+    max-width:230px;
+  }
+
+  .sales29-material-status-detail .material-symbols-rounded{
+    font-size:15px;
+    line-height:1;
+    flex:0 0 auto;
+  }
+
+  .sales29-material-status-detail.is-observed{
+    color:#be123c;
+  }
+
+
+  /* Paso 29K — anulación lógica de material */
+  .sales29-cancel-item-btn{
+    margin-top:9px;
+  }
+
+  .sales29-cancel-item-btn .material-symbols-rounded{
+    font-size:17px;
+  }
+
+  .sales29-item-row-cancelled{
+    background:#f8fafc;
+  }
+
+  .sales29-item-row-cancelled > td:first-child > strong{
+    color:#64748b;
+    text-decoration:line-through;
+  }
+
+  .sales29-item-cancel-detail{
+    margin-top:7px;
+    display:flex;
+    flex-direction:column;
+    gap:3px;
+    max-width:230px;
+  }
+
+  .sales29-item-cancel-detail strong{
+    color:#be123c;
+    font-size:11px;
+  }
+
+  .sales29-item-cancel-detail small{
+    color:#64748b;
+    font-size:11px;
+    line-height:1.35;
+  }
+
+  .sales29-financial-grid{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:10px;
+  }
+
+  .sales29-financial-grid > div{
+    min-height:72px;
+    padding:12px 14px;
+    border:1px solid #e5edf6;
+    border-radius:14px;
+    background:#fff;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    gap:5px;
+  }
+
+  .sales29-financial-grid small{
+    color:#64748b;
+    font-size:11px;
+    font-weight:750;
+  }
+
+  .sales29-financial-grid strong{
+    color:#0f172a;
+    font-size:16px;
+  }
+
+  .sales29-financial-alert{
+    margin-top:12px;
+    padding:12px 14px;
+    display:flex;
+    gap:10px;
+    align-items:flex-start;
+    border:1px solid #fed7aa;
+    border-radius:14px;
+    background:#fff7ed;
+    color:#9a3412;
+  }
+
+  .sales29-financial-alert .material-symbols-rounded{
+    font-size:20px;
+    flex:0 0 auto;
+  }
+
+  .sales29-financial-alert > div{
+    display:flex;
+    flex-direction:column;
+    gap:3px;
+  }
+
+  .sales29-financial-alert strong{
+    font-size:12px;
+  }
+
+  .sales29-financial-alert span{
+    font-size:11px;
+    line-height:1.45;
+  }
+
+  .sales29-delivery-product-card.is-cancelled{
+    background:#f8fafc;
+    border-style:dashed;
+    opacity:.86;
+  }
+
+  .sales29-delivery-product-card.is-cancelled
+  .sales29-delivery-product-title > strong{
+    color:#64748b;
+    text-decoration:line-through;
+  }
+
+  .sales29-delivery-item-cancelled{
+    margin-top:9px;
+    padding:9px 10px;
+    display:flex;
+    align-items:flex-start;
+    gap:8px;
+    border-radius:12px;
+    background:#fff1f2;
+    color:#be123c;
+    font-size:11px;
+  }
+
+  .sales29-delivery-item-cancelled .material-symbols-rounded{
+    font-size:17px;
+  }
+
+  .sales29-delivery-item-cancelled span:last-child{
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+  }
+
+  .sales29-delivery-item-cancelled small{
+    color:#64748b;
+    line-height:1.35;
+  }
+
+  @media (max-width: 760px){
+    .sales29-financial-grid{
+      grid-template-columns:1fr;
+    }
+  }
+
+  @media (max-width: 1080px) { .sales-form-grid, .sales-type-grid, .sales-detail-grid { grid-template-columns: 1fr; } .sales-form-grid .span-2 { grid-column: auto; } .sales-list-head, .sales-modal-heading, .sales-main-header { flex-direction: column; } .sales29-actions-stack{min-width:100%;align-items:stretch}.sales29-actions-row{justify-content:flex-start}.sales29-actions-row--secondary .button{min-width:0} }
+
+  .sales-workspace .input-field{position:relative;display:flex;flex-direction:column;gap:7px;font-size:12px;font-weight:800;color:#475569;text-transform:uppercase;letter-spacing:.035em}
+  .sales-workspace .input-field input,.sales-workspace .input-field select,.sales-workspace .input-field textarea,.modal-card .sales-form-grid .input-field input,.modal-card .sales-form-grid .input-field select,.modal-card .sales-form-grid .input-field textarea{width:100%;box-sizing:border-box;border:1px solid #dbe4ef;border-radius:15px;background:#fff;padding:12px 14px;font:inherit;color:#0f172a;text-transform:none;letter-spacing:0;box-shadow:0 1px 0 rgba(15,23,42,.02);transition:border-color .16s ease,box-shadow .16s ease,background .16s ease}
+  .sales-workspace .input-field select,.modal-card .sales-form-grid .input-field select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,#64748b 50%),linear-gradient(135deg,#64748b 50%,transparent 50%);background-position:calc(100% - 18px) 52%,calc(100% - 12px) 52%;background-size:6px 6px,6px 6px;background-repeat:no-repeat;padding-right:38px}
+  .sales-workspace .input-field input:focus,.sales-workspace .input-field select:focus,.sales-workspace .input-field textarea:focus,.modal-card .sales-form-grid .input-field input:focus,.modal-card .sales-form-grid .input-field select:focus,.modal-card .sales-form-grid .input-field textarea:focus{outline:none;border-color:var(--primary,#00A1DE);box-shadow:0 0 0 4px rgba(0,161,222,.13)}
+  .sales-workspace .input-field select:disabled,.modal-card .sales-form-grid .input-field select:disabled{background-color:#f8fafc;color:#64748b;cursor:not-allowed}
+  .sales-form-grid{background:linear-gradient(180deg,#fff,#f8fbff);border:1px solid #e5edf6;border-radius:20px;padding:18px;box-shadow:0 14px 34px rgba(15,23,42,.06)}
+  .sales-form-grid hr{border:0;border-top:1px solid #e5edf6;width:100%;margin:4px 0}
+  .sales-step-intro--modern{padding:16px;border:1px solid #e5edf6;border-radius:20px;background:linear-gradient(135deg,rgba(0,161,222,.10),rgba(255,255,255,.92))}
+  .sales-type-card--modern{position:relative;overflow:hidden;min-height:138px;background:linear-gradient(180deg,#fff,#f8fbff)}
+  .sales-type-card--modern:after{content:"";position:absolute;right:-24px;bottom:-24px;width:88px;height:88px;border-radius:999px;background:rgba(0,161,222,.08)}
+  .sales-radio-row label{transition:border-color .15s ease,box-shadow .15s ease,background .15s ease}.sales-radio-row label:has(input:checked){border-color:var(--primary,#00A1DE);background:rgba(0,161,222,.08);box-shadow:0 0 0 3px rgba(0,161,222,.10)}
+  .sales-modal-heading{background:#f8fbff;border:1px solid #e5edf6;border-radius:18px;padding:14px;margin-bottom:14px}
+
+  .sales-modal-shell{display:grid;gap:16px}
+  .modal-card--wide{width:min(1080px,100%)}
+  .modal-card .sales-step-intro--modern{margin-bottom:0}
+  .sales-modern-form{display:grid;gap:16px}
+  .sales-form-section{border:1px solid #e5edf6;border-radius:22px;background:linear-gradient(180deg,#fff,#f8fbff);padding:18px;box-shadow:0 12px 30px rgba(15,23,42,.05)}
+  .sales-form-section-head{display:flex;align-items:flex-start;gap:12px;margin-bottom:14px}
+  .sales-form-section-head .material-symbols-rounded{width:40px;height:40px;display:grid;place-items:center;border-radius:14px;background:rgba(0,161,222,.10);color:var(--primary,#00A1DE)}
+  .sales-form-section-head h4{margin:0 0 4px;font-size:16px}.sales-form-section-head p{margin:0;color:#64748b;font-size:13px;line-height:1.4}
+  .modal-card .sales-form-grid{box-shadow:none;background:transparent;border:0;border-radius:0;padding:0}
+  .modal-card .sales-form-grid .input-field,.sales-modern-form .input-field{position:relative;display:flex;flex-direction:column;gap:7px;font-size:12px;font-weight:800;color:#475569;text-transform:uppercase;letter-spacing:.035em}
+  .modal-card .sales-form-grid .input-field input,.modal-card .sales-form-grid .input-field select,.modal-card .sales-form-grid .input-field textarea,.sales-modern-form .input-field input,.sales-modern-form .input-field select,.sales-modern-form .input-field textarea{width:100%;box-sizing:border-box;border:1px solid #dbe4ef;border-radius:15px;background:#fff;padding:12px 14px;font:inherit;color:#0f172a;text-transform:none;letter-spacing:0;box-shadow:0 1px 0 rgba(15,23,42,.02);transition:border-color .16s ease,box-shadow .16s ease,background .16s ease}
+  .modal-card .sales-form-grid .input-field select,.sales-modern-form .input-field select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,#64748b 50%),linear-gradient(135deg,#64748b 50%,transparent 50%);background-position:calc(100% - 18px) 52%,calc(100% - 12px) 52%;background-size:6px 6px,6px 6px;background-repeat:no-repeat;padding-right:38px}
+  .modal-card .sales-form-grid .input-field input:focus,.modal-card .sales-form-grid .input-field select:focus,.modal-card .sales-form-grid .input-field textarea:focus,.sales-modern-form .input-field input:focus,.sales-modern-form .input-field select:focus,.sales-modern-form .input-field textarea:focus{outline:none;border-color:var(--primary,#00A1DE);box-shadow:0 0 0 4px rgba(0,161,222,.13)}
+  .sales-radio-field{border:1px solid #e5edf6;border-radius:18px;background:#fff;padding:14px;margin:0}.sales-radio-field legend{padding:0 6px;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.035em;color:#475569}
+  .sales-radio-row label{background:#fff;border-color:#dbe4ef}.sales-radio-row input{accent-color:var(--primary,#00A1DE)}
+  .sales-nested-grid{background:transparent!important;border:0!important;box-shadow:none!important;padding:0!important;margin-top:0}
+  .sales-price-box{min-height:58px;display:flex;flex-direction:column;justify-content:center;border:1px solid #dbe4ef;border-radius:15px;background:#fff;padding:12px 14px;text-transform:none;letter-spacing:0}.sales-price-box strong{font-size:18px;color:#0f172a}
+  .sales-form-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}.sales-receipt-field input[type="file"]{border-style:dashed;background:#f8fbff}
+
+  /* Paso 29T — clasificación Comercial / Prueba */
+  .sales29-code-cell{display:flex;flex-direction:column;align-items:flex-start;gap:5px}
+  .sales29-row-archived{background:#f8fafc;opacity:.82}
+  .sales29-test-banner{display:flex;align-items:flex-start;gap:10px;margin-bottom:14px;padding:12px 14px;border:1px solid #bfdbfe;border-radius:14px;background:#eff6ff;color:#1e40af}
+  .sales29-test-banner.is-archived{border-color:#cbd5e1;background:#f8fafc;color:#475569}
+  .sales29-test-banner>.material-symbols-rounded,.sales29-reclassify-warning>.material-symbols-rounded{flex:0 0 auto;font-size:22px}
+  .sales29-test-banner>div,.sales29-reclassify-warning>div{display:flex;flex-direction:column;gap:3px}
+  .sales29-test-banner strong,.sales29-reclassify-warning strong{font-size:12px}
+  .sales29-test-banner span,.sales29-reclassify-warning span{font-size:11px;line-height:1.45}
+  .sales29-record-classification{border-color:#dbeafe}
+  .sales29-reclassify-warning{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border:1px solid #fed7aa;border-radius:14px;background:#fff7ed;color:#9a3412}
+  .sales29-reclassify-modal .sales-form-section{padding:18px}
+  .sales29-static-field{display:flex;align-items:center;min-height:48px;padding:10px 14px;border:1px solid #dbe4ef;border-radius:15px;background:#fff;color:#0f172a}
+  .sales29-field-note{font-size:10px;font-weight:900;color:#c2410c;text-transform:uppercase;letter-spacing:.05em}
+
+
+
+  /* Paso 29W — rendimiento y modal único */
+  .sales29-module-loading,
+  .sales29-modal-loading{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:14px;
+    min-height:180px;
+    padding:28px;
+    text-align:left;
+    color:#475569;
+  }
+
+  .sales29-module-loading .material-symbols-rounded,
+  .sales29-modal-loading .material-symbols-rounded{
+    font-size:30px;
+    animation:sales29w-spin 1s linear infinite;
+  }
+
+  .sales29-module-loading > div,
+  .sales29-modal-loading > div{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+  }
+
+  .sales29-module-loading strong,
+  .sales29-modal-loading strong{
+    color:#0f172a;
+    font-size:14px;
+  }
+
+  .sales29-module-loading span,
+  .sales29-modal-loading span{
+    font-size:12px;
+  }
+
+  @keyframes sales29w-spin{
+    to{transform:rotate(360deg);}
+  }
+
+  #modalRoot:not([hidden]) .modal-card{
+    isolation:isolate;
+  }
+
+  #modalRoot .modal-body{
+    min-height:120px;
+  }
+
+</style>
+<style>
+  #modalRoot .modal-card:has(.sales-modal-shell){border-radius:28px;border:1px solid #dbe9f5;background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%);box-shadow:0 28px 70px rgba(15,23,42,.22);overflow:hidden}
+  #modalRoot .modal-card:has(.sales-modal-shell) .modal-header{background:linear-gradient(135deg,rgba(0,161,222,.12),rgba(255,255,255,.96));border-bottom:1px solid #e5edf6;padding:22px 24px}
+  #modalRoot .modal-card:has(.sales-modal-shell) .modal-body{background:#f8fbff;padding:18px;max-height:min(78vh,760px);overflow:auto}
+  #modalRoot .modal-card:has(.sales-modal-shell) .modal-footer{background:#fff;border-top:1px solid #e5edf6;padding:14px 18px}
+  .sales-form-section{transition:box-shadow .16s ease,transform .16s ease}.sales-form-section:hover{box-shadow:0 16px 36px rgba(15,23,42,.07)}
+  .sales-modern-form .input-field select:hover,.sales-modern-form .input-field input:hover,.sales-modern-form .input-field textarea:hover{border-color:#b9d4e7}
+  .sales-price-box--amount strong{font-size:22px;letter-spacing:-.02em;color:#002B45}.sales-price-box--amount small:empty{display:none}
+</style>
+<style>
+  .sales-detail-shell{gap:14px}.sales-detail-shell .sales-items-table{background:#fff;border:1px solid #e5edf6;border-radius:16px;overflow:hidden}.sales-detail-shell .sales-items-table tr:last-child td{border-bottom:0}
+  .sales-filter-bar{align-items:end;flex-wrap:wrap}.sales-filter-bar .input-field{min-width:150px}.sales-filter-bar .search-field{min-width:min(420px,100%);flex:1}
+  .sales-items-table td small{display:block;margin-top:3px;line-height:1.35}
+</style>
+
+
+<style>
+  .sales29-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}.sales29-tab{border:1px solid #dbe4ef;background:#fff;border-radius:14px;padding:10px 14px;display:inline-flex;align-items:center;gap:8px;font:inherit;font-weight:700;color:#475569;cursor:pointer}.sales29-tab:hover{border-color:#9ccfe5;color:#002b45}.sales29-tab.is-active{background:#002b45;color:#fff;border-color:#002b45}.sales29-tab .material-symbols-rounded{font-size:19px}
+  .sales29-table th,.sales29-table td{vertical-align:middle}.sales29-progress{display:inline-flex;padding:4px 9px;border:1px solid #dbe4ef;border-radius:999px;font-size:12px;font-weight:700;background:#fff}
+  /* PASO 29B — Nueva venta más amplia y con mayor respiración visual */
+  #modalRoot .modal-card:has(.sales29-sale-modal){
+    width:min(1360px,calc(100vw - 32px));
+    max-width:none;
+  }
+  #modalRoot .modal-card:has(.sales29-sale-modal) .modal-body{
+    padding:24px;
+    max-height:min(84vh,900px);
+  }
+  #modalRoot .modal-card:has(.sales29-sale-modal) .modal-header{
+    padding:22px 28px;
+  }
+  #modalRoot .modal-card:has(.sales29-sale-modal) .modal-footer{
+    padding:16px 24px;
+  }
+
+  .sales29-sale-modal{
+    gap:20px;
+  }
+
+  .sales29-sale-modal .sales-modern-form{
+    gap:20px;
+  }
+
+  .sales29-sale-modal .sales-form-section{
+    padding:22px;
+  }
+
+  .sales29-sale-modal .sales-form-section-head{
+    margin-bottom:18px;
+  }
+
+  .sales29-form-layout{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) minmax(380px,430px);
+    gap:22px;
+    align-items:start;
+  }
+
+  .sales29-form-main{
+    display:flex;
+    flex-direction:column;
+    gap:20px;
+    min-width:0;
+  }
+
+  .sales29-sidebar{
+    position:sticky;
+    top:0;
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+    min-width:0;
+  }
+
+  .sales29-cart{
+    position:static;
+    background:#fff;
+    border:1px solid #dbe4ef;
+    border-radius:20px;
+    padding:18px;
+    box-shadow:0 12px 32px rgba(15,23,42,.07);
+    min-width:0;
+  }
+
+  .sales29-sidebar-payment{
+    margin:0;
+    padding:18px!important;
+  }
+
+  .sales29-sidebar-payment .sales-form-section-head{
+    margin-bottom:14px!important;
+  }
+
+  .sales29-sidebar-payment .sales-form-grid{
+    grid-template-columns:1fr;
+    gap:12px;
+  }
+
+  .sales29-sidebar-payment .span-2{
+    grid-column:1;
+  }
+
+  .sales29-sidebar-payment textarea{
+    min-height:88px;
+  }
+
+  .sales29-catalog-gate{
+    display:flex;
+    align-items:flex-start;
+    gap:12px;
+    padding:16px 18px;
+    margin-top:14px;
+    border:1px dashed #cbd5e1;
+    border-radius:16px;
+    background:#f8fafc;
+    color:#475569;
+  }
+
+  .sales29-catalog-gate .material-symbols-rounded{
+    color:#0f6b8f;
+    font-size:22px;
+    margin-top:1px;
+  }
+
+  .sales29-catalog-gate>div{
+    display:flex;
+    flex-direction:column;
+    gap:3px;
+  }
+
+  .sales29-catalog-gate strong{
+    color:#0f172a;
+    font-size:13px;
+  }
+
+  .sales29-catalog-gate small{
+    line-height:1.45;
+    color:#64748b;
+  }
+
+  .sales29-context-ready{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    margin-top:12px;
+    padding:8px 10px;
+    border-radius:10px;
+    background:#f0fdf4;
+    border:1px solid #dcfce7;
+    color:#166534;
+    font-size:12px;
+  }
+
+  .sales29-context-ready .material-symbols-rounded{
+    font-size:17px;
+  }
+
+  .sales29-cart-head{
+    display:flex;
+    gap:11px;
+    align-items:center;
+    padding-bottom:14px;
+    border-bottom:1px solid #edf2f7;
+  }
+
+  .sales29-cart-head>div{
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+  }
+
+  .sales29-cart-head strong{
+    font-size:15px;
+    color:#0f172a;
+  }
+
+  .sales29-cart-head small{
+    color:#64748b;
+    line-height:1.35;
+  }
+
+  .sales29-cart-save{
+    width:100%;
+    justify-content:center;
+    margin-top:0;
+    min-height:46px;
+  }
+
+  .sales29-catalog-toolbar{
+    display:grid;
+    grid-template-columns:minmax(280px,1.7fr) repeat(3,minmax(145px,.8fr));
+    gap:12px;
+    margin-bottom:16px;
+  }
+
+  .sales29-offers{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:14px;
+    max-height:560px;
+    overflow:auto;
+    padding:3px;
+  }
+
+  .sales29-offer-card{
+    border:1px solid #dbe4ef;
+    border-radius:18px;
+    background:#fff;
+    padding:16px;
+    display:flex;
+    flex-direction:column;
+    gap:11px;
+    min-width:0;
+  }
+
+  .sales29-offer-top{
+    display:flex;
+    justify-content:space-between;
+    gap:16px;
+    align-items:flex-start;
+  }
+
+  .sales29-offer-top>div{
+    min-width:0;
+  }
+
+  .sales29-offer-top h5{
+    font-size:14px;
+    line-height:1.35;
+    margin:4px 0;
+    color:#0f172a;
+  }
+
+  .sales29-offer-top p,
+  .sales29-offer-top small{
+    margin:0;
+    color:#64748b;
+    line-height:1.4;
+  }
+
+  .sales29-price{
+    white-space:nowrap;
+    font-size:18px;
+    color:#002b45;
+  }
+
+  .sales29-offer-meta{
+    display:flex;
+    flex-direction:column;
+    gap:5px;
+    font-size:12px;
+    color:#64748b;
+  }
+
+  .sales29-offer-meta span{
+    display:flex;
+    align-items:center;
+    gap:5px;
+  }
+
+  .sales29-offer-meta .material-symbols-rounded{
+    font-size:16px;
+  }
+
+  .sales29-combo{
+    background:#f0f9ff;
+    border:1px solid #cdeefa;
+    border-radius:12px;
+    padding:9px 11px;
+    font-size:12px;
+    line-height:1.4;
+    color:#0c4a6e;
+  }
+
+  /* Carrito: nombre -> combo -> proveedor -> controles */
+  .sales29-cart-lines{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+    margin-top:14px;
+  }
+
+  .sales29-cart-line{
+    border:1px solid #e5edf6;
+    border-radius:16px;
+    padding:14px;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+    background:#fff;
+    min-width:0;
+  }
+
+  .sales29-cart-product{
+    display:flex;
+    flex-direction:column;
+    gap:5px;
+    min-width:0;
+  }
+
+  .sales29-cart-product-name{
+    display:block;
+    font-size:13px;
+    line-height:1.35;
+    font-weight:750;
+    color:#0f172a;
+    overflow-wrap:anywhere;
+  }
+
+  .sales29-cart-combo{
+    display:block;
+    color:#0c4a6e!important;
+    font-size:11.5px;
+    line-height:1.4;
+    padding:7px 9px;
+    background:#f0f9ff;
+    border:1px solid #d8f1fb;
+    border-radius:10px;
+    white-space:normal;
+  }
+
+  .sales29-cart-provider{
+    display:flex;
+    align-items:center;
+    gap:5px;
+    margin-top:1px;
+    color:#64748b!important;
+    font-size:11.5px;
+    line-height:1.35;
+    white-space:normal;
+  }
+
+  .sales29-cart-provider .material-symbols-rounded{
+    font-size:15px;
+  }
+
+  .sales29-cart-line-controls{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    padding-top:10px;
+    border-top:1px solid #edf2f7;
+  }
+
+  .sales29-qty{
+    display:flex;
+    align-items:center;
+    gap:7px;
+  }
+
+  .sales29-qty button{
+    width:30px;
+    height:30px;
+    border-radius:9px;
+    border:1px solid #dbe4ef;
+    background:#fff;
+    cursor:pointer;
+    color:#334155;
+    font-size:16px;
+  }
+
+  .sales29-qty span{
+    min-width:22px;
+    text-align:center;
+    font-size:13px;
+    font-weight:700;
+  }
+
+  .sales29-line-price{
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    gap:8px;
+    font-weight:800;
+    color:#002b45;
+    white-space:nowrap;
+  }
+
+  .sales29-remove{
+    width:30px;
+    height:30px;
+    display:grid;
+    place-items:center;
+    border:0;
+    border-radius:9px;
+    background:#fff1f2;
+    color:#b91c1c;
+    cursor:pointer;
+  }
+
+  .sales29-remove:hover{
+    background:#ffe4e6;
+  }
+
+  .sales29-remove .material-symbols-rounded{
+    font-size:18px;
+  }
+
+  .sales29-cart-total{
+    margin-top:16px;
+    padding-top:14px;
+    border-top:1px solid #e5edf6;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
+  }
+
+  .sales29-cart-total span{
+    color:#64748b;
+    font-size:12px;
+  }
+
+  .sales29-cart-total strong{
+    font-size:21px;
+    color:#002b45;
+  }
+
+  .sales29-cart-empty{
+    text-align:center;
+    color:#64748b;
+    padding:34px 10px;
+  }
+
+  .sales29-cart-empty .material-symbols-rounded{
+    font-size:34px;
+  }
+  .sales29-delivery-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}.sales29-delivery-summary>div{background:#f8fbff;border:1px solid #e5edf6;border-radius:12px;padding:11px;display:flex;flex-direction:column;gap:3px}.sales29-delivery-summary small{color:#64748b}.sales29-evidence-summary{margin-top:14px;border-top:1px solid #e5edf6;padding-top:12px}
+  .sales29-modal-section{background:#fff;border:1px solid #e5edf6;border-radius:16px;padding:16px;display:grid;gap:14px}
+  .sales29-modal-section .sales-form-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+  .sales29-modal-section textarea{min-height:112px}
+  .sales29-modal-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+  .sales29-modal-summary>div{background:#f8fbff;border:1px solid #e5edf6;border-radius:12px;padding:11px;display:flex;flex-direction:column;gap:4px}
+  .sales29-modal-summary small{color:#64748b}
+  .sales29-provider-inline{display:flex;flex-direction:column;gap:4px;padding:12px 14px;border:1px solid #dbe4ef;border-radius:14px;background:#f8fbff}
+  .sales29-provider-inline strong{font-size:13px;color:#0f172a}
+  .sales29-provider-inline small{color:#64748b;line-height:1.4}
+  .sales29-provider-empty{padding:12px 14px;border-radius:14px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;line-height:1.45}
+  .sales29-inline-loader{display:flex;align-items:center;gap:8px;color:#475569;font-size:13px}
+  .sales29-inline-loader .material-symbols-rounded{font-size:18px;color:#0f6b8f}
+  .sales29-field-help{font-size:11px;color:#64748b;line-height:1.4;text-transform:none;letter-spacing:0;font-weight:500}
+  .sales29-hidden{display:none!important}
+
+  /* PASO 29F — Gestión de entrega enfocada al proveedor */
+  .sales29-delivery-client{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:12px;
+  }
+  .sales29-delivery-client>div{
+    background:#f8fbff;
+    border:1px solid #e5edf6;
+    border-radius:14px;
+    padding:12px 14px;
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    min-width:0;
+  }
+  .sales29-delivery-client small{
+    color:#64748b;
+    font-size:11px;
+  }
+  .sales29-delivery-client strong{
+    color:#0f172a;
+    font-size:13px;
+    line-height:1.4;
+    overflow-wrap:anywhere;
+  }
+  .sales29-delivery-products{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+  .sales29-delivery-product-card{
+    border:1px solid #dbe4ef;
+    border-radius:16px;
+    padding:14px 16px;
+    background:#fff;
+    display:grid;
+    gap:10px;
+  }
+  .sales29-delivery-product-head{
+    display:flex;
+    justify-content:space-between;
+    gap:16px;
+    align-items:flex-start;
+  }
+  .sales29-delivery-product-title{
+    min-width:0;
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+  }
+  .sales29-delivery-product-title strong{
+    font-size:14px;
+    line-height:1.35;
+    color:#0f172a;
+  }
+  .sales29-delivery-product-title small{
+    color:#64748b;
+    line-height:1.4;
+  }
+  .sales29-delivery-product-combo{
+    padding:8px 10px;
+    border-radius:10px;
+    background:#f0f9ff;
+    border:1px solid #d8f1fb;
+    color:#0c4a6e!important;
+    font-size:11.5px;
+  }
+  .sales29-delivery-product-provider{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    color:#475569;
+    font-size:12px;
+  }
+  .sales29-delivery-product-provider .material-symbols-rounded{
+    font-size:16px;
+    color:#0f6b8f;
+  }
+  .sales29-delivery-product-values{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:10px;
+    padding-top:10px;
+    border-top:1px solid #edf2f7;
+  }
+  .sales29-delivery-product-values>div{
+    display:flex;
+    flex-direction:column;
+    gap:3px;
+  }
+  .sales29-delivery-product-values small{
+    color:#64748b;
+    font-size:10.5px;
+  }
+  .sales29-delivery-product-values strong{
+    color:#002b45;
+    font-size:13px;
+  }
+  .sales29-delivery-status-block{
+    display:grid;
+    gap:14px;
+  }
+  .sales29-delivery-dynamic{
+    margin-top:4px;
+    padding-top:14px;
+    border-top:1px solid #edf2f7;
+  }
+  .sales29-delivery-evidence-grid{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:12px;
+  }
+  .sales29-delivery-current{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:9px 11px;
+    border-radius:11px;
+    background:#f8fafc;
+    color:#475569;
+    font-size:12px;
+  }
+  .sales29-delivery-current .material-symbols-rounded{
+    font-size:17px;
+    color:#0f6b8f;
+  }
+  .sales29-cancel-warning{
+    padding:14px 16px;
+    border:1px solid #fecaca;
+    border-radius:14px;
+    background:#fff7f7;
+    color:#7f1d1d;
+    line-height:1.5;
+  }
+  .sales29-cancel-button{
+    border-color:#fecaca!important;
+    color:#b91c1c!important;
+    background:#fff7f7!important;
+  }
+  .sales29-cancel-button:hover{
+    background:#ffe4e6!important;
+  }
+  .status-pill.is-success{background:#ecfdf5;color:#047857}.status-pill.is-warning{background:#fffbeb;color:#b45309}.status-pill.is-danger{background:#fff1f2;color:#be123c}
+  @media(max-width:1100px){
+    #modalRoot .modal-card:has(.sales29-sale-modal){width:min(960px,calc(100vw - 24px))}
+    .sales29-form-layout{grid-template-columns:1fr}
+    .sales29-sidebar{position:static}
+    .sales29-cart{position:static}
+    .sales29-catalog-toolbar{grid-template-columns:1fr 1fr}
+    .sales29-offers{grid-template-columns:1fr}
+  }
+  @media(max-width:720px){
+    #modalRoot .modal-card:has(.sales29-sale-modal) .modal-body{padding:14px}
+    .sales29-sale-modal .sales-form-section{padding:16px}
+    .sales29-catalog-toolbar,.sales29-delivery-summary,.sales29-modal-summary,.sales29-modal-section .sales-form-grid,.sales29-delivery-client,.sales29-delivery-product-values,.sales29-delivery-evidence-grid{grid-template-columns:1fr}
+    .sales29-offers{max-height:none}
+    .sales29-tab{flex:1;justify-content:center}
+    .sales29-cart-line-controls{align-items:flex-end}
+  }
+
+  /* PASO 29G — Estado/evidencias con el mismo sistema visual de formularios */
+  .sales29-delivery-status-grid{
+    grid-template-columns:minmax(220px,340px)!important;
+    align-items:end;
+  }
+  .sales29-delivery-status-block .sales-form-grid{
+    margin:0;
+  }
+  .sales29-delivery-evidence-grid.sales-form-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:12px;
+  }
+  .modal-card .sales29-delivery-evidence-grid .input-field input[type="file"],
+  .modal-card .sales29-modal-section .input-field input[type="file"]{
+    padding:7px 8px;
+    min-height:44px;
+    background:#fff;
+  }
+  .modal-card .sales29-delivery-evidence-grid .input-field input[type="file"]::file-selector-button,
+  .modal-card .sales29-modal-section .input-field input[type="file"]::file-selector-button{
+    border:1px solid #bfe6f6;
+    border-radius:10px;
+    background:#eefaff;
+    color:#006b96;
+    font-weight:800;
+    padding:8px 11px;
+    margin-right:10px;
+    cursor:pointer;
+  }
+  .modal-card .sales29-delivery-evidence-grid .input-field input[type="file"]::file-selector-button:hover,
+  .modal-card .sales29-modal-section .input-field input[type="file"]::file-selector-button:hover{
+    background:#e1f6ff;
+  }
+  .sales29-delivery-status-block .input-field>span{
+    margin-bottom:1px;
+  }
+</style>

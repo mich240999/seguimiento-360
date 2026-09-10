@@ -1,0 +1,121 @@
+<!-- SGT360 — Workspace Materiales y Precios -->
+<template id="materialsPricesWorkspaceTemplate">
+  <section class="mp-workspace" aria-labelledby="mpWorkspaceTitle">
+    <header class="providers-header mp-header">
+      <div class="providers-header-copy">
+        <p class="eyebrow">COMERCIAL</p>
+        <h2 id="mpWorkspaceTitle">Materiales y Precios</h2>
+        <p>Gestiona materiales universales, precios por proveedor y listas de precios por negocio, oficina, grupo y vigencia.</p>
+      </div>
+      <div class="providers-actions">
+        <button id="mpRefreshButton" class="button button--secondary" type="button">
+          <span class="material-symbols-rounded">refresh</span>Actualizar
+        </button>
+      </div>
+    </header>
+
+    <nav id="mpTabs" class="mp-tabs" aria-label="Secciones de Materiales y Precios">
+      <button type="button" data-mp-tab="summary">Resumen</button>
+      <button type="button" data-mp-tab="materials">Materiales</button>
+      <button type="button" data-mp-tab="prices">Precios</button>
+      <button type="button" data-mp-tab="lists">Listas</button>
+    </nav>
+
+    <div id="mpRegion" class="mp-region"></div>
+  </section>
+</template>
+
+<style>
+  .mp-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 18px}
+  .mp-tabs button{border:1px solid var(--border-color,#d8e0ea);background:#fff;border-radius:999px;padding:9px 14px;font-weight:700;color:#42526e;cursor:pointer}
+  .mp-tabs button.is-active{background:var(--primary-500,#00A1DE);border-color:var(--primary-500,#00A1DE);color:#fff}
+  .mp-region{display:block}
+  .mp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:18px}
+  .mp-card{background:#fff;border:1px solid var(--border-color,#d8e0ea);border-radius:18px;padding:16px;box-shadow:0 10px 24px rgba(20,34,65,.06)}
+  .mp-card small{display:block;color:#6b778c;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+  .mp-card strong{font-size:28px;display:block;margin-top:6px}
+  .mp-panel{background:#fff;border:1px solid var(--border-color,#d8e0ea);border-radius:20px;padding:18px;box-shadow:0 10px 24px rgba(20,34,65,.06);margin-bottom:16px}
+  .mp-form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:12px 0}
+  .mp-form-grid label{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:800;color:#42526e;text-transform:uppercase;letter-spacing:.03em}
+  .mp-form-grid input,.mp-form-grid select,.mp-form-grid textarea{border:1px solid var(--border-color,#d8e0ea);border-radius:14px;padding:12px 14px;font:inherit;text-transform:none;background:#fff}
+
+  .mp-field-label{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .mp-field-info{position:relative;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:999px;background:#eef6fb;color:#0077a8;font-size:13px;line-height:1;cursor:help;flex:0 0 auto}
+  .mp-field-info .material-symbols-rounded{font-size:16px;line-height:1}
+  .mp-field-info::after{content:attr(data-tooltip);position:absolute;right:0;top:calc(100% + 8px);width:max-content;max-width:240px;padding:9px 11px;border-radius:12px;background:#172b4d;color:#fff;font-size:12px;font-weight:600;line-height:1.35;text-transform:none;letter-spacing:0;box-shadow:0 12px 28px rgba(9,30,66,.22);opacity:0;visibility:hidden;transform:translateY(-4px);transition:opacity .15s ease,transform .15s ease,visibility .15s ease;z-index:10050;white-space:normal}
+  .mp-field-info::before{content:"";position:absolute;right:6px;top:calc(100% + 3px);border:5px solid transparent;border-bottom-color:#172b4d;opacity:0;visibility:hidden;transition:opacity .15s ease,visibility .15s ease;z-index:10051}
+  .mp-field-info:hover::after,.mp-field-info:focus::after,.mp-field-info:hover::before,.mp-field-info:focus::before{opacity:1;visibility:visible;transform:translateY(0)}
+  .mp-form-grid textarea{min-height:92px;resize:vertical}.mp-form-span-2{grid-column:span 2}
+  .mp-table-wrap{overflow:auto;border:1px solid var(--border-color,#d8e0ea);border-radius:16px}
+  .mp-table{width:100%;border-collapse:collapse;background:#fff}
+  .mp-table th,.mp-table td{padding:10px 12px;border-bottom:1px solid var(--border-color,#e8edf3);text-align:left;vertical-align:top}
+  .mp-table th{font-size:12px;text-transform:uppercase;color:#6b778c;background:#f7f9fc}
+  .mp-status{display:inline-flex;border-radius:999px;padding:4px 8px;background:#eef4ff;font-size:12px;font-weight:800}
+  .mp-status.ERROR,.mp-status.OBSERVADO_POR_SISTEMA,.mp-status.RECHAZADO{background:#ffebe6;color:#bf2600}
+  .mp-status.ADVERTENCIA,.mp-status.EN_REVISION,.mp-status.OBSERVADO_POR_REVISOR{background:#fff4d6;color:#8a5a00}
+  .mp-status.OK,.mp-status.APROBADO,.mp-status.PUBLICADO,.mp-status.ACTIVO{background:#e3fcef;color:#006644}
+  .mp-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .mp-detail-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:14px}
+  .mp-note{padding:12px;border-radius:14px;background:#f7f9fc;color:#42526e}
+  .mp-note strong{font-weight:800}
+  .mp-observation{margin-top:14px;padding:14px 16px;border-radius:16px;background:#f7f9fc;border:1px solid #e7edf4;color:#42526e;line-height:1.55}
+  .mp-hidden{display:none!important}
+  .mp-modal-backdrop{position:fixed;inset:0;background:rgba(9,30,66,.38);z-index:9999;display:flex;align-items:stretch;justify-content:flex-end}
+  .mp-modal{width:min(760px,100%);background:#fff;box-shadow:-18px 0 40px rgba(9,30,66,.2);padding:22px;overflow:auto}
+  .mp-modal--wide{width:min(1040px,100%)}
+  .mp-modal-header{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;border-bottom:1px solid var(--border-color,#e8edf3);padding-bottom:14px;margin-bottom:18px}
+  .mp-modal-close{border:0;background:#f4f6f8;border-radius:999px;width:38px;height:38px;cursor:pointer}
+  .mp-upload-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:12px 0}
+  .mp-upload-summary div{background:#f7f9fc;border-radius:14px;padding:10px}
+  .mp-upload-summary small{display:block;color:#6b778c;font-weight:700}
+  .mp-upload-summary strong{font-size:22px}
+  .mp-inline-loader{display:flex;align-items:center;gap:10px;background:#f7f9fc;border-radius:14px;padding:12px;color:#42526e}
+  .mp-toolbar{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}
+
+  .mp-section-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;min-height:74px}
+  .mp-section-title h3{margin:0 0 6px}
+  .mp-section-title p{margin:0;color:#6b778c}
+  .mp-section-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:flex-end}
+  .mp-section-search{margin-top:14px;max-width:460px}
+  .mp-section-search .search-field{width:100%}
+
+  .mp-filter-row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;max-width:none}
+  .mp-filter-row .search-field{min-width:min(420px,100%);flex:1 1 320px}
+  .mp-filter-control{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:800;color:#42526e;text-transform:uppercase;letter-spacing:.03em;min-width:150px}
+  .mp-filter-control select{border:1px solid var(--border-color,#d8e0ea);border-radius:14px;padding:10px 12px;font:inherit;text-transform:none;background:#fff}
+  .mp-price-filter-bar{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-top:14px}
+  .mp-price-filter-bar .mp-section-search{margin-top:0;flex:1 1 620px}
+  .mp-price-filter-bar #mpDownloadPrices{margin-left:auto;align-self:flex-end}
+  .mp-material-bulk-result{margin-top:10px}
+
+  .mp-material-header{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:start}
+  .mp-material-search-row{margin-top:14px;max-width:460px}
+  .mp-material-search-row .search-field{width:100%}
+  .mp-combo-help{margin-top:12px;padding:14px 16px;border-radius:16px;background:#fff;border:1px dashed #c8d7e6;color:#42526e;line-height:1.55}
+  .mp-combo-help strong{color:#23384d}
+  .mp-toolbar-copy h3{margin:0 0 4px}
+  .mp-toolbar-copy p{margin:0;color:#6b778c}
+  .mp-toolbar-actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+  .mp-toolbar .search-field{min-width:min(320px,100%)}
+  .mp-modern-form{display:grid;gap:18px}
+  .mp-upload-hero{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap;padding:16px 18px;border-radius:18px;background:linear-gradient(135deg,#f7fbff 0%,#f2f6fb 100%);border:1px solid #e6eef7}
+  .mp-upload-hero p{margin:6px 0 0;color:#51637a;max-width:620px}
+  .mp-upload-badges{display:flex;gap:8px;flex-wrap:wrap}
+  .mp-badge{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:999px;background:#fff;border:1px solid #d9e6f2;color:#1f3b57;font-size:12px;font-weight:800}
+  .mp-modal-section{border:1px solid #e7edf4;border-radius:18px;padding:16px;background:#fff}
+  .mp-modal-section h4{margin:0 0 4px;font-size:16px}
+  .mp-modal-section p{margin:0 0 14px;color:#6b778c}
+  .mp-upload-layout{display:grid;grid-template-columns:minmax(0,1.75fr) minmax(260px,.95fr);gap:16px;align-items:start}
+  .mp-upload-sidebar{display:grid;gap:16px}
+  .mp-file-field input[type="file"]{padding:14px;background:#f9fbfd;border-style:dashed}
+  .mp-scope-card,.mp-help-card{padding:16px;border-radius:18px;background:#f7f9fc;border:1px solid #e5edf6;color:#42526e;line-height:1.6}
+  .mp-scope-card strong,.mp-help-card strong{display:block;margin-bottom:8px;color:#23384d}
+  .mp-help-card ul{margin:0;padding-left:18px}
+  .mp-help-card li + li{margin-top:6px}
+  .mp-upload-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+  @media(max-width:920px){.mp-upload-layout{grid-template-columns:1fr}.mp-toolbar-actions{justify-content:flex-start}.mp-toolbar .search-field{min-width:100%}.mp-material-header{grid-template-columns:1fr}.mp-material-search-row{max-width:100%}}
+  @media(max-width:720px){.mp-detail-head{display:block}.mp-actions{margin-top:10px}.mp-table th,.mp-table td{white-space:nowrap}.mp-modal{width:100%}.mp-upload-hero{display:block}}
+
+  .mp-price-alert{display:flex;align-items:flex-start;gap:10px;margin:12px 0;padding:12px 14px;border-radius:14px;background:#fff7ed;color:#9a3412;border:1px solid #fed7aa;font-size:13px;font-weight:700}
+  .mp-price-alert[hidden]{display:none!important}.mp-price-alert .material-symbols-rounded{font-size:20px}
+</style>
