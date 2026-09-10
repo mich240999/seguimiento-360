@@ -55,12 +55,6 @@ supabase_modal = """
   </div>
 </div>
 
-<!-- BARRA INDICADORA FLOTANTE DE ESTADO SUPABASE -->
-<div id="badgeSupabaseStatus" onclick="document.getElementById('modalConfigSupabase').style.display='flex'" style="position:fixed; bottom:16px; right:16px; z-index:9999; background:rgba(30,41,59,0.92); backdrop-filter:blur(10px); border:1px solid #475569; padding:8px 14px; border-radius:30px; display:flex; align-items:center; gap:8px; cursor:pointer; font-size:0.78rem; font-family:'Inter',sans-serif; color:#F8FAFC; box-shadow:0 8px 20px rgba(0,0,0,0.35);">
-  <span id="dotSupabaseStatus" style="width:8px; height:8px; border-radius:50%; background:#F59E0B;"></span>
-  <span id="textSupabaseStatus">Modo Demo (Click p/ conectar Supabase)</span>
-  <i class="fas fa-gear" style="color:#94A3B8; font-size:0.85rem;"></i>
-</div>
 """
 
 template = """<!DOCTYPE html>
@@ -164,6 +158,10 @@ template = """<!DOCTYPE html>
 
     document.addEventListener("DOMContentLoaded", function() {
       actualizarIndicadorSupabase();
+      var badge = document.getElementById("badgeSupabaseStatus");
+      if (badge) badge.addEventListener("click", function() {
+        document.getElementById("modalConfigSupabase").style.display = "flex";
+      });
     });
   </script>
 </body>
