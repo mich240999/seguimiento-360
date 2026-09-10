@@ -1,7 +1,7 @@
 # Acceso con Google y Microsoft
 
-La aplicacion conserva el acceso por correo y contrasena, y agrega inicio de
-sesion con Google y Microsoft mediante Supabase Auth.
+La aplicacion usa inicio de sesion con Google y Microsoft mediante Supabase
+Auth.
 
 Para GitHub Pages, en **Supabase > Authentication > URL Configuration** usa:
 
