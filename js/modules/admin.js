@@ -1542,10 +1542,15 @@ const ADMIN_STATE = {
     const data = formDataObject(form);
     setLoader(true, "Guardando usuario…");
     secureRpc("guardarUsuarioAdminMotor", [data], adminRpcModuleCode())
-      .then(function() {
+      .then(function(result) {
         closeSideSheet();
         setLoader(false);
-        toast("Usuario guardado", "Los datos y asignaciones fueron actualizados.");
+        toast(
+          idUsuario ? "Usuario actualizado" : "Invitación enviada",
+          result && result.mensaje || (idUsuario ?
+            "Los datos y asignaciones fueron actualizados." :
+            "El usuario recibirá un correo para definir su contraseña.")
+        );
         const search = document.getElementById("adminUsersSearch");
         return loadAdminUsers(search ? search.value : "", true);
       })
