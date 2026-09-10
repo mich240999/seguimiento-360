@@ -53,13 +53,18 @@
     const authActions = document.querySelector(".auth-actions"); if (!authActions) return;
     const google = document.getElementById("authGoogleButton"); const microsoft = document.getElementById("authMicrosoftButton");
     if (google) google.remove(); if (microsoft) microsoft.remove();
-    const style = document.createElement("style"); style.id = "supabase-auth-styles";
+    /* const style = document.createElement("style"); style.id = "supabase-auth-styles";
     style.textContent = ".supabase-auth-form{display:grid;gap:12px;margin-top:4px}.supabase-auth-label{display:grid;gap:6px;font-size:12px;font-weight:700;color:#475569;text-align:left}.supabase-auth-input{width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:12px;padding:12px 14px;font:inherit;background:#fff;color:#0f172a;outline:none}.supabase-auth-input:focus{border-color:#00a1de;box-shadow:0 0 0 3px rgba(0,161,222,.12)}.supabase-auth-submit{width:100%;justify-content:center;border:0;cursor:pointer}.supabase-auth-submit[disabled]{opacity:.65;cursor:wait}.supabase-auth-forgot{border:0;background:none;color:#007da9;font:inherit;font-size:13px;font-weight:700;cursor:pointer;padding:4px}.supabase-auth-forgot:hover{text-decoration:underline}#authMessage.is-success{color:#16794b}#authMessage.is-error{color:#b42318}";
     document.head.appendChild(style);
     authActions.innerHTML = '<form id="supabaseEmailLogin" class="supabase-auth-form" novalidate><label class="supabase-auth-label">Correo electrónico<input id="authEmail" class="supabase-auth-input" type="email" autocomplete="username" inputmode="email" placeholder="nombre@empresa.com" required></label><label class="supabase-auth-label">Contraseña<input id="authPassword" class="supabase-auth-input" type="password" autocomplete="current-password" placeholder="Ingresa tu contraseña" required minlength="6"></label><button id="authEmailSubmit" class="provider-button supabase-auth-submit" type="submit"><span class="material-symbols-rounded" aria-hidden="true">login</span><span>Iniciar sesión</span></button><button id="authForgotPassword" class="supabase-auth-forgot" type="button">¿Olvidaste tu contraseña?</button></form>';
-    authActions.insertAdjacentHTML("beforeend", '<button id="supabaseGoogleButton" class="provider-button supabase-auth-submit" type="button">Continuar con Google</button><button id="supabaseMicrosoftButton" class="provider-button supabase-auth-submit" type="button">Continuar con Microsoft</button>');
+    authActions.insertAdjacentHTML("beforeend", '<button id="supabaseGoogleButton" class="provider-button supabase-auth-submit" type="button">Continuar con Google</button><button id="supabaseMicrosoftButton" class="provider-button supabase-auth-submit" type="button">Continuar con Microsoft</button>'); */
     const form = document.getElementById("supabaseEmailLogin"); const emailInput = document.getElementById("authEmail"); const passwordInput = document.getElementById("authPassword"); const submit = document.getElementById("authEmailSubmit"); const forgot = document.getElementById("authForgotPassword");
     form.hidden = true;
+    const emailButton = document.getElementById("supabaseEmailButton");
+    emailButton.addEventListener("click", function() {
+      form.hidden = !form.hidden;
+      if (!form.hidden) emailInput.focus();
+    });
     form.addEventListener("submit", async function(event) {
       event.preventDefault(); const email = String(emailInput.value || "").trim().toLowerCase(); const password = String(passwordInput.value || "");
       if (!email || !emailInput.checkValidity()) return showMessage("Ingresa un correo válido.", true); if (!password) return showMessage("Ingresa tu contraseña.", true);
