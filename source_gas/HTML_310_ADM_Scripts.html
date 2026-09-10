@@ -116,8 +116,19 @@
   }
 
   function getAdministrationModuleConfiguration(code) {
-    return ADMIN_MODULE_CONFIGURATION[String(code || "").toUpperCase()] ||
+    const normalizedCode = String(code || "").toUpperCase();
+    const base = ADMIN_MODULE_CONFIGURATION[normalizedCode] ||
       ADMIN_MODULE_CONFIGURATION.ADMIN_GENERAL;
+    const role = String(APP_STATE.context && APP_STATE.context.usuario && APP_STATE.context.usuario.rol || "").toUpperCase();
+    if (normalizedCode === "ADMIN_CONFIG_APP" && role === "SUPERADMIN") {
+      return Object.assign({}, base, {
+        eyebrow: "CENTRO DE GESTIÓN",
+        title: "Administración integral",
+        description: "Gestiona desde una sola interfaz usuarios, proveedores, oficinas, grupos, asignaciones, roles, permisos, módulos y recursos visuales.",
+        sections: ["users", "roles", "permissions", "providers", "offices-groups", "modules", "catalogs", "visual-resources", "settings"]
+      });
+    }
+    return base;
   }
 
 
@@ -353,6 +364,12 @@
         loadAdminResources(),
         loadAdminSettings()
       ];
+      const role = String(APP_STATE.context && APP_STATE.context.usuario && APP_STATE.context.usuario.rol || "").toUpperCase();
+      if (role === "SUPERADMIN") {
+        tasks.push(loadAdminUsers("", true));
+        tasks.push(loadAdminRoles());
+        tasks.push(loadAdminAssignmentStructure());
+      }
     } else if (ADMIN_STATE.activeModule === "ADMIN_AUDITORIA") {
       tasks = [loadAdminSessions(), loadAdminAudit()];
     }
