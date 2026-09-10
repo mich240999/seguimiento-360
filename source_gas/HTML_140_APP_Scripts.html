@@ -63,35 +63,30 @@
    */
   function bootApplication() {
     setLoader(true, "Validando acceso seguro…");
-    const token = readStoredToken();
+    const supabase = window.supabaseClient && window.supabaseClient.isConfigured() ?
+      window.supabaseClient.getClient() : null;
 
-    if (!token) {
-      showLogin("Inicia sesión con una cuenta autorizada.", false);
+    if (!supabase) {
+      showLogin("Supabase no está configurado.", true);
       return;
     }
 
-    APP_STATE.token = token;
-
-    google.script.run
-      .withSuccessHandler(function(result) {
-        if (!result || result.correcto !== true || result.autenticado !== true) {
+    supabase.auth.getSession()
+      .then(function(result) {
+        const session = result.data && result.data.session;
+        if (!session || !session.access_token) {
           clearLocalSession();
-          showLogin(result && result.mensaje ? result.mensaje : "La sesión no es válida.", true);
+          showLogin("Inicia sesión con una cuenta autorizada.", false);
           return;
         }
-
-        APP_STATE.session = result;
+        APP_STATE.token = session.access_token;
+        APP_STATE.session = session;
+        try { window.localStorage.setItem(APP_STORAGE.TOKEN, session.access_token); } catch (error) {}
         initializeProtectedApplication();
       })
-      .withFailureHandler(function(error) {
+      .catch(function(error) {
         clearLocalSession();
-        showLogin(errorMessage(error, "No fue posible validar la sesión."), true);
-      })
-      .validarSesionAplicacionPaso13D1({
-        token: token,
-        modulo: "DASHBOARD",
-        origen: window.location.href,
-        userAgent: navigator.userAgent
+        showLogin(errorMessage(error, "No fue posible validar la sesión de Supabase."), true);
       });
   }
 
@@ -1328,7 +1323,7 @@
 
     const logo = document.getElementById("loaderLogo");
     const fallback = document.getElementById("loaderFallbackIcon");
-    const source = String(config.logoDataUrl || "").trim();
+    const source = String(config.logoDataUrl || "img/calidda-logo.png").trim();
 
     if (logo && source) {
       logo.onload = function() {
