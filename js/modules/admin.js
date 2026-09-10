@@ -1501,6 +1501,7 @@ const ADMIN_STATE = {
         fieldInput("nombre", "Nombre completo", user.nombre, true) +
         fieldInput("correo", "Correo", user.correo, true, "email") +
         fieldInput("telefono", "Teléfono", user.telefono) +
+        (user.idUsuario ? '<label class="field field--full"><span>Nueva contraseña <small>(opcional)</small></span><input name="nuevaContrasena" type="password" minlength="8" autocomplete="new-password"><small class="field-help">Solo SUPERADMIN puede cambiarla. El usuario podrá cambiarla nuevamente desde su perfil.</small></label>' : '') +
         '<label class="field is-required"><span>Rol</span><select id="userRoleSelect" name="rol" required>' +
           '<option value="">Selecciona</option>' + roles + "</select></label>" +
         '<label id="userProviderField" class="field"><span>Proveedor principal</span>' +

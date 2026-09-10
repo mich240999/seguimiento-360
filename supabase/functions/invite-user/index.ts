@@ -39,6 +39,20 @@ Deno.serve(async (request) => {
   }
 
   const payload = await request.json().catch(() => null);
+  if (payload && payload.accion === "CAMBIAR_CONTRASENA") {
+    const idUsuario = String(payload.idUsuario || "").trim();
+    const password = String(payload.nuevaContrasena || "");
+    if (!idUsuario || password.length < 8) return response({ error: "La nueva contraseña debe tener al menos 8 caracteres." }, 400);
+    const { data: target, error: targetError } = await admin.from("seg_usuarios").select("correo").eq("id_usuario", idUsuario).maybeSingle();
+    if (targetError || !target) return response({ error: "No se encontró el usuario a modificar." }, 404);
+    const { data: authUsers, error: authUsersError } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    if (authUsersError) return response({ error: authUsersError.message }, 400);
+    const authUser = authUsers.users.find((item) => String(item.email || "").toLowerCase() === String(target.correo || "").toLowerCase());
+    if (!authUser) return response({ error: "El usuario todavía no ha aceptado su invitación de Supabase." }, 409);
+    const { error: passwordError } = await admin.auth.admin.updateUserById(authUser.id, { password });
+    if (passwordError) return response({ error: passwordError.message }, 400);
+    return response({ correcto: true, mensaje: "Contraseña actualizada." });
+  }
   const input = payload && payload.usuario || {};
   const email = String(input.correo || "").trim().toLowerCase();
   const name = String(input.nombre || "").trim();

@@ -638,16 +638,10 @@
     const subtipoSelect = form.elements["idSubtipoMaterial"];
 
     function cargarSubtipos(valorInicial) {
-      const producto = productoSelect ? productoSelect.value : "";
       const tipo = tipoSelect ? tipoSelect.value : "";
-      const subtipos = tipo ?
-        opcionesHijasMpArbol_(
-          opts.subtipos || [],
-          "MP_TIPOS_MATERIAL",
-          tipo,
-          producto
-        ) :
-        [];
+      const subtipos = tipo ? (opts.subtipos || []).filter(function(item) {
+        return String(item.idTipoMaterial || item.valorPadre || "") === String(tipo);
+      }) : [];
 
       cargarOpcionesSelectMpArbol_(
         subtipoSelect,
@@ -659,13 +653,9 @@
 
     function cargarTipos(valorTipoInicial, valorSubtipoInicial) {
       const producto = productoSelect ? productoSelect.value : "";
-      const tipos = producto ?
-        opcionesHijasMpArbol_(
-          opts.tipos || [],
-          "MP_PRODUCTOS_PRINCIPALES",
-          producto
-        ) :
-        [];
+      // MAE_TIPOS_MATERIAL no tiene una FK a producto. Los tipos se obtienen
+      // directamente de la base y los subtipos sí se limitan por su tipo.
+      const tipos = producto ? (opts.tipos || []) : [];
 
       cargarOpcionesSelectMpArbol_(
         tipoSelect,
@@ -697,6 +687,27 @@
       materialData.idTipoMaterial || "",
       materialData.idSubtipoMaterial || ""
     );
+
+    [productoSelect, tipoSelect, subtipoSelect, form.elements["idNegocio"]]
+      .filter(Boolean)
+      .forEach(makeMpSelectSearchable_);
+  }
+
+  function makeMpSelectSearchable_(select) {
+    if (!select || select.dataset.searchReady === "1") return;
+    select.dataset.searchReady = "1";
+    const search = document.createElement("input");
+    search.type = "search";
+    search.className = "mp-select-search";
+    search.placeholder = "Escribe para buscar…";
+    search.setAttribute("aria-label", "Buscar " + (select.name || "opción"));
+    select.parentNode.insertBefore(search, select);
+    search.addEventListener("input", function() {
+      const term = String(search.value || "").toLowerCase().trim();
+      Array.from(select.options).forEach(function(option, index) {
+        option.hidden = index > 0 && Boolean(term) && option.text.toLowerCase().indexOf(term) === -1;
+      });
+    });
   }
 
   function renderMaterialModalBody(opts, materialData) {
