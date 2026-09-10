@@ -66,6 +66,7 @@ ON CONFLICT (id_proveedor) DO NOTHING;
 -- 6. Usuario Administrador Inicial
 INSERT INTO seg_usuarios (id_usuario, correo, nombre, telefono, rol, id_proveedor, id_oficina, estado, tipo_documento, numero_documento)
 VALUES
+    ('USR-MICH', 'mich240999@gmail.com', 'Michael (Superadministrador)', '+51 999 999 999', 'SUPERADMIN', 'PRV-CALIDDA-DIRECTO', 'OFI-LIMA-CENTRO', 'ACTIVO', 'DNI', '70000001'),
     ('USR-SUPERADMIN', 'admin@calidda.com.pe', 'Administrador Cálidda 360', '+51 999 888 777', 'SUPERADMIN', 'PRV-CALIDDA-DIRECTO', 'OFI-LIMA-CENTRO', 'ACTIVO', 'DNI', '00000001'),
     ('USR-DEMO', 'usuario.demo@calidda.com.pe', 'Asesor Comercial Demo', '+51 987 654 321', 'VENDEDOR', 'PRV-CONTRATISTA-01', 'OFI-LIMA-NORTE', 'ACTIVO', 'DNI', '10203040')
 ON CONFLICT (correo) DO NOTHING;

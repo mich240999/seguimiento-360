@@ -13,6 +13,7 @@
   function getInitialStore() {
     return {
       usuarios: [
+        { idUsuario: "USR-MICH", correo: "mich240999@gmail.com", nombre: "Michael (Superadministrador)", rol: "SUPERADMIN", estado: "ACTIVO", telefono: "+51 999 999 999", idProveedor: "PRV-CALIDDA-DIRECTO", idOficina: "OFI-LIMA-CENTRO" },
         { idUsuario: "USR-SUPERADMIN", correo: "admin@calidda.com.pe", nombre: "Administrador Cálidda 360", rol: "SUPERADMIN", estado: "ACTIVO", telefono: "+51 999 888 777", idProveedor: "PRV-CALIDDA-DIRECTO", idOficina: "OFI-LIMA-CENTRO" },
         { idUsuario: "USR-DEMO", correo: "usuario.demo@calidda.com.pe", nombre: "Asesor Comercial Demo", rol: "VENDEDOR", estado: "ACTIVO", telefono: "+51 987 654 321", idProveedor: "PRV-CONTRATISTA-01", idOficina: "OFI-LIMA-NORTE" },
         { idUsuario: "USR-GESTOR", correo: "gestor.entrega@calidda.com.pe", nombre: "Gestor de Entregas Campo", rol: "GESTOR_ENTREGA", estado: "ACTIVO", telefono: "+51 912 345 678", idProveedor: "PRV-CONTRATISTA-01", idOficina: "OFI-LIMA-NORTE" }
