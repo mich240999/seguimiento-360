@@ -666,7 +666,7 @@ const MP_STATE = {
       mpSelectInfo("idNegocio", "Negocio", ordenarOpcionesMpArbol_(opts.negocios || []), false, "Asocia el material al negocio que lo venderá.") +
       mpSelectInfo("idProducto", "Producto principal", productos, false, "Jerarquía general: Producto, Servicio o Trabajo.", "mpMaterialProducto") +
       mpSelectInfo("idTipoMaterial", "Tipo", [], false, "Se habilita según el Producto principal seleccionado.", "mpMaterialTipo") +
-      mpSelectInfo("idSubtipoMaterial", "Subtipo", [], false, "Se habilita según el Tipo seleccionado.", "mpMaterialSubtipo") +
+      mpSelectInfo("idSubtipoMaterial", "Subtipo", [], true, "Opcional. Se habilita según el Tipo seleccionado cuando existan subtipos.", "mpMaterialSubtipo") +
       '<label>' + mpFieldLabel("Marca", "Escribe una nueva marca o selecciona una ya registrada.") +
         '<input name="idMarca" list="mpMaterialBrands" value="' + escapeHtml(materialData.marca || materialData.idMarca || "") + '" placeholder="Escribe o selecciona una marca">' +
         '<datalist id="mpMaterialBrands">' + marcas.map(function(item) {
@@ -700,12 +700,11 @@ const MP_STATE = {
 
       if (
         !form.elements["idProducto"].value ||
-        !form.elements["idTipoMaterial"].value ||
-        !form.elements["idSubtipoMaterial"].value
+        !form.elements["idTipoMaterial"].value
       ) {
         toast(
           "Clasificación incompleta",
-          "Selecciona Producto principal, Tipo y Subtipo respetando el árbol.",
+          "Selecciona Producto principal y Tipo respetando el árbol.",
           true
         );
         return;
