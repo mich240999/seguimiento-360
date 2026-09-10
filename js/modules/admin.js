@@ -367,7 +367,7 @@ const ADMIN_STATE = {
       APP_STATE.requestPending = false;
       ADMIN_STATE.initialized = true;
       applyAdministrationPermissionVisibility();
-      if (ADMIN_STATE.activeModule === "ADMIN_PERMISOS") {
+      if (ADMIN_STATE.activeModule === "ADMIN_PERMISOS" || ADMIN_STATE.activeModule === "ADMIN_CONFIG_APP") {
         populatePermissionRoleSelector();
       }
       markSync();

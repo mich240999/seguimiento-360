@@ -609,6 +609,21 @@
     const seleccionado = normalizarCodigoMpArbol_(selectedValue);
     const tieneOpciones = lista.length > 0;
 
+    if (select.tagName === "INPUT") {
+      const listId = select.getAttribute("list");
+      const list = listId && document.getElementById(listId);
+      if (list) list.innerHTML = lista.map(function(item) {
+        const value = String(item.id || item.codigo || "").trim();
+        return '<option value="' + escapeHtml(value + " — " + (item.nombre || value)) + '"></option>';
+      }).join("");
+      select.placeholder = tieneOpciones ? (placeholder || "Escribe para buscar") : "Sin opciones disponibles";
+      select.disabled = !tieneOpciones;
+      if (selectedValue) {
+        const item = lista.find(function(row) { return String(row.id || row.codigo || "") === String(selectedValue); });
+        select.value = item ? String(item.id || item.codigo) + " — " + (item.nombre || item.id || item.codigo) : "";
+      }
+      return;
+    }
     select.innerHTML =
       '<option value="">' +
       escapeHtml(tieneOpciones ? (placeholder || "Seleccionar") : "Sin opciones disponibles") +
@@ -638,7 +653,7 @@
     const subtipoSelect = form.elements["idSubtipoMaterial"];
 
     function cargarSubtipos(valorInicial) {
-      const tipo = tipoSelect ? tipoSelect.value : "";
+      const tipo = tipoSelect ? String(tipoSelect.value || "").split(" — ")[0].trim() : "";
       const subtipos = tipo ? (opts.subtipos || []).filter(function(item) {
         return String(item.idTipoMaterial || item.valorPadre || "") === String(tipo);
       }) : [];
@@ -652,7 +667,7 @@
     }
 
     function cargarTipos(valorTipoInicial, valorSubtipoInicial) {
-      const producto = productoSelect ? productoSelect.value : "";
+      const producto = productoSelect ? String(productoSelect.value || "").split(" — ")[0].trim() : "";
       // MAE_TIPOS_MATERIAL no tiene una FK a producto. Los tipos se obtienen
       // directamente de la base y los subtipos sí se limitan por su tipo.
       const tipos = producto ? (opts.tipos || []) : [];
@@ -688,26 +703,17 @@
       materialData.idSubtipoMaterial || ""
     );
 
-    [productoSelect, tipoSelect, subtipoSelect, form.elements["idNegocio"]]
-      .filter(Boolean)
-      .forEach(makeMpSelectSearchable_);
   }
 
-  function makeMpSelectSearchable_(select) {
-    if (!select || select.dataset.searchReady === "1") return;
-    select.dataset.searchReady = "1";
-    const search = document.createElement("input");
-    search.type = "search";
-    search.className = "mp-select-search";
-    search.placeholder = "Escribe para buscar…";
-    search.setAttribute("aria-label", "Buscar " + (select.name || "opción"));
-    select.parentNode.insertBefore(search, select);
-    search.addEventListener("input", function() {
-      const term = String(search.value || "").toLowerCase().trim();
-      Array.from(select.options).forEach(function(option, index) {
-        option.hidden = index > 0 && Boolean(term) && option.text.toLowerCase().indexOf(term) === -1;
-      });
-    });
+  function mpSearchSelectInfo_(name, label, options, optional, tooltip, id) {
+    const listId = "mpList_" + name;
+    return '<label>' + mpFieldLabel(label, tooltip) + '<input ' + (id ? 'id="' + escapeHtml(id) + '" ' : '') + 'name="' + escapeHtml(name) + '" list="' + listId + '" autocomplete="off" placeholder="Escribe para buscar"' + (optional ? '' : ' required') + '><datalist id="' + listId + '">' + (options || []).map(function(item) { const value=String(item.id || item.codigo || ""); return '<option value="' + escapeHtml(value + " — " + (item.nombre || value)) + '"></option>'; }).join("") + '</datalist></label>';
+  }
+
+  function mpSearchSelectValue_(form, name) {
+    const input = form && form.elements[name];
+    const value = String(input && input.value || "").trim();
+    return value.split(" — ")[0].trim();
   }
 
   function renderMaterialModalBody(opts, materialData) {
@@ -727,10 +733,10 @@
     body.innerHTML = '<form id="mpMaterialForm" class="mp-form-grid">' +
       '<input type="hidden" name="idMaterial" value="' + escapeHtml(materialData.idMaterial || "") + '">' +
       '<input type="hidden" name="codigoMaterial" value="' + escapeHtml(materialData.codigoMaterial || "") + '">' +
-      mpSelectInfo("idNegocio", "Negocio", ordenarOpcionesMpArbol_(opts.negocios || []), false, "Asocia el material al negocio que lo venderá.") +
-      mpSelectInfo("idProducto", "Producto principal", productos, false, "Jerarquía general: Producto, Servicio o Trabajo.", "mpMaterialProducto") +
-      mpSelectInfo("idTipoMaterial", "Tipo", [], false, "Se habilita según el Producto principal seleccionado.", "mpMaterialTipo") +
-      mpSelectInfo("idSubtipoMaterial", "Subtipo", [], true, "Opcional. Se habilita según el Tipo seleccionado cuando existan subtipos.", "mpMaterialSubtipo") +
+      mpSearchSelectInfo_("idNegocio", "Negocio", ordenarOpcionesMpArbol_(opts.negocios || []), false, "Asocia el material al negocio que lo venderá.") +
+      mpSearchSelectInfo_("idProducto", "Producto principal", productos, false, "Escribe para buscar el producto.", "mpMaterialProducto") +
+      mpSearchSelectInfo_("idTipoMaterial", "Tipo", [], false, "Escribe para buscar el tipo.", "mpMaterialTipo") +
+      mpSearchSelectInfo_("idSubtipoMaterial", "Subtipo", [], true, "Opcional. Escribe para buscar cuando existan subtipos.", "mpMaterialSubtipo") +
       '<label>' + mpFieldLabel("Marca", "Escribe una nueva marca o selecciona una ya registrada.") +
         '<input name="idMarca" list="mpMaterialBrands" value="' + escapeHtml(materialData.marca || materialData.idMarca || "") + '" placeholder="Escribe o selecciona una marca">' +
         '<datalist id="mpMaterialBrands">' + marcas.map(function(item) {
@@ -777,6 +783,7 @@
       if (typeof form.reportValidity === "function" && !form.reportValidity()) return;
 
       const data = formToObject(form);
+      ["idNegocio", "idProducto", "idTipoMaterial", "idSubtipoMaterial"].forEach(function(name) { data[name] = mpSearchSelectValue_(form, name); });
       const esEdicion = Boolean(String(data.idMaterial || "").trim());
       form.dataset.saving = "1";
       setMaterialSaveState_(form, "loading", esEdicion ?
