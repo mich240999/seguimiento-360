@@ -667,7 +667,11 @@ const MP_STATE = {
       mpSelectInfo("idProducto", "Producto principal", productos, false, "Jerarquía general: Producto, Servicio o Trabajo.", "mpMaterialProducto") +
       mpSelectInfo("idTipoMaterial", "Tipo", [], false, "Se habilita según el Producto principal seleccionado.", "mpMaterialTipo") +
       mpSelectInfo("idSubtipoMaterial", "Subtipo", [], false, "Se habilita según el Tipo seleccionado.", "mpMaterialSubtipo") +
-      mpSelectInfo("idMarca", "Marca", marcas, true, "Marca comercial del material, si aplica.") +
+      '<label>' + mpFieldLabel("Marca", "Escribe una nueva marca o selecciona una ya registrada.") +
+        '<input name="idMarca" list="mpMaterialBrands" value="' + escapeHtml(materialData.marca || materialData.idMarca || "") + '" placeholder="Escribe o selecciona una marca">' +
+        '<datalist id="mpMaterialBrands">' + marcas.map(function(item) {
+          return '<option value="' + escapeHtml(item.nombre || item.codigo || item.id) + '"></option>';
+        }).join("") + '</datalist></label>' +
       mpInputInfo("codigoSap", "Código SAP/HANA", "text", materialData.codigoSap || "", "Opcional. Puede actualizarse cuando SAP lo tenga creado.") +
       mpInputInfo("descripcionMaterial", "Descripción material", "text", materialData.descripcionMaterial || "", "Nombre descriptivo que aparecerá en búsquedas y listas.") +
       mpInputInfo("nombreMaterial", "Nombre corto", "text", materialData.nombreMaterial || materialData.descripcionMaterial || "", "Texto breve para mostrar en tablas o selectores.") +
@@ -684,7 +688,6 @@ const MP_STATE = {
     if (!form) return;
 
     setFormValue_(form, "idNegocio", materialData.idNegocio || "");
-    setFormValue_(form, "idMarca", materialData.idMarca || "");
     setFormValue_(form, "unidadMedida", materialData.unidadMedida || "UN");
     setFormValue_(form, "estado", materialData.estado || "ACTIVO");
 
@@ -2158,7 +2161,10 @@ const MP_STATE = {
       );
     }
 
-    const blob = base64ToBlobMateriales_(
+    const blob = result.contenido != null ? new Blob(
+      [result.contenido],
+      { type: result.mimeType || "text/csv;charset=utf-8" }
+    ) : base64ToBlobMateriales_(
       result.contenidoBase64,
       result.mimeType ||
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -2512,7 +2518,10 @@ const MP_STATE = {
       throw new Error(result.mensaje || "No fue posible preparar la plantilla.");
     }
 
-    const blob = base64ToBlobMateriales_(
+    const blob = result.contenido != null ? new Blob(
+      [result.contenido],
+      { type: result.mimeType || "text/csv;charset=utf-8" }
+    ) : base64ToBlobMateriales_(
       result.contenidoBase64,
       result.mimeType ||
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"

@@ -501,8 +501,13 @@
   function validateAdminUsersResponse(result) {
     const contextUser = APP_STATE.context && APP_STATE.context.usuario || {};
     const access = result && result.contextoAcceso || {};
+    // El adaptador de Supabase devuelve el listado directo. En ese caso la
+    // identidad ya fue comprobada al abrir la sesión y no existe un sello
+    // contextoAcceso que comparar.
+    if (!access.idUsuario) {
+      return Array.isArray(result && result.registros) ? result.registros.slice() : [];
+    }
     if (
-      !access.idUsuario ||
       String(access.idUsuario) !== String(contextUser.idUsuario || "") ||
       String(access.rol || "").toUpperCase() !==
         String(contextUser.rol || "").toUpperCase()
