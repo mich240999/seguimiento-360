@@ -80,6 +80,7 @@
       { id: "supabaseMicrosoftButton", provider: "azure" }
     ].forEach(function(item) {
       const oauthButton = document.getElementById(item.id);
+      if (!oauthButton) return;
       oauthButton.addEventListener("click", async function() {
         oauthButton.disabled = true;
         showMessage("Redirigiendo al proveedor de identidad...", false);
@@ -128,7 +129,6 @@
     const originalExecuteRpc = window.apiAdapter.executeRpc.bind(window.apiAdapter);
     window.apiAdapter.executeRpc = async function(operation, argumentsList, moduleCode) { await getAuthorizedUser(); if (operation === "obtenerContextoAplicacion") return loadContext(); return originalExecuteRpc(operation, argumentsList, moduleCode); };
     window.apiAdapter.__s360SupabaseBridge = true;
-    if (!Promise.prototype.ejecutarOperacionSeguraMotor) Object.defineProperty(Promise.prototype, "ejecutarOperacionSeguraMotor", { configurable: true, value: function() { return this; } });
   }
   function installAuthBridge() {
     installLoginView(); createGoogleScriptCompatibility(); installAdapterBridge(); syncLegacySessionSync(); syncLegacySession();

@@ -85,9 +85,12 @@ const APP_STORAGE = Object.freeze({
   function initializeProtectedApplication() {
     setLoader(true, "Cargando módulos y permisos…");
 
-    secureRpc("obtenerContextoAplicacion", [], "SISTEMA")
+    withTimeout(
+      secureRpc("obtenerContextoAplicacion", [], "SISTEMA"),
+      15000,
+      "La carga inicial tardó demasiado. Verifica tu conexión e inicia sesión nuevamente."
+    )
       .then(function(context) {
-        context = normalizeApplicationContext(context);
         APP_STATE.realContext = context;
         APP_STATE.context = context;
         APP_STATE.rolePreview = null;
@@ -148,15 +151,6 @@ const APP_STORAGE = Object.freeze({
             showLogin(message, true);
           }
           reject(new Error(message));
-        })
-        .ejecutarOperacionSeguraMotor({
-          token: APP_STATE.token,
-          operacion: operation,
-          argumentos: Array.isArray(argumentsList) ? argumentsList : [],
-          modulo: moduleCode || APP_STATE.module || "SISTEMA",
-          origen: window.location.href,
-          userAgent: navigator.userAgent,
-          simulacion: simulacion
         });
     });
   }
@@ -211,16 +205,6 @@ const APP_STORAGE = Object.freeze({
     }
 
     updateAutomaticRefreshInterface();
-  }
-
-  function normalizeApplicationContext(context) {
-    context = context || {};
-    context.usuario = context.usuario || context.sesion || {};
-    context.modulos = Array.isArray(context.modulos) ? context.modulos :
-      (Array.isArray(context.modulosPermitidos) ? context.modulosPermitidos : []);
-    context.seguridad = context.seguridad || {};
-    context.seguridad.permisos = context.seguridad.permisos || context.permisos || {};
-    return context;
   }
 
   /**
@@ -1207,7 +1191,6 @@ const APP_STORAGE = Object.freeze({
    * que el usuario no tiene que esperar una recarga completa de la aplicación.
    */
   function closeApplicationSession(changeAccount) {
-    const token = APP_STATE.token;
     const message = changeAccount ?
       "Sesión cerrada. Selecciona la cuenta con la que deseas continuar." :
       "Sesión cerrada correctamente.";
@@ -1223,24 +1206,22 @@ const APP_STORAGE = Object.freeze({
     closeSidebar();
     showLogin(message, false);
 
-    if (!token) return;
-
-    google.script.run
-      .withSuccessHandler(function() {
-        console.info("La sesión técnica fue cerrada en el servidor.");
-      })
-      .withFailureHandler(function(error) {
-        console.warn(
-          "La sesión local se cerró, pero el servidor no confirmó el cierre: ",
-          errorMessage(error, "Error no especificado.")
-        );
-      })
-      .cerrarSesionAplicacionPaso13E1({
-        token: token,
-        modo: changeAccount ? "CAMBIAR_CUENTA" : "CERRAR_SESION",
-        origen: window.location.href,
-        userAgent: navigator.userAgent
+    const supabase = window.supabaseClient && window.supabaseClient.getClient ?
+      window.supabaseClient.getClient() : null;
+    if (supabase) {
+      supabase.auth.signOut({ scope: "local" }).catch(function(error) {
+        console.warn("No fue posible cerrar la sesión de Supabase:", error);
       });
+    }
+  }
+
+  function withTimeout(promise, milliseconds, message) {
+    return Promise.race([
+      promise,
+      new Promise(function(_resolve, reject) {
+        window.setTimeout(function() { reject(new Error(message)); }, milliseconds);
+      })
+    ]);
   }
 
   /**
