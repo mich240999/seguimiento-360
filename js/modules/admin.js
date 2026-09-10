@@ -1479,9 +1479,8 @@ const ADMIN_STATE = {
         escapeHtml(role.nombre || role.codigo) + "</option>";
     }).join("");
     const documentTypes = ADMIN_STATE.documentTypes.map(function(type) {
-      return '<option value="' + escapeHtml(type.codigo) + '" ' +
-        (user.tipoDocumento === type.codigo ? "selected" : "") + '>' +
-        escapeHtml(type.nombre) + "</option>";
+      return '<option value="' + escapeHtml(type.codigo) + '">' +
+        escapeHtml(type.nombre || type.codigo) + "</option>";
     }).join("");
     const providers = buildProviderOptions(user.idProveedor);
 
@@ -1491,9 +1490,9 @@ const ADMIN_STATE = {
       body: '<form id="userEditorForm" class="form-grid">' +
         hiddenInput("idUsuario", user.idUsuario) +
         '<label class="field is-required"><span>Tipo de documento</span>' +
-          '<select id="userDocumentType" name="tipoDocumento" required>' +
-            '<option value="">Selecciona el documento</option>' + documentTypes +
-          '</select></label>' +
+          '<input id="userDocumentType" name="tipoDocumento" list="userDocumentTypes" value="' +
+            escapeHtml(user.tipoDocumento || "") + '" required placeholder="Escribe o selecciona un tipo">' +
+          '<datalist id="userDocumentTypes">' + documentTypes + '</datalist></label>' +
         '<label class="field is-required"><span>Número de documento</span>' +
           '<input id="userDocumentNumber" name="numeroDocumento" value="' +
             escapeHtml(user.numeroDocumento || "") + '" required autocomplete="off" disabled>' +
@@ -2616,10 +2615,12 @@ const ADMIN_STATE = {
     if (documentType) documentType.addEventListener("change", configureUserDocumentField);
     if (documentNumber) {
       documentNumber.addEventListener("input", function() {
-        const type = String(documentType && documentType.value || "");
-        documentNumber.value = type === "DNI" ?
-          documentNumber.value.replace(/\D/g, "") :
-          documentNumber.value.toUpperCase().replace(/[^A-Z0-9\-]/g, "");
+        const rule = ADMIN_STATE.documentTypes.find(function(item) {
+          return item.codigo === String(documentType && documentType.value || "");
+        });
+        if (rule && rule.soloNumeros) {
+          documentNumber.value = documentNumber.value.replace(/\D/g, "");
+        }
         validateUserDocumentField();
       });
     }
@@ -2650,14 +2651,14 @@ const ADMIN_STATE = {
     const rule = ADMIN_STATE.documentTypes.find(function(item) {
       return item.codigo === typeSelect.value;
     });
-    input.disabled = !rule;
+    input.disabled = false;
     input.setCustomValidity("");
 
     if (!rule) {
       input.removeAttribute("pattern");
       input.removeAttribute("maxlength");
       input.placeholder = "";
-      if (help) help.textContent = "Selecciona primero el tipo de documento.";
+      if (help) help.textContent = "Escribe el tipo y el número de documento.";
       return;
     }
 
@@ -2673,13 +2674,17 @@ const ADMIN_STATE = {
   function validateUserDocumentField() {
     const typeSelect = document.getElementById("userDocumentType");
     const input = document.getElementById("userDocumentNumber");
-    if (!typeSelect || !input || input.disabled) return true;
+    if (!typeSelect || !input) return true;
     const rule = ADMIN_STATE.documentTypes.find(function(item) {
       return item.codigo === typeSelect.value;
     });
-    if (!rule || !input.value) {
-      input.setCustomValidity(input.value ? "" : "Ingresa el número de documento.");
+    if (!typeSelect.value || !input.value) {
+      input.setCustomValidity(!typeSelect.value ? "Ingresa el tipo de documento." : "Ingresa el número de documento.");
       return false;
+    }
+    if (!rule) {
+      input.setCustomValidity("");
+      return true;
     }
     let valid = false;
     try {
