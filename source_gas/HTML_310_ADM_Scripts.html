@@ -731,7 +731,7 @@
     if (!ADMIN_STATE.modules.length) { region.innerHTML = emptyStateHtml(); return; }
     region.innerHTML = ADMIN_STATE.modules.map(function(module) {
       return '<article class="builder-card"><div class="builder-card-head">' +
-        '<span class="module-card-icon"><span class="material-symbols-rounded">' + escapeHtml(module.icono || "grid_view") + "</span></span>" +
+        '<span class="module-card-icon">' + moduleIconHtml(module.icono) + "</span>" +
         '<div><strong>' + escapeHtml(module.nombre) + '</strong><small>' + escapeHtml(module.codigo + " · " + module.tipoVista) + "</small></div>" +
         '<button class="table-button" type="button" data-edit-module="' + escapeHtml(module.idModulo) + '"><span class="material-symbols-rounded">edit</span></button>' +
         '</div><p>' + escapeHtml(module.descripcion || "Sin descripción") + '</p><div class="toolbar toolbar--end">' +

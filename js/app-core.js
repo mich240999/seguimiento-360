@@ -308,7 +308,7 @@ const APP_STORAGE = Object.freeze({
         button.title = module.nombre || module.codigo;
         button.setAttribute("aria-label", module.nombre || module.codigo);
         button.innerHTML =
-          '<span class="material-symbols-rounded">' + escapeHtml(module.icono || "grid_view") + "</span>" +
+          moduleIconHtml(module.icono) +
           '<span class="nav-label">' + escapeHtml(module.nombre) + "</span>";
         button.addEventListener("click", function() { openModule(module.codigo); });
         group.appendChild(button);
@@ -957,7 +957,7 @@ const APP_STORAGE = Object.freeze({
     return '<section class="preview-module-item">' +
       '<div class="preview-module-head">' +
         '<div class="preview-module-head-copy">' +
-          '<span class="material-symbols-rounded">' + escapeHtml(module.icono || "grid_view") + "</span>" +
+          moduleIconHtml(module.icono) +
           "<div><strong>" + escapeHtml(module.nombre || module.codigo) + "</strong>" +
           "<small>" + escapeHtml(module.codigo) + " · " + escapeHtml(stateLabel) + "</small></div>" +
         "</div>" +
@@ -1706,6 +1706,13 @@ const APP_STORAGE = Object.freeze({
    * Escapa HTML.
    */
   function escapeHtml(value) { return String(value === null || value === undefined ? "" : value).replace(/[&<>'"]/g, function(character) { return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character]; }); }
+  function moduleIconHtml(icon) {
+    const value = String(icon || "grid_view").trim();
+    if (/^(?:fa[bsrl]?|fa-solid|fa-regular|fa-brands)(?:\s+fa[-a-z0-9]+)+$/i.test(value)) {
+      return '<i class="module-fontawesome-icon ' + escapeHtml(value) + '" aria-hidden="true"></i>';
+    }
+    return '<span class="material-symbols-rounded">' + escapeHtml(value) + '</span>';
+  }
   /**
    * Obtiene mensaje.
    */

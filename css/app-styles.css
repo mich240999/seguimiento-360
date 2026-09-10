@@ -259,6 +259,7 @@
   }
   .nav-item:hover { color: #fff; background: rgba(255,255,255,.09); }
   .nav-item.is-active { color: #fff; background: linear-gradient(100deg, rgba(0,161,222,.48), rgba(0,161,222,.15)); box-shadow: inset 3px 0 0 #73dbf5; }
+  .module-fontawesome-icon { width: 24px; text-align: center; font-size: 18px; }
   .nav-item .nav-label { overflow: hidden; font-weight: 650; white-space: nowrap; text-overflow: ellipsis; }
   .sidebar-footer { display: flex; align-items: center; gap: 10px; padding: 14px; border-top: 1px solid rgba(255,255,255,.09); }
   .sidebar-user-avatar, .profile-button { display: grid; place-items: center; border-radius: 50%; font-weight: 800; }
@@ -399,6 +400,7 @@
   }
   .preview-module-head-copy { display: flex; align-items: center; gap: 9px; min-width: 0; }
   .preview-module-head-copy .material-symbols-rounded { color: var(--primary-700); }
+  .preview-module-head-copy .module-fontawesome-icon, .module-card-icon .module-fontawesome-icon { color: var(--primary-700); }
   .preview-module-head-copy div { display: grid; min-width: 0; }
   .preview-module-head-copy strong, .preview-module-head-copy small { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
   .preview-module-head-copy small { color: var(--muted); }
@@ -624,6 +626,7 @@
     .app-shell.is-sidebar-collapsed .nav-item .material-symbols-rounded {
       font-size: 23px;
     }
+    .app-shell.is-sidebar-collapsed .nav-item .module-fontawesome-icon { font-size: 21px; }
     .app-shell.is-sidebar-collapsed .sidebar-footer {
       flex-direction: column; justify-content: center; gap: 8px; padding: 12px 8px;
     }
