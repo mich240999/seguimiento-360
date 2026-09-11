@@ -32,6 +32,24 @@
     const { data, error } = await getClient().from("seg_usuarios").select("id_usuario, correo, nombre, telefono, rol, id_proveedor, id_oficina, id_grupo, estado, tipo_documento, numero_documento").ilike("correo", email).eq("estado", "ACTIVO").maybeSingle();
     if (error) throw error;
     if (!data) { await getClient().auth.signOut(); throw new Error("USUARIO_NO_AUTORIZADO: tu correo no está registrado como usuario activo en Seguimiento 360."); }
+    // La tabla técnica aplica la política de una sola sesión incluso aunque el
+    // token de Supabase siga almacenado en otro navegador.
+    try {
+      const session = (await getClient().auth.getSession()).data.session;
+      const technicalId = idSesionSupabase_(session, user);
+      const technical = await getClient().from("seg_sesiones").select("estado,fecha_fin").eq("id_sesion", technicalId).maybeSingle();
+      if (technical.error) throw technical.error;
+      const expired = technical.data && technical.data.fecha_fin && new Date(technical.data.fecha_fin).getTime() <= Date.now();
+      if (technical.data && (technical.data.estado !== "ACTIVA" || expired)) {
+        if (expired && technical.data.estado === "ACTIVA") await getClient().from("seg_sesiones").update({ estado:"EXPIRADA" }).eq("id_sesion", technicalId);
+        await getClient().auth.signOut();
+        throw new Error(expired ? "SESION_EXPIRADA" : "SESION_REEMPLAZADA");
+      }
+    } catch (error) {
+      const code = String(error && error.message || error);
+      if (/SESION_(EXPIRADA|REEMPLAZADA)/.test(code)) throw error;
+      console.warn("[SGT360] No se pudo validar la sesión técnica:", error);
+    }
     return { authUser: user, usuario: data };
   }
   function syncLegacySessionSync() {
@@ -135,7 +153,29 @@
     context.seguridad = { permisos: context.permisos };
     // Mantiene una sesión técnica visible para la consola de Auditoría.
     // No impide el ingreso si la tabla aún no está disponible.
-    try { const authSession=(await client.auth.getSession()).data.session; const sessionId=idSesionSupabase_(authSession,authorized.authUser); const existing=await client.from("seg_sesiones").select("estado,fecha_inicio").eq("id_sesion",sessionId).maybeSingle(); if(existing.error)throw existing.error; if(existing.data && existing.data.estado==="CERRADA"){await client.auth.signOut();throw new Error("SESION_CERRADA_POR_ADMIN");} await client.from("seg_sesiones").upsert({id_sesion:sessionId,id_usuario:usuario.id_usuario,correo:usuario.correo,rol:role,fecha_inicio:existing.data&&existing.data.fecha_inicio||new Date().toISOString(),ultima_actividad:new Date().toISOString(),estado:"ACTIVA",modulo_actual:window.APP_STATE&&window.APP_STATE.module||"INICIO",origen:"SUPABASE_AUTH"}); if(!window.sessionStorage.getItem("S360_AUDIT_LOGIN")){await client.from("seg_auditoria_accesos").insert({id_usuario:usuario.id_usuario,correo:usuario.correo,rol:role,modulo:"SISTEMA",accion:"INICIO_SESION",resultado:"AUTORIZADO",origen:"SUPABASE_AUTH",id_sesion:sessionId,detalle:{mensaje:"Sesión autenticada en Seguimiento 360"}});window.sessionStorage.setItem("S360_AUDIT_LOGIN","1");} } catch(error) { if(String(error&&error.message||error).indexOf("SESION_CERRADA_POR_ADMIN")!==-1)throw error; }
+    try {
+      const authSession=(await client.auth.getSession()).data.session;
+      const sessionId=idSesionSupabase_(authSession,authorized.authUser);
+      const existing=await client.from("seg_sesiones").select("estado,fecha_inicio,fecha_fin").eq("id_sesion",sessionId).maybeSingle();
+      if(existing.error)throw existing.error;
+      const now=new Date(), existingExpiry=existing.data&&existing.data.fecha_fin?new Date(existing.data.fecha_fin):null;
+      if(existing.data && (existing.data.estado!=="ACTIVA" || (existingExpiry&&existingExpiry.getTime()<=now.getTime()))){
+        if(existing.data.estado==="ACTIVA")await client.from("seg_sesiones").update({estado:"EXPIRADA"}).eq("id_sesion",sessionId);
+        await client.auth.signOut();throw new Error("SESION_CERRADA_POR_ADMIN");
+      }
+      const setting=await client.from("sys_parametros").select("valor").eq("clave","EXPIRACION_SESION_MINUTOS").maybeSingle();
+      const minutes=Math.max(5,Number(setting.data&&setting.data.valor||480));
+      const started=existing.data&&existing.data.fecha_inicio||now.toISOString();
+      const expires=existingExpiry&&existingExpiry.getTime()>now.getTime()?existingExpiry:new Date(new Date(started).getTime()+minutes*60000);
+      const others=await client.from("seg_sesiones").select("id_sesion").eq("id_usuario",usuario.id_usuario).eq("estado","ACTIVA").neq("id_sesion",sessionId);
+      if(others.error)throw others.error;
+      if((others.data||[]).length)await client.from("seg_sesiones").update({estado:"CERRADA",fecha_fin:now.toISOString(),ultima_actividad:now.toISOString(),modulo_actual:"SESION_REEMPLAZADA"}).eq("id_usuario",usuario.id_usuario).eq("estado","ACTIVA").neq("id_sesion",sessionId);
+      const tracked=await client.from("seg_sesiones").upsert({id_sesion:sessionId,id_usuario:usuario.id_usuario,correo:usuario.correo,rol:role,fecha_inicio:started,fecha_fin:expires.toISOString(),ultima_actividad:now.toISOString(),estado:"ACTIVA",modulo_actual:window.APP_STATE&&window.APP_STATE.module||"INICIO",origen:"SUPABASE_AUTH"});
+      if(tracked.error)throw tracked.error;
+      if(window.__S360_SESSION_EXPIRY_TIMER__)window.clearTimeout(window.__S360_SESSION_EXPIRY_TIMER__);
+      window.__S360_SESSION_EXPIRY_TIMER__=window.setTimeout(async function(){await client.auth.signOut();window.location.reload();},Math.max(0,expires.getTime()-Date.now()));
+      if(!window.sessionStorage.getItem("S360_AUDIT_LOGIN")){await client.from("seg_auditoria_accesos").insert({id_usuario:usuario.id_usuario,correo:usuario.correo,rol:role,modulo:"SISTEMA",accion:"INICIO_SESION",resultado:"AUTORIZADO",origen:"SUPABASE_AUTH",id_sesion:sessionId,detalle:{mensaje:"Sesión única autenticada en Seguimiento 360",fechaExpiracion:expires.toISOString()}});window.sessionStorage.setItem("S360_AUDIT_LOGIN","1");}
+    } catch(error) { if(String(error&&error.message||error).indexOf("SESION_CERRADA_POR_ADMIN")!==-1)throw error; }
     return context;
   }
   function createGoogleScriptCompatibility() {
