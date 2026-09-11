@@ -603,7 +603,7 @@ const MP_STATE = {
       const tipo = tipoSelect ? String(tipoSelect.value || "").split(" — ")[0].trim() : "";
       const subtipos = tipo ? (opts.subtipos || []).filter(function(item) {
         return String(item.idTipoMaterial || item.valorPadre || "") === String(tipo);
-      }) : [];
+      }) : (opts.subtipos || []);
 
       cargarOpcionesSelectMpArbol_(
         subtipoSelect,
@@ -614,15 +614,14 @@ const MP_STATE = {
     }
 
     function cargarTipos(valorTipoInicial, valorSubtipoInicial) {
-      const producto = productoSelect ? String(productoSelect.value || "").split(" — ")[0].trim() : "";
       // MAE_TIPOS_MATERIAL no tiene una FK a producto. Los tipos se obtienen
       // directamente de la base y los subtipos sí se limitan por su tipo.
-      const tipos = producto ? (opts.tipos || []) : [];
+      const tipos = opts.tipos || [];
 
       cargarOpcionesSelectMpArbol_(
         tipoSelect,
         tipos,
-        producto ? "Seleccionar tipo" : "Selecciona primero un producto",
+        "Seleccionar tipo",
         valorTipoInicial || ""
       );
 
