@@ -54,8 +54,13 @@
     if (/invalid login credentials/i.test(message)) return "Correo o contraseña incorrectos.";
     if (/email not confirmed/i.test(message)) return "Debes confirmar tu correo antes de iniciar sesión.";
     if (/rate limit|too many requests/i.test(message)) return "Demasiados intentos. Espera unos minutos y vuelve a intentarlo.";
+    if (/redirect|redirect_to|not allowed/i.test(message)) return "Supabase rechazó la URL de recuperación. Registra la URL de esta aplicación en Authentication > URL Configuration > Redirect URLs.";
     if (/failed to fetch|network/i.test(message)) return "No se pudo conectar con Supabase. Verifica tu conexión.";
     return message || "No fue posible iniciar sesión.";
+  }
+  function authRedirectUrl() {
+    const configured = String(config.AUTH_REDIRECT_URL || window.localStorage.getItem("S360_AUTH_REDIRECT_URL") || "").trim();
+    return configured || (window.location.origin + window.location.pathname);
   }
   function installLoginView() {
     const authActions = document.querySelector(".auth-actions"); if (!authActions) return;
@@ -81,7 +86,10 @@
     });
     forgot.addEventListener("click", async function() {
       const email = String(emailInput.value || "").trim().toLowerCase(); if (!email || !emailInput.checkValidity()) { showMessage("Ingresa primero tu correo para enviarte el enlace de recuperación.", true); emailInput.focus(); return; }
-      forgot.disabled = true; try { const { error } = await getClient().auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + window.location.pathname }); if (error) throw error; showMessage("Si el correo está registrado, recibirás un enlace para restablecer la contraseña.", false); } catch (error) { showMessage(normalizeAuthError(error), true); } finally { forgot.disabled = false; }
+      const originalText = forgot.textContent; forgot.disabled = true; forgot.textContent = "Enviando enlace…";
+      try { const { error } = await getClient().auth.resetPasswordForEmail(email, { redirectTo: authRedirectUrl() }); if (error) throw error; showMessage("Enlace enviado. Revisa tu correo y spam; al abrirlo verás la pantalla para crear una nueva contraseña.", false); }
+      catch (error) { showMessage(normalizeAuthError(error), true); }
+      finally { forgot.disabled = false; forgot.textContent = originalText; }
     });
     [
       { id: "supabaseGoogleButton", provider: "google" },
