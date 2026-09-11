@@ -2710,10 +2710,15 @@ const ADMIN_STATE = {
     if (!providerSelect || !officeSelect || !groupSelect) return;
 
     const providerId = providerSelect.value;
+    const roleCode = String((document.getElementById("userRoleSelect") || {}).value || "").toUpperCase();
+    const isCommercialRole = ["VENDEDOR", "COORDINADOR_VENTAS"].indexOf(roleCode) !== -1;
     const provider = ADMIN_STATE.providers.find(function(item) {
       return item.idProveedor === providerId;
     });
-    const allowedOfficeIds = provider ? (provider.idsOficina || []) : [];
+    // Vendedores y coordinadores pueden trabajar directamente con la estructura
+    // comercial de Cálidda, aun si no se les asignó proveedor propio.
+    const allowedOfficeIds = provider ? (provider.idsOficina || []) :
+      (isCommercialRole ? ADMIN_STATE.offices.map(function(item) { return item.idOficina; }) : []);
     const officeValue = selectedOffice || officeSelect.value;
     const groupValue = selectedGroup || groupSelect.value;
     const offices = ADMIN_STATE.offices.filter(function(item) {
@@ -2722,7 +2727,7 @@ const ADMIN_STATE = {
     });
 
     officeSelect.innerHTML = '<option value="">' +
-      (providerId ? "Sin oficina específica" : "Selecciona primero un proveedor") + "</option>" +
+      ((providerId || isCommercialRole) ? "Sin oficina específica" : "Selecciona primero un proveedor") + "</option>" +
       offices.map(function(item) {
         return '<option value="' + escapeHtml(item.idOficina) + '" ' +
           (item.idOficina === officeValue ? "selected" : "") + '>' +
@@ -2740,8 +2745,8 @@ const ADMIN_STATE = {
         escapeHtml(item.nombre + " · " + item.idGrupo) + "</option>";
     }).join("");
 
-    officeSelect.disabled = !providerId;
-    groupSelect.disabled = !providerId || !effectiveOffice;
+    officeSelect.disabled = !providerId && !isCommercialRole;
+    groupSelect.disabled = !effectiveOffice;
   }
 
   function updateUserAssignmentRequirements() {
@@ -2757,15 +2762,24 @@ const ADMIN_STATE = {
       return role.codigo === roleSelect.value;
     });
     const providerRequired = Boolean(selectedRole && !selectedRole.protegido && !selectedRole.sistema);
+    const isCommercialRole = ["VENDEDOR", "COORDINADOR_VENTAS"].indexOf(String(roleSelect.value || "").toUpperCase()) !== -1;
 
     providerSelect.required = providerRequired;
-    officeSelect.required = false;
+    officeSelect.required = isCommercialRole;
+    const groupSelect = document.getElementById("userGroupSelect");
+    if (groupSelect) groupSelect.required = isCommercialRole;
     if (providerField) providerField.classList.toggle("is-required", providerRequired);
     if (officeField) {
       officeField.classList.remove("is-required");
       officeField.hidden = false;
     }
     if (groupField) groupField.hidden = false;
+    if (isCommercialRole) {
+      if (officeField) officeField.classList.add("is-required");
+      if (groupField) groupField.classList.add("is-required");
+    } else {
+      if (groupField) groupField.classList.remove("is-required");
+    }
   }
 
   /**
