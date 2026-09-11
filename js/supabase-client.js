@@ -80,6 +80,19 @@
     const configured = String(config.AUTH_REDIRECT_URL || window.localStorage.getItem("S360_AUTH_REDIRECT_URL") || "").trim();
     return configured || (window.location.origin + window.location.pathname);
   }
+  async function chooseActiveSession(authUser) {
+    const response=await getClient().from("seg_sesiones").select("id_sesion,fecha_fin,modulo_actual").eq("id_usuario",authUser.usuario.id_usuario).eq("estado","ACTIVA");
+    if(response.error)throw response.error;
+    const active=(response.data||[]).filter(function(row){return !row.fecha_fin||new Date(row.fecha_fin).getTime()>Date.now();});
+    if(!active.length)return true;
+    return new Promise(function(resolve){
+      const layer=document.createElement("div");layer.style.cssText="position:fixed;inset:0;z-index:100001;background:rgba(15,23,42,.72);display:grid;place-items:center;padding:20px";
+      layer.innerHTML='<section role="dialog" aria-modal="true" style="width:min(460px,100%);background:#fff;border-radius:18px;padding:28px;color:#132b3a;box-shadow:0 24px 64px rgba(0,0,0,.28)"><div style="display:flex;align-items:center;gap:10px;color:#007da9;font-weight:800;letter-spacing:.08em;font-size:12px">SESIÓN ACTIVA</div><h2 style="margin:12px 0 8px;font-size:24px">Tu cuenta ya está en uso</h2><p style="margin:0 0 22px;color:#52677a;line-height:1.5">Solo puedes mantener una sesión activa. Elige si deseas conservar la sesión existente o cerrarla para ingresar desde este equipo.</p><div style="display:grid;gap:10px"><button id="s360KeepActiveSession" type="button" style="padding:12px;border:1px solid #99dcef;background:#fff;color:#007da9;border-radius:9px;font-weight:700;cursor:pointer">Mantener sesión activa</button><button id="s360ReplaceActiveSession" type="button" style="padding:12px;border:0;background:#008fbe;color:#fff;border-radius:9px;font-weight:700;cursor:pointer">Cerrar sesión anterior e ingresar</button></div></section>';
+      document.body.appendChild(layer);
+      document.getElementById("s360KeepActiveSession").addEventListener("click",async function(){await getClient().auth.signOut({scope:"local"});layer.remove();resolve(false);});
+      document.getElementById("s360ReplaceActiveSession").addEventListener("click",function(){window.sessionStorage.setItem("S360_SESSION_TAKEOVER","1");layer.remove();resolve(true);});
+    });
+  }
   function installLoginView() {
     const authActions = document.querySelector(".auth-actions"); if (!authActions) return;
     /* const style = document.createElement("style"); style.id = "supabase-auth-styles";
@@ -99,7 +112,7 @@
       event.preventDefault(); const email = String(emailInput.value || "").trim().toLowerCase(); const password = String(passwordInput.value || "");
       if (!email || !emailInput.checkValidity()) return showMessage("Ingresa un correo válido.", true); if (!password) return showMessage("Ingresa tu contraseña.", true);
       submit.disabled = true; showMessage("Validando acceso…", false);
-      try { const { data, error } = await getClient().auth.signInWithPassword({ email, password }); if (error) throw error; if (!data || !data.session) throw new Error("No se recibió una sesión válida de Supabase."); const auth = await getAuthorizedUser(); window.localStorage.setItem(LEGACY_TOKEN_KEY, data.session.access_token); window.localStorage.setItem(LEGACY_SESSION_KEY, JSON.stringify({ user: auth.authUser })); showMessage("Acceso autorizado. Cargando Seguimiento 360…", false); window.location.reload(); }
+      try { const { data, error } = await getClient().auth.signInWithPassword({ email, password }); if (error) throw error; if (!data || !data.session) throw new Error("No se recibió una sesión válida de Supabase."); const auth = await getAuthorizedUser(); const replace=await chooseActiveSession(auth); if(!replace){showMessage("Se mantiene la sesión ya activa. No se inició una nueva sesión en este equipo.",false);submit.disabled=false;return;} window.localStorage.setItem(LEGACY_TOKEN_KEY, data.session.access_token); window.localStorage.setItem(LEGACY_SESSION_KEY, JSON.stringify({ user: auth.authUser })); showMessage("Acceso autorizado. Cargando Seguimiento 360…", false); window.location.reload(); }
       catch (error) { try { await getClient().auth.signOut(); } catch (_) {} showMessage(normalizeAuthError(error), true); submit.disabled = false; passwordInput.focus(); }
     });
     forgot.addEventListener("click", async function() {
