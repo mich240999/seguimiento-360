@@ -1508,11 +1508,11 @@ const ADMIN_STATE = {
           '<select id="userProviderSelect" name="idProveedor"><option value="">Sin proveedor</option>' +
             providers + '</select><small class="field-help">Es obligatorio para roles configurables. No otorga acceso por sí solo: los permisos y alcances determinan la visibilidad.</small></label>' +
         '<label id="userOfficeField" class="field"><span>Oficina</span>' +
-          '<select id="userOfficeSelect" name="idOficina"><option value="">Selecciona primero un proveedor</option></select></label>' +
+          '<select id="userOfficeSelect" name="idOficina"><option value="">Selecciona una oficina</option></select></label>' +
         '<label id="userGroupField" class="field"><span>Grupo</span>' +
-          '<select id="userGroupSelect" name="idGrupo"><option value="">Sin grupo</option></select></label>' +
+          '<select id="userGroupSelect" name="idGrupo"><option value="">Selecciona un grupo</option></select></label>' +
         statusSelect("estado", user.estado || "ACTIVO") +
-        '<p class="assignment-note">La asignación al proveedor se conserva internamente aunque cambien la razón social o el nombre comercial; oficina y grupo son opcionales.</p>' +
+        '<p class="assignment-note">Para Vendedor y Coordinador de Ventas debes asignar una oficina y un grupo. El grupo siempre pertenece a la oficina seleccionada.</p>' +
         "</form>",
       footer: '<button class="button button--ghost" type="button" data-sheet-close>Cancelar</button><button id="saveUserButton" class="button button--primary" type="button">Guardar usuario</button>'
     });
@@ -2289,6 +2289,22 @@ const ADMIN_STATE = {
         ADMIN_STATE.assignmentRules = result.reglas || {};
         ADMIN_STATE.assignmentStructureLoaded = true;
         if (providersRegion || officesRegion || groupsRegion) renderAdminAssignmentStructure();
+        // Algunas instalaciones antiguas no devuelven oficinas y grupos en la
+        // estructura de asignación. Reintenta con el catálogo comercial para
+        // que el editor de usuario nunca ofrezca una asignación vacía.
+        if (!ADMIN_STATE.offices.length) {
+          return secureRpc("obtenerOpcionesProveedorModulo", [], adminRpcModuleCode())
+            .then(function(options) {
+              options = options || {};
+              ADMIN_STATE.offices = (options.oficinas || []).map(function(office) {
+                return Object.assign({ estado: "ACTIVO" }, office);
+              });
+              ADMIN_STATE.groups = (options.grupos || []).map(function(group) {
+                return Object.assign({ estado: "ACTIVO" }, group);
+              });
+              if (providersRegion || officesRegion || groupsRegion) renderAdminAssignmentStructure();
+            });
+        }
       })
       .catch(function(error) {
         if (providersRegion) renderAdminPermissionError("adminProvidersContent", error);
@@ -2715,10 +2731,11 @@ const ADMIN_STATE = {
     const provider = ADMIN_STATE.providers.find(function(item) {
       return item.idProveedor === providerId;
     });
-    // Vendedores y coordinadores pueden trabajar directamente con la estructura
-    // comercial de Cálidda, aun si no se les asignó proveedor propio.
-    const allowedOfficeIds = provider ? (provider.idsOficina || []) :
-      (isCommercialRole ? ADMIN_STATE.offices.map(function(item) { return item.idOficina; }) : []);
+    // Vendedores y coordinadores usan toda la estructura comercial vigente.
+    // La relación proveedor-oficina limita solo a los demás roles.
+    const allowedOfficeIds = isCommercialRole ?
+      ADMIN_STATE.offices.map(function(item) { return item.idOficina; }) :
+      (provider ? (provider.idsOficina || []) : []);
     const officeValue = selectedOffice || officeSelect.value;
     const groupValue = selectedGroup || groupSelect.value;
     const offices = ADMIN_STATE.offices.filter(function(item) {
@@ -2727,7 +2744,7 @@ const ADMIN_STATE = {
     });
 
     officeSelect.innerHTML = '<option value="">' +
-      ((providerId || isCommercialRole) ? "Sin oficina específica" : "Selecciona primero un proveedor") + "</option>" +
+      (isCommercialRole ? "Selecciona una oficina" : (providerId ? "Sin oficina específica" : "Selecciona primero un proveedor")) + "</option>" +
       offices.map(function(item) {
         return '<option value="' + escapeHtml(item.idOficina) + '" ' +
           (item.idOficina === officeValue ? "selected" : "") + '>' +
@@ -2739,7 +2756,8 @@ const ADMIN_STATE = {
       return item.idOficina === effectiveOffice &&
         (item.estado === "ACTIVO" || item.idGrupo === groupValue);
     });
-    groupSelect.innerHTML = '<option value="">Sin grupo</option>' + groups.map(function(item) {
+    groupSelect.innerHTML = '<option value="">' +
+      (isCommercialRole ? "Selecciona un grupo" : "Sin grupo") + "</option>" + groups.map(function(item) {
       return '<option value="' + escapeHtml(item.idGrupo) + '" ' +
         (item.idGrupo === groupValue ? "selected" : "") + '>' +
         escapeHtml(item.nombre + " · " + item.idGrupo) + "</option>";
