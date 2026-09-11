@@ -286,7 +286,7 @@ const MP_STATE = {
   function getMpSummaryCacheKey() {
     const user = APP_STATE.context && APP_STATE.context.usuario ? APP_STATE.context.usuario : {};
     const revision = APP_STATE.dataRevision || "0";
-    return "SGT360_MP_SUMMARY_V2_" + String(user.idUsuario || user.correo || "GENERAL") + "_" + revision;
+    return "SGT360_MP_SUMMARY_V3_" + String(user.idUsuario || user.correo || "GENERAL") + "_" + revision;
   }
 
   function readMpSummaryCache() {
