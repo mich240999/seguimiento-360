@@ -128,7 +128,7 @@ const MP_STATE = {
     const user = APP_STATE.context && APP_STATE.context.usuario ? APP_STATE.context.usuario : {};
     // Se cambia la versión al ajustar la carga de la clasificación para no
     // reutilizar catálogos vacíos almacenados por versiones anteriores.
-    return "SGT360_MP_OPTIONS_V9_" + String(user.idUsuario || user.correo || "GENERAL");
+    return "SGT360_MP_OPTIONS_V10_" + String(user.idUsuario || user.correo || "GENERAL");
   }
 
   function readMpOptionsCache() {
