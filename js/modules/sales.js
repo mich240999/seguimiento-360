@@ -1834,11 +1834,16 @@ const SALES_STATE = {
     };
 
     if (SALES_STATE.activeView === "ABONOS") {
+      const estadoAbonos = String(item.estado || item.estadoEntrega || "").toUpperCase();
+      const canCancelAbonos = estadoAbonos !== "ENTREGADA" && estadoAbonos !== "ANULADA";
       return wrapRows(
         [
           '<button class="button button--primary button--compact" type="button" data-sales-pay="' + id + '"><span class="material-symbols-rounded">fact_check</span>Validar abono</button>',
           '<button class="button button--ghost button--compact" type="button" data-sales-view-detail="' + id + '">Ver</button>'
-        ]
+        ],
+        canCancelAbonos ? [
+          '<button class="button button--secondary button--compact sales29-cancel-button" type="button" data-sales-cancel-observed="' + id + '"><span class="material-symbols-rounded">cancel</span>Anular</button>'
+        ] : []
       );
     }
 
@@ -5300,17 +5305,17 @@ const SALES_STATE = {
 
     const estado = String(row.estado || row.estadoEntrega || "").toUpperCase();
     if (row.puedeAnularObservada !== true && (estado === "ENTREGADA" || estado === "ANULADA")) {
-      toast('Sin permiso','Solo el responsable que registró una venta Observada puede anularla.',true);
+      toast('Venta no anulable','Una venta entregada o ya anulada no puede anularse.',true);
       return;
     }
 
     openModal({
-      eyebrow:'VENTA OBSERVADA',
+      eyebrow:'ANULACIÓN DE VENTA',
       title:'Anular venta ' + escapeHtml(row.codigoVenta || ''),
       wide:false,
       body:'<div class="sales-modal-shell">' +
-        '<div class="sales29-cancel-warning"><strong>Esta acción anula toda la venta.</strong><br>La observación del proveedor y sus sustentos se conservarán como trazabilidad. El estado del abono no se modifica automáticamente.</div>' +
-        '<label class="input-field"><span>Motivo de anulación</span><textarea id="salesCancelReason29" rows="4" maxlength="1000" placeholder="Indica por qué la venta observada será anulada"></textarea></label>' +
+        '<div class="sales29-cancel-warning"><strong>Esta acción anula toda la venta.</strong><br>Se conservarán el cliente, los productos, el abono y el motivo como trazabilidad. No se eliminará información.</div>' +
+        '<label class="input-field"><span>Motivo de anulación</span><textarea id="salesCancelReason29" rows="4" maxlength="1000" placeholder="Indica por qué se anula esta venta"></textarea></label>' +
       '</div>',
       footer:'<button class="button button--secondary" type="button" data-modal-close>Cerrar</button><button id="salesConfirmCancelObserved29" class="button button--primary" type="button"><span class="material-symbols-rounded">cancel</span>Anular venta</button>'
     });
