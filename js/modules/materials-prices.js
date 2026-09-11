@@ -126,7 +126,9 @@ const MP_STATE = {
 
   function getMpOptionsCacheKey() {
     const user = APP_STATE.context && APP_STATE.context.usuario ? APP_STATE.context.usuario : {};
-    return "SGT360_MP_OPTIONS_V8_" + String(user.idUsuario || user.correo || "GENERAL");
+    // Se cambia la versión al ajustar la carga de la clasificación para no
+    // reutilizar catálogos vacíos almacenados por versiones anteriores.
+    return "SGT360_MP_OPTIONS_V9_" + String(user.idUsuario || user.correo || "GENERAL");
   }
 
   function readMpOptionsCache() {
@@ -504,7 +506,7 @@ const MP_STATE = {
   function openMaterialModal(materialData) {
     const isEdit = materialData && materialData.idMaterial;
     openMpModal(isEdit ? "Modificar material" : "Nuevo material", isEdit ? "Actualiza los datos del material universal sin alterar sus relaciones históricas." : "Registra un material universal. Las opciones desplegables se mantienen desde Configuración > Catálogos.", '<div class="mp-inline-loader"><span class="material-symbols-rounded">hourglass_empty</span>Cargando opciones...</div>');
-    ensureMpOptionsForModal(function(opts) { renderMaterialModalBody(opts, materialData || null); }, { force: false, useCache: true, maxAgeMs: MP_OPTIONS_CACHE_TTL_MS });
+    ensureMpOptionsForModal(function(opts) { renderMaterialModalBody(opts, materialData || null); }, { force: true, useCache: false, maxAgeMs: MP_OPTIONS_CACHE_TTL_MS });
   }
 
 
