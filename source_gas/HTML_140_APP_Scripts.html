@@ -62,6 +62,11 @@
    * Inicia la aplicación y valida si existe una sesión local.
    */
   function bootApplication() {
+    if (window.__S360_PASSWORD_SETUP_REQUIRED__) {
+      clearLocalSession();
+      setLoader(false);
+      return;
+    }
     setLoader(true, "Validando acceso seguro…");
     const supabase = window.supabaseClient && window.supabaseClient.isConfigured() ?
       window.supabaseClient.getClient() : null;
