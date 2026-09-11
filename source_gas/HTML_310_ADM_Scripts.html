@@ -1328,7 +1328,10 @@
         if (b.codigo === "VISUALIZAR_MODULO") return 1;
         return a.orden - b.orden;
       });
-      return '<section class="permission-module"><header class="permission-module-header"><span class="material-symbols-rounded">dataset</span><strong>' + escapeHtml(module.codigo) + '</strong></header><div class="permission-list">' +
+      const allEnabled = resources.length > 0 && resources.every(function(resource) { return resource.permitido === true; });
+      const sharedScope = (resources[0] && resources[0].alcance) || "PROPIO";
+      const scopes = matrix.alcancesDisponibles || ["PROPIO", "PROVEEDOR", "GRUPO", "ASIGNADOS", "GLOBAL"];
+      return '<section class="permission-module" data-permission-module-section="' + escapeHtml(module.codigo) + '"><header class="permission-module-header"><span class="material-symbols-rounded">dataset</span><strong>' + escapeHtml(module.codigo) + '</strong><span style="margin-left:auto;display:flex;align-items:center;gap:10px"><label class="switch" title="Habilitar o deshabilitar todas las funciones del módulo"><input type="checkbox" data-module-enabled ' + (allEnabled ? "checked" : "") + '><span class="switch-track"></span></label><select data-module-scope title="Aplicar alcance a todas las funciones">' + scopes.map(function(scope) { return '<option value="' + scope + '" ' + (sharedScope === scope ? "selected" : "") + '>' + scope + '</option>'; }).join("") + '</select></span></header><div class="permission-list">' +
         resources.map(function(resource) {
           const isModule = resource.codigo === "VISUALIZAR_MODULO";
           return '<div class="permission-row" data-permission-module="' + escapeHtml(module.codigo) + '" data-permission-resource="' + escapeHtml(resource.codigo) + '">' +
@@ -1350,6 +1353,28 @@
             childRow.querySelector("[data-permission-scope]").disabled = true;
           });
         }
+        const section = row.closest("[data-permission-module-section]");
+        if (section) section.querySelector("[data-module-enabled]").checked =
+          Array.from(section.querySelectorAll("[data-permission-enabled]")).every(function(item) {
+            return item.checked;
+          });
+      });
+    });
+    region.querySelectorAll("[data-module-enabled]").forEach(function(input) {
+      input.addEventListener("change", function() {
+        const section = input.closest("[data-permission-module-section]");
+        section.querySelectorAll(".permission-row").forEach(function(row) {
+          row.querySelector("[data-permission-enabled]").checked = input.checked;
+          row.querySelector("[data-permission-scope]").disabled = !input.checked;
+        });
+      });
+    });
+    region.querySelectorAll("[data-module-scope]").forEach(function(select) {
+      select.addEventListener("change", function() {
+        const section = select.closest("[data-permission-module-section]");
+        section.querySelectorAll("[data-permission-scope]").forEach(function(scope) {
+          scope.value = select.value;
+        });
       });
     });
   }
@@ -2738,7 +2763,7 @@
 
     const providerId = providerSelect.value;
     const roleCode = String((document.getElementById("userRoleSelect") || {}).value || "").toUpperCase();
-    const isCommercialRole = ["VENDEDOR", "COORDINADOR_VENTAS"].indexOf(roleCode) !== -1;
+    const isCommercialRole = /VENDEDOR|COORDINADOR/.test(roleCode);
     const provider = ADMIN_STATE.providers.find(function(item) {
       return item.idProveedor === providerId;
     });
@@ -2751,7 +2776,7 @@
     const groupValue = selectedGroup || groupSelect.value;
     const offices = ADMIN_STATE.offices.filter(function(item) {
       return allowedOfficeIds.indexOf(item.idOficina) !== -1 &&
-        (item.estado === "ACTIVO" || item.idOficina === officeValue);
+        (String(item.estado || "ACTIVO").toUpperCase() !== "INACTIVO" || item.idOficina === officeValue);
     });
 
     officeSelect.innerHTML = '<option value="">' +
@@ -2765,7 +2790,7 @@
     const effectiveOffice = officeSelect.value;
     const groups = ADMIN_STATE.groups.filter(function(item) {
       return item.idOficina === effectiveOffice &&
-        (item.estado === "ACTIVO" || item.idGrupo === groupValue);
+        (String(item.estado || "ACTIVO").toUpperCase() !== "INACTIVO" || item.idGrupo === groupValue);
     });
     groupSelect.innerHTML = '<option value="">' +
       (isCommercialRole ? "Selecciona un grupo" : "Sin grupo") + "</option>" + groups.map(function(item) {
@@ -2791,7 +2816,7 @@
       return role.codigo === roleSelect.value;
     });
     const providerRequired = Boolean(selectedRole && !selectedRole.protegido && !selectedRole.sistema);
-    const isCommercialRole = ["VENDEDOR", "COORDINADOR_VENTAS"].indexOf(String(roleSelect.value || "").toUpperCase()) !== -1;
+    const isCommercialRole = /VENDEDOR|COORDINADOR/.test(String(roleSelect.value || "").toUpperCase());
 
     providerSelect.required = providerRequired;
     officeSelect.required = isCommercialRole;
