@@ -1857,13 +1857,19 @@ const SALES_STATE = {
 
     const secundarios = [];
 
-    if (item.puedeModificar) {
+    const estadoVenta = String(item.estado || item.estadoEntrega || "").toUpperCase();
+    const sePuedeModificar = item.puedeModificar === true ||
+      (estadoVenta !== "ENTREGADA" && estadoVenta !== "ANULADA");
+    const sePuedeAnular = item.puedeAnularObservada === true ||
+      (estadoVenta !== "ENTREGADA" && estadoVenta !== "ANULADA");
+
+    if (sePuedeModificar) {
       principales.push(
         '<button class="button button--ghost button--compact" type="button" data-sales-edit="' + id + '">Modificar</button>'
       );
     }
 
-    if (item.puedeAnularObservada) {
+    if (sePuedeAnular) {
       secundarios.push(
         '<button class="button button--secondary button--compact sales29-cancel-button" type="button" data-sales-cancel-observed="' + id + '"><span class="material-symbols-rounded">cancel</span>Anular</button>'
       );
@@ -5292,7 +5298,8 @@ const SALES_STATE = {
     prepareSalesModal29W_("ANULAR:" + String(idVenta || ""));
     const row = getSalesRowById29(idVenta) || { idVenta:idVenta };
 
-    if (!row.puedeAnularObservada) {
+    const estado = String(row.estado || row.estadoEntrega || "").toUpperCase();
+    if (row.puedeAnularObservada !== true && (estado === "ENTREGADA" || estado === "ANULADA")) {
       toast('Sin permiso','Solo el responsable que registró una venta Observada puede anularla.',true);
       return;
     }
