@@ -1200,6 +1200,18 @@ const APP_STORAGE = Object.freeze({
       "Sesión cerrada. Selecciona la cuenta con la que deseas continuar." :
       "Sesión cerrada correctamente.";
 
+    const supabase = window.supabaseClient && window.supabaseClient.getClient ?
+      window.supabaseClient : null;
+    if (supabase && typeof supabase.closeCurrentSession === "function") {
+      supabase.closeCurrentSession("Cierre voluntario desde la aplicación").catch(function(error) {
+        console.warn("No fue posible registrar el cierre de sesión:", error);
+      });
+    } else if (supabase) {
+      supabase.getClient().auth.signOut({ scope: "local" }).catch(function(error) {
+        console.warn("No fue posible cerrar la sesión de Supabase:", error);
+      });
+    }
+
     stopTimers();
     clearLocalSession();
     APP_STATE.module = "DASHBOARD";
@@ -1211,13 +1223,6 @@ const APP_STORAGE = Object.freeze({
     closeSidebar();
     showLogin(message, false);
 
-    const supabase = window.supabaseClient && window.supabaseClient.getClient ?
-      window.supabaseClient.getClient() : null;
-    if (supabase) {
-      supabase.auth.signOut({ scope: "local" }).catch(function(error) {
-        console.warn("No fue posible cerrar la sesión de Supabase:", error);
-      });
-    }
   }
 
   function withTimeout(promise, milliseconds, message) {
