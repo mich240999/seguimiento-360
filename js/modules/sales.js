@@ -4150,6 +4150,15 @@ const SALES_STATE = {
         "VENTAS_CONTADO"
       )
       .then(function(r){
+        // El detalle puede haberse abierto antes de que Supabase termine de
+        // devolver la fila persistida. Nunca reutilizar su versión previa.
+        const savedId = String((r && r.idVenta) || (edit && edit.idVenta) || "");
+        if (savedId && SALES_STATE.detailCache) {
+          Object.keys(SALES_STATE.detailCache).forEach(function(key) {
+            if (key.indexOf(savedId) !== -1) delete SALES_STATE.detailCache[key];
+          });
+        }
+        SALES_STATE.offerContextCache = {};
         toast(
           edit?"Venta modificada":"Venta registrada",
           r.mensaje||("Código: "+(r.codigoVenta||""))
