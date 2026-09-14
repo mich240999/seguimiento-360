@@ -37,20 +37,84 @@ window.__C360_LOADER_CONFIG__ = {
   faviconSource: "https://www.calidda.com.pe/favicon.ico"
 };
 
-// Extensiones de interfaz cargadas después de que el documento esté listo.
-// Se mantiene separado del núcleo para no tocar el flujo existente de autenticación.
-(function loadAdministrationExtensions() {
-  function load() {
-    if (window.__S360_ADMIN_DEACTIVATION_LOADED__) return;
-    window.__S360_ADMIN_DEACTIVATION_LOADED__ = true;
-    var script = document.createElement("script");
-    script.src = "js/admin-user-deactivation.js?v=" + encodeURIComponent(window.APP_CONFIG.VERSION);
-    script.defer = true;
-    document.head.appendChild(script);
-  }
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", load, { once: true });
-  } else {
-    load();
-  }
+// Correcciones visuales finales. Se inyectan desde un archivo que ya carga el index,
+// evitando modificar el flujo principal de autenticación.
+(function injectFinalVisualFixes() {
+  var style = document.createElement("style");
+  style.id = "s360-final-visual-fixes";
+  style.textContent = `
+    @media (min-width: 1025px) {
+      .app-shell.is-sidebar-collapsed .sidebar-brand {
+        position: relative;
+        width: var(--sidebar-collapsed-width);
+        min-width: var(--sidebar-collapsed-width);
+        height: var(--app-header-height);
+        padding: 0 !important;
+        margin: 0;
+        display: block;
+      }
+      .app-shell.is-sidebar-collapsed .sidebar-logo-button {
+        position: absolute;
+        inset: 0;
+        width: var(--sidebar-collapsed-width);
+        height: var(--app-header-height);
+        margin: 0 !important;
+        padding: 0 !important;
+        display: grid !important;
+        place-items: center !important;
+        justify-content: center !important;
+        align-items: center !important;
+      }
+      .app-shell.is-sidebar-collapsed .sidebar-logo-button .sidebar-logo,
+      .app-shell.is-sidebar-collapsed .sidebar-logo-button .sidebar-logo-image {
+        position: static !important;
+        width: 34px !important;
+        height: 34px !important;
+        min-width: 34px;
+        min-height: 34px;
+        margin: 0 !important;
+        padding: 0;
+        transform: none !important;
+      }
+      .app-shell.is-sidebar-collapsed .sidebar-brand-copy,
+      .app-shell.is-sidebar-collapsed #sidebarCloseButton {
+        display: none !important;
+      }
+    }
+
+    /* Loader idéntico al lenguaje visual del login: mismo fondo, trama y contraste. */
+    .global-loader {
+      background: linear-gradient(145deg, var(--primary-800), var(--primary-500)) !important;
+    }
+    .global-loader::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      background-image: radial-gradient(rgba(255,255,255,.17) 1px, transparent 1px) !important;
+      background-size: 26px 26px !important;
+      opacity: .55;
+      pointer-events: none;
+    }
+    .global-loader::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      background:
+        radial-gradient(circle at 18% 22%, rgba(255,255,255,.12), transparent 32%),
+        radial-gradient(circle at 82% 78%, rgba(0,0,0,.10), transparent 38%);
+      pointer-events: none;
+    }
+    .global-loader .loader-panel {
+      z-index: 2;
+      color: var(--ink);
+      background: rgba(255,255,255,.95) !important;
+      border: 1px solid rgba(255,255,255,.68) !important;
+      box-shadow: 0 30px 90px rgba(0,54,78,.27) !important;
+      backdrop-filter: blur(14px) !important;
+      -webkit-backdrop-filter: blur(14px) !important;
+    }
+  `;
+  document.head.appendChild(style);
 })();
