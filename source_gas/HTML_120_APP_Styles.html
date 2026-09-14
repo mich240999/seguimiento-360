@@ -1351,17 +1351,18 @@
     content: "";
     position: absolute;
     z-index: 0;
-    inset: -10px;
+    inset: 0;
     background: url("../img/calidda-building.png") center / cover no-repeat;
-    filter: blur(3px);
-    transform: scale(1.02);
+    filter: saturate(.92) contrast(.98);
   }
   .auth-view::after {
     content: "";
     position: absolute;
     z-index: 1;
     inset: 0;
-    background: linear-gradient(135deg, rgba(231,250,253,.80), rgba(224,247,251,.58) 48%, rgba(6,119,151,.22));
+    background:
+      radial-gradient(circle at 50% 42%, transparent 0 20%, rgba(2,63,84,.18) 100%),
+      linear-gradient(135deg, rgba(239,252,254,.50), rgba(224,247,251,.30) 48%, rgba(4,112,144,.17));
   }
   .auth-panel {
     position: relative;
