@@ -1386,6 +1386,61 @@
     .auth-copy h2 { font-size: 27px; }
   }
 
+  /* Apertura progresiva del acceso por correo, sin salto de contenido. */
+  .supabase-auth-form:not([hidden]) {
+    max-height: 0;
+    margin: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    overflow: hidden;
+    opacity: 0;
+    transform: translateY(-7px) scaleY(.96);
+    transform-origin: top;
+    border-color: transparent;
+    transition: max-height 300ms cubic-bezier(.2,.8,.2,1), padding 300ms cubic-bezier(.2,.8,.2,1), margin 300ms cubic-bezier(.2,.8,.2,1), opacity 180ms ease, transform 300ms cubic-bezier(.2,.8,.2,1), border-color 180ms ease;
+  }
+  .supabase-auth-form.is-open {
+    max-height: 380px;
+    margin-top: 2px;
+    padding-top: 16px;
+    padding-bottom: 16px;
+    opacity: 1;
+    transform: translateY(0) scaleY(1);
+    border-color: var(--border);
+  }
+
+  /* El logo comparte la misma línea central que los iconos de navegación. */
+  @media (min-width: 1025px) {
+    .app-shell.is-sidebar-collapsed .sidebar-logo-button .sidebar-logo,
+    .app-shell.is-sidebar-collapsed .sidebar-logo-button .sidebar-logo-image {
+      position: static;
+      width: 34px;
+      height: 34px;
+      flex-basis: 34px;
+      margin: 0;
+      transform: none;
+    }
+  }
+
+  /* Contención móvil: los datos extensos se desplazan dentro de su propia tabla. */
+  @media (max-width: 720px) {
+    html, body { width: 100%; overflow-x: hidden; }
+    .app-main, .app-content, .view-panel, .providers-workspace, .mp-workspace, .sales-workspace,
+    .providers-panel, .mp-panel, .sales-card, .sales-form-section { min-width: 0; max-width: 100%; }
+    .data-region, .providers-table-wrap, .mp-table-wrap { max-width: 100%; overscroll-behavior-inline: contain; -webkit-overflow-scrolling: touch; }
+    .button, .provider-button { max-width: 100%; white-space: normal; }
+    .providers-panel, .mp-panel { padding: 14px; }
+    .providers-actions, .mp-section-actions, .mp-toolbar-actions { width: 100%; justify-content: stretch; }
+    .providers-actions .button, .mp-section-actions .button, .mp-toolbar-actions .button { flex: 1 1 auto; justify-content: center; }
+    .mp-filter-row, .mp-price-filter-bar { align-items: stretch; flex-direction: column; }
+    .mp-filter-row .search-field, .mp-filter-control, .mp-price-filter-bar .mp-section-search { width: 100%; min-width: 0; max-width: 100%; flex: 1 1 auto; }
+    .mp-price-filter-bar #mpDownloadPrices { width: 100%; margin-left: 0; }
+    .mp-form-span-2 { grid-column: auto; }
+    .sales29-catalog-toolbar, .sales29-delivery-evidence-grid.sales-form-grid { grid-template-columns: 1fr !important; }
+    .sales29-catalog-toolbar > *, .sales-form-grid > *, .mp-form-grid > * { min-width: 0; }
+    .sales-items-table { min-width: 620px; }
+  }
+
 
 
   .field select[multiple] {

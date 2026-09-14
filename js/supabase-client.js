@@ -114,11 +114,23 @@
     authActions.insertAdjacentHTML("beforeend", '<button id="supabaseGoogleButton" class="provider-button supabase-auth-submit" type="button">Continuar con Google</button><button id="supabaseMicrosoftButton" class="provider-button supabase-auth-submit" type="button">Continuar con Microsoft</button>'); */
     const form = document.getElementById("supabaseEmailLogin"); const emailInput = document.getElementById("authEmail"); const passwordInput = document.getElementById("authPassword"); const submit = document.getElementById("authEmailSubmit"); const forgot = document.getElementById("authForgotPassword");
     form.hidden = true;
+    form.classList.remove("is-open");
     const emailButton = document.getElementById("supabaseEmailButton");
+    let emailFormCloseTimer = null;
     emailButton.addEventListener("click", function() {
-      form.hidden = !form.hidden;
-      emailButton.setAttribute("aria-expanded", String(!form.hidden));
-      if (!form.hidden) emailInput.focus();
+      const willOpen = form.hidden;
+      if (willOpen) {
+        if (emailFormCloseTimer) window.clearTimeout(emailFormCloseTimer);
+        form.hidden = false;
+        window.requestAnimationFrame(function() {
+          form.classList.add("is-open");
+          emailInput.focus();
+        });
+      } else {
+        form.classList.remove("is-open");
+        emailFormCloseTimer = window.setTimeout(function() { form.hidden = true; emailFormCloseTimer = null; }, 260);
+      }
+      emailButton.setAttribute("aria-expanded", String(willOpen));
     });
     form.addEventListener("submit", async function(event) {
       event.preventDefault(); const email = String(emailInput.value || "").trim().toLowerCase(); const password = String(passwordInput.value || "");
