@@ -506,7 +506,6 @@
       synchronizeApplicationChanges(false, true);
     });
     on("logoutButton", "click", function() { closeApplicationSession(false); });
-    on("deactivateAccountButton", "click", requestSelfDeactivation);
     on("rolePreviewSelect", "change", handleRolePreviewChange);
     on("rolePreviewUserSelect", "change", handleRolePreviewUserChange);
     on("rolePreviewExitButton", "click", exitRolePreview);
@@ -1237,35 +1236,6 @@
 
   }
 
-  /** Desactiva voluntariamente el acceso del usuario actual y cierra su sesión. */
-  function requestSelfDeactivation() {
-    const accepted = window.confirm(
-      "¿Deseas dar de baja tu acceso? No podrás volver a ingresar hasta que un administrador reactive tu usuario."
-    );
-    if (!accepted) return;
-
-    const supabase = window.supabaseClient && typeof window.supabaseClient.deactivateCurrentUser === "function" ?
-      window.supabaseClient : null;
-    if (!supabase) {
-      toast("No fue posible dar de baja", "La conexión segura con Supabase no está disponible.", true);
-      return;
-    }
-
-    const button = document.getElementById("deactivateAccountButton");
-    if (button) button.disabled = true;
-    supabase.deactivateCurrentUser().then(function() {
-      stopTimers();
-      clearLocalSession();
-      APP_STATE.module = "DASHBOARD";
-      closeModal();
-      closeSideSheet();
-      closeSidebar();
-      showLogin("Tu acceso fue dado de baja. Solicita a un administrador que lo reactive si necesitas volver a ingresar.", false);
-    }).catch(function(error) {
-      toast("No fue posible dar de baja", errorMessage(error, "Inténtalo nuevamente o comunícate con un administrador."), true);
-      if (button) button.disabled = false;
-    });
-  }
 
   function withTimeout(promise, milliseconds, message) {
     return Promise.race([

@@ -1434,7 +1434,30 @@
       margin: 0;
       transform: none;
     }
+    .app-shell.is-sidebar-collapsed .sidebar-brand {
+      justify-content: flex-start;
+      padding: 14px 0 14px 34px;
+    }
   }
+
+  /* Carga con la misma fotografía y vidrio esmerilado del acceso. */
+  .global-loader { background: #dff3f7; }
+  .global-loader::before {
+    content: "";
+    position: absolute;
+    z-index: 0;
+    inset: 0;
+    background: url("../img/calidda-building.png") center / cover no-repeat;
+    filter: saturate(.92) contrast(.98);
+  }
+  .global-loader::after {
+    content: "";
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    background: radial-gradient(circle at 50% 42%, transparent 0 20%, rgba(2,63,84,.18) 100%), linear-gradient(135deg, rgba(239,252,254,.50), rgba(224,247,251,.30) 48%, rgba(4,112,144,.17));
+  }
+  .loader-panel { z-index: 2; background: rgba(255,255,255,.68); backdrop-filter: blur(20px) saturate(1.05); -webkit-backdrop-filter: blur(20px) saturate(1.05); }
 
   /* Contención móvil: los datos extensos se desplazan dentro de su propia tabla. */
   @media (max-width: 720px) {
