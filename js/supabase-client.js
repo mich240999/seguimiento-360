@@ -78,6 +78,41 @@
     window.localStorage.removeItem(LEGACY_TOKEN_KEY);window.localStorage.removeItem(LEGACY_SESSION_KEY);window.sessionStorage.removeItem("S360_AUDIT_LOGIN");
     return {correcto:true};
   }
+  async function deactivateCurrentUser() {
+    const authorized = await getAuthorizedUser();
+    if (String(authorized.usuario.rol || "").toUpperCase() === "SUPERADMIN") {
+      throw new Error("El superadministrador no puede darse de baja a sí mismo. Asigna otro superadministrador primero.");
+    }
+    const client = getClient();
+    const now = new Date().toISOString();
+    const session = (await client.auth.getSession()).data.session;
+    const idSession = idSesionSupabase_(session, authorized.authUser);
+    const updated = await client.from("seg_usuarios")
+      .update({ estado: "INACTIVO", id_usuario_actualizacion: authorized.usuario.id_usuario })
+      .eq("id_usuario", authorized.usuario.id_usuario)
+      .eq("estado", "ACTIVO");
+    if (updated.error) throw updated.error;
+    const closed = await client.from("seg_sesiones")
+      .update({ estado: "CERRADA", fecha_fin: now, ultima_actividad: now, modulo_actual: "BAJA_VOLUNTARIA" })
+      .eq("id_sesion", idSession).eq("estado", "ACTIVA");
+    if (closed.error) throw closed.error;
+    const audit = await client.from("seg_auditoria_accesos").insert({
+      id_usuario: authorized.usuario.id_usuario,
+      correo: authorized.usuario.correo,
+      rol: authorized.usuario.rol,
+      modulo: "SISTEMA",
+      accion: "BAJA_VOLUNTARIA",
+      resultado: "EXITOSO",
+      origen: "SUPABASE_AUTH",
+      id_sesion: idSession,
+      motivo: "El usuario solicitó la desactivación de su propio acceso."
+    });
+    if (audit.error) console.warn("[SGT360] No se pudo registrar la baja voluntaria:", audit.error);
+    await client.auth.signOut({ scope: "local" });
+    window.localStorage.removeItem(LEGACY_TOKEN_KEY); window.localStorage.removeItem(LEGACY_SESSION_KEY);
+    window.sessionStorage.removeItem("S360_AUDIT_LOGIN");
+    return { correcto: true };
+  }
   function showMessage(message, isError) { const el = document.getElementById("authMessage"); if (!el) return; el.hidden = false; el.textContent = message || ""; el.classList.toggle("is-error", !!isError); el.classList.toggle("is-success", !isError); }
   function normalizeAuthError(error) {
     const message = String(error && (error.message || error.error_description) || error || "");
@@ -335,6 +370,6 @@
     if (!passwordSetupCompleted && isPasswordSetupFlow()) showPasswordSetup();
     const client = getClient(); client.auth.onAuthStateChange(function(event, session) { if (session && session.access_token) window.localStorage.setItem(LEGACY_TOKEN_KEY, session.access_token); else { window.localStorage.removeItem(LEGACY_TOKEN_KEY); window.localStorage.removeItem(LEGACY_SESSION_KEY); } if(!passwordSetupCompleted && (event==="PASSWORD_RECOVERY" || (session && isPasswordSetupFlow()))) showPasswordSetup(); });
   }
-  window.supabaseClient = { getClient: getClient, isConfigured: function() { return !!supabaseInstance; }, getAuthUser: getAuthUser, getAuthorizedUser: getAuthorizedUser, closeCurrentSession: closeCurrentSession, reconfigure: function(url, key) { window.localStorage.setItem("S360_SUPABASE_URL", url); window.localStorage.setItem("S360_SUPABASE_ANON_KEY", key); config.SUPABASE_URL = url; config.SUPABASE_ANON_KEY = key; initSupabase(); return !!supabaseInstance; }, clearConfig: function() { window.localStorage.removeItem("S360_SUPABASE_URL"); window.localStorage.removeItem("S360_SUPABASE_ANON_KEY"); config.SUPABASE_URL = ""; config.SUPABASE_ANON_KEY = ""; supabaseInstance = null; }, subirArchivoEvidencia: async function(archivo, nombreRuta) { const client = getClient(); await getAuthorizedUser(); const bucket = config.STORAGE_BUCKETS && config.STORAGE_BUCKETS.EVIDENCIAS || "evidencias"; const path = nombreRuta || `entrega_${Date.now()}_${archivo.name}`; const { data, error } = await client.storage.from(bucket).upload(path, archivo, { cacheControl: "3600", upsert: true }); if (error) throw new Error("Error al subir archivo a Supabase Storage: " + error.message); const { data: publicUrlData } = client.storage.from(bucket).getPublicUrl(path); return { correcto: true, urlPublica: publicUrlData.publicUrl, idArchivo: data.path }; } };
+  window.supabaseClient = { getClient: getClient, isConfigured: function() { return !!supabaseInstance; }, getAuthUser: getAuthUser, getAuthorizedUser: getAuthorizedUser, closeCurrentSession: closeCurrentSession, deactivateCurrentUser: deactivateCurrentUser, reconfigure: function(url, key) { window.localStorage.setItem("S360_SUPABASE_URL", url); window.localStorage.setItem("S360_SUPABASE_ANON_KEY", key); config.SUPABASE_URL = url; config.SUPABASE_ANON_KEY = key; initSupabase(); return !!supabaseInstance; }, clearConfig: function() { window.localStorage.removeItem("S360_SUPABASE_URL"); window.localStorage.removeItem("S360_SUPABASE_ANON_KEY"); config.SUPABASE_URL = ""; config.SUPABASE_ANON_KEY = ""; supabaseInstance = null; }, subirArchivoEvidencia: async function(archivo, nombreRuta) { const client = getClient(); await getAuthorizedUser(); const bucket = config.STORAGE_BUCKETS && config.STORAGE_BUCKETS.EVIDENCIAS || "evidencias"; const path = nombreRuta || `entrega_${Date.now()}_${archivo.name}`; const { data, error } = await client.storage.from(bucket).upload(path, archivo, { cacheControl: "3600", upsert: true }); if (error) throw new Error("Error al subir archivo a Supabase Storage: " + error.message); const { data: publicUrlData } = client.storage.from(bucket).getPublicUrl(path); return { correcto: true, urlPublica: publicUrlData.publicUrl, idArchivo: data.path }; } };
   document.addEventListener("DOMContentLoaded", function() { try { installAuthBridge(); } catch (error) { console.error("[SGT360] No fue posible instalar el puente Supabase:", error); showMessage("No fue posible preparar la autenticación. Revisa la configuración de Supabase.", true); } }, { once: true });
 })(window);
