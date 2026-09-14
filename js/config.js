@@ -71,13 +71,10 @@ window.__C360_LOADER_CONFIG__ = {
     }
 
     /* ================================================================
-       VIDRIO ESMERILADO REAL PARA LOS MÓDULOS
-       Conserva el blanco, pero lo convierte en una superficie de vidrio:
-       translucidez blanca + desenfoque del fondo + borde luminoso + sombra.
-       La clase se añade también por JS a superficies blancas creadas
-       dinámicamente por cada módulo.
+       GLASSMORPHISM GENERAL DE MÓDULOS
+       Blanco translúcido + desenfoque, como el vidrio empavonado del login.
+       Se aplica a superficies existentes sin cambiar colores de botones ni estados.
        ================================================================ */
-    .app-main .s360-frosted-surface,
     .app-main .card,
     .app-main .panel,
     .app-main .module-card,
@@ -108,57 +105,43 @@ window.__C360_LOADER_CONFIG__ = {
     .app-main .dialog-content,
     .app-main .drawer-content,
     .app-main .dropdown-menu {
-      background: rgba(255,255,255,.82) !important;
-      background-color: rgba(255,255,255,.82) !important;
-      border: 1px solid rgba(255,255,255,.88) !important;
-      box-shadow: 0 18px 50px rgba(15,72,94,.10), 0 1px 0 rgba(255,255,255,.95) inset !important;
-      backdrop-filter: blur(20px) saturate(120%) !important;
-      -webkit-backdrop-filter: blur(20px) saturate(120%) !important;
+      background: rgba(255,255,255,.72) !important;
+      border-color: rgba(255,255,255,.82) !important;
+      box-shadow: 0 18px 50px rgba(15,72,94,.10), 0 1px 0 rgba(255,255,255,.92) inset !important;
+      backdrop-filter: blur(18px) saturate(118%) !important;
+      -webkit-backdrop-filter: blur(18px) saturate(118%) !important;
     }
 
-    /* Todos los paneles/contendedores habituales quedan blancos empavunados. */
-    .app-main :is([class*="card"], [class*="panel"], [class*="surface"], [class*="container"], [class*="section"], [class*="content"], [class*="module"], [class*="table"], [class*="list"], [class*="widget"], [class*="box"]):not(.sidebar):not(.sidebar-nav):not(.nav):not(.navigation) {
-      background: rgba(255,255,255,.82) !important;
-      background-color: rgba(255,255,255,.82) !important;
-      border-color: rgba(255,255,255,.88) !important;
-      box-shadow: 0 18px 50px rgba(15,72,94,.10), 0 1px 0 rgba(255,255,255,.95) inset !important;
-      backdrop-filter: blur(20px) saturate(120%) !important;
-      -webkit-backdrop-filter: blur(20px) saturate(120%) !important;
+    /* Las superficies que originalmente usan fondo blanco también quedan empavunadas.
+       :is permite cubrir variantes de clases usadas por los distintos módulos. */
+    .app-main :is([class*="card"], [class*="panel"], [class*="surface"], [class*="container"], [class*="section"]):not(.sidebar):not(.sidebar-nav) {
+      background-color: rgba(255,255,255,.72);
     }
 
-    /* Contenedores blancos creados sin una clase estándar: el JS les añade la clase. */
-    .app-main .s360-frosted-surface {
-      background: rgba(255,255,255,.82) !important;
-      background-color: rgba(255,255,255,.82) !important;
-      border: 1px solid rgba(255,255,255,.88) !important;
-      box-shadow: 0 18px 50px rgba(15,72,94,.10), 0 1px 0 rgba(255,255,255,.95) inset !important;
-      backdrop-filter: blur(20px) saturate(120%) !important;
-      -webkit-backdrop-filter: blur(20px) saturate(120%) !important;
-    }
-
-    /* Los controles siguen siendo blancos y legibles, pero también tienen un leve vidrio. */
+    /* Mantener el vidrio blanco, pero sin volver transparentes los controles. */
     .app-main input,
     .app-main select,
     .app-main textarea,
     .app-main .form-control,
     .app-main .input,
     .app-main .select {
-      background: rgba(255,255,255,.90) !important;
-      border-color: rgba(190,215,225,.80) !important;
-      backdrop-filter: blur(10px) !important;
-      -webkit-backdrop-filter: blur(10px) !important;
+      background: rgba(255,255,255,.84) !important;
+      border-color: rgba(190,215,225,.80);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
     }
 
+    /* Cabeceras de tablas: vidrio blanco ligeramente más sólido para conservar legibilidad. */
     .app-main table thead,
     .app-main .table-header,
     .app-main .card-header,
     .app-main .panel-header {
-      background: rgba(255,255,255,.76) !important;
-      backdrop-filter: blur(16px) saturate(120%) !important;
-      -webkit-backdrop-filter: blur(16px) saturate(120%) !important;
+      background: rgba(255,255,255,.58) !important;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
     }
 
-    /* No tocar colores funcionales de botones, estados, alertas ni navegación. */
+    /* No aplicar el acabado a elementos que deben conservar su color funcional. */
     .app-main button,
     .app-main .btn,
     .app-main .badge,
@@ -174,46 +157,4 @@ window.__C360_LOADER_CONFIG__ = {
     }
   `;
   document.head.appendChild(style);
-
-  /*
-   * Detecta superficies que realmente tienen fondo blanco aunque su módulo
-   * no use ninguna de las clases anteriores. Esto permite que el efecto se
-   * aplique también a módulos renderizados dinámicamente.
-   */
-  function applyFrostedGlass(root) {
-    if (!root || !root.querySelectorAll) return;
-    var nodes = root.querySelectorAll('*');
-    for (var i = 0; i < nodes.length; i += 1) {
-      var el = nodes[i];
-      if (el.classList.contains('s360-frosted-surface')) continue;
-      if (el.matches('button, input, select, textarea, option, svg, img, .btn, .badge, .status, .chip, .alert, .toast, .progress, nav, .sidebar, [role="button"]')) continue;
-      var cs = window.getComputedStyle(el);
-      var bg = cs.backgroundColor;
-      var isWhite = bg === 'rgb(255, 255, 255)' || bg === 'rgba(255, 255, 255, 1)';
-      if (!isWhite) continue;
-      var rect = el.getBoundingClientRect();
-      if (rect.width < 120 || rect.height < 45) continue;
-      el.classList.add('s360-frosted-surface');
-    }
-  }
-
-  function observeModules() {
-    var main = document.querySelector('.app-main');
-    if (!main) return false;
-    applyFrostedGlass(main);
-    if (!window.__S360_GLASS_OBSERVER__) {
-      window.__S360_GLASS_OBSERVER__ = new MutationObserver(function() {
-        applyFrostedGlass(main);
-      });
-      window.__S360_GLASS_OBSERVER__.observe(main, { childList: true, subtree: true });
-    }
-    return true;
-  }
-
-  if (!observeModules()) {
-    var bootTimer = setInterval(function() {
-      if (observeModules()) clearInterval(bootTimer);
-    }, 250);
-    setTimeout(function() { clearInterval(bootTimer); }, 30000);
-  }
 })();
