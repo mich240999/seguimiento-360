@@ -488,7 +488,7 @@ const APP_STORAGE = Object.freeze({
   function bindGlobalInterface() {
     on("sidebarOpenButton", "click", openSidebar);
     on("sidebarCloseButton", "click", closeSidebar);
-    on("sidebarCollapseButton", "click", toggleSidebarCollapse);
+    on("sidebarBrandToggle", "click", toggleSidebarCollapse);
     on("sidebarBackdrop", "click", closeSidebar);
     on("refreshButton", "click", function() {
       clearClientModuleCache("ALL");
@@ -1556,8 +1556,7 @@ const APP_STORAGE = Object.freeze({
    */
   function applySidebarCollapsed(collapsed, persist) {
     const shell = document.getElementById("appShell");
-    const button = document.getElementById("sidebarCollapseButton");
-    const icon = document.getElementById("sidebarCollapseIcon");
+    const button = document.getElementById("sidebarBrandToggle");
     if (!shell) return;
 
     shell.classList.toggle("is-sidebar-collapsed", Boolean(collapsed));
@@ -1569,8 +1568,6 @@ const APP_STORAGE = Object.freeze({
       button.setAttribute("title", label);
       button.dataset.tooltip = label;
     }
-    if (icon) icon.textContent = collapsed ? "chevron_right" : "chevron_left";
-
     if (persist) {
       try {
         window.localStorage.setItem(APP_STORAGE.SIDEBAR_COLLAPSED, collapsed ? "1" : "0");
