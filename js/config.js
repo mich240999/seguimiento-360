@@ -29,81 +29,52 @@ window.__C360_LOADER_CONFIG__ = {
   var style = document.createElement("style");
   style.id = "s360-final-visual-fixes";
   style.textContent = `
-    /* Rail contraído: el logo queda centrado exactamente en la columna de iconos. */
     @media (min-width: 1025px) {
       .app-shell.is-sidebar-collapsed .sidebar-brand {
-        position: relative;
-        width: var(--sidebar-collapsed-width);
-        min-width: var(--sidebar-collapsed-width);
-        height: var(--app-header-height);
-        padding: 0 !important;
-        margin: 0;
-        display: block;
+        position: relative; width: var(--sidebar-collapsed-width); min-width: var(--sidebar-collapsed-width);
+        height: var(--app-header-height); padding: 0 !important; margin: 0; display: block;
       }
       .app-shell.is-sidebar-collapsed .sidebar-logo-button {
-        position: absolute;
-        inset: 0;
-        width: var(--sidebar-collapsed-width);
-        height: var(--app-header-height);
-        margin: 0 !important;
-        padding: 0 !important;
-        display: grid !important;
-        place-items: center !important;
+        position: absolute; inset: 0; width: var(--sidebar-collapsed-width); height: var(--app-header-height);
+        margin: 0 !important; padding: 0 !important; display: grid !important; place-items: center !important;
       }
       .app-shell.is-sidebar-collapsed .sidebar-logo-button .sidebar-logo,
       .app-shell.is-sidebar-collapsed .sidebar-logo-button .sidebar-logo-image {
-        position: static !important;
-        width: 34px !important;
-        height: 34px !important;
-        min-width: 34px;
-        min-height: 34px;
-        margin: 0 !important;
-        padding: 0;
-        transform: none !important;
+        position: static !important; width: 34px !important; height: 34px !important;
+        min-width: 34px; min-height: 34px; margin: 0 !important; padding: 0; transform: none !important;
       }
       .app-shell.is-sidebar-collapsed .sidebar-brand-copy,
-      .app-shell.is-sidebar-collapsed #sidebarCloseButton {
-        display: none !important;
-      }
+      .app-shell.is-sidebar-collapsed #sidebarCloseButton { display: none !important; }
     }
 
-    /* Loader: mismo fondo fotográfico que el login, usando el recurso existente en /img. */
+    /* Loader: misma imagen de /img y mismo lenguaje visual del login. */
     .global-loader {
       background:
         linear-gradient(135deg, rgba(7,91,120,.74), rgba(0,161,222,.48)),
         url('../img/calidda-building.png') center center / cover no-repeat !important;
     }
     .global-loader::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      z-index: 0;
+      content: ""; position: absolute; inset: 0; z-index: 0;
       background-image: radial-gradient(rgba(255,255,255,.17) 1px, transparent 1px) !important;
-      background-size: 26px 26px !important;
-      opacity: .45;
-      pointer-events: none;
+      background-size: 26px 26px !important; opacity: .45; pointer-events: none;
     }
     .global-loader::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      z-index: 0;
-      background:
-        radial-gradient(circle at 18% 22%, rgba(255,255,255,.16), transparent 32%),
-        radial-gradient(circle at 82% 78%, rgba(0,0,0,.18), transparent 38%);
-      pointer-events: none;
+      content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+      background: radial-gradient(circle at 18% 22%, rgba(255,255,255,.16), transparent 32%), radial-gradient(circle at 82% 78%, rgba(0,0,0,.18), transparent 38%);
     }
     .global-loader .loader-panel {
-      z-index: 2;
-      color: var(--ink);
-      background: rgba(255,255,255,.70) !important;
+      z-index: 2; color: var(--ink); background: rgba(255,255,255,.70) !important;
       border: 1px solid rgba(255,255,255,.78) !important;
       box-shadow: 0 30px 90px rgba(0,54,78,.34), 0 2px 0 rgba(255,255,255,.82) inset !important;
       backdrop-filter: blur(24px) saturate(120%) !important;
       -webkit-backdrop-filter: blur(24px) saturate(120%) !important;
     }
 
-    /* Acabado vidrio esmerilado para las superficies blancas de los módulos. */
+    /* ================================================================
+       GLASSMORPHISM GENERAL DE MÓDULOS
+       Blanco translúcido + desenfoque, como el vidrio empavonado del login.
+       Se aplica a superficies existentes sin cambiar colores de botones ni estados.
+       ================================================================ */
     .app-main .card,
     .app-main .panel,
     .app-main .module-card,
@@ -116,35 +87,73 @@ window.__C360_LOADER_CONFIG__ = {
     .app-main .form-card,
     .app-main .list-card,
     .app-main .empty-state,
-    .app-main .dashboard-card {
-      background: rgba(255,255,255,.68) !important;
-      border-color: rgba(255,255,255,.82) !important;
-      box-shadow: 0 18px 50px rgba(15,72,94,.10), 0 1px 0 rgba(255,255,255,.9) inset !important;
-      backdrop-filter: blur(18px) saturate(118%) !important;
-      -webkit-backdrop-filter: blur(18px) saturate(118%) !important;
-    }
-
-    /* Contenedores principales que el sistema usa como superficies blancas. */
+    .app-main .dashboard-card,
     .app-main .surface,
     .app-main .surface-soft,
     .app-main .module-surface,
     .app-main .content-surface,
-    .app-main .white-surface {
-      background: rgba(255,255,255,.68) !important;
-      border: 1px solid rgba(255,255,255,.82) !important;
-      box-shadow: 0 18px 50px rgba(15,72,94,.10), 0 1px 0 rgba(255,255,255,.9) inset !important;
+    .app-main .white-surface,
+    .app-main .box,
+    .app-main .section,
+    .app-main .module,
+    .app-main .widget,
+    .app-main .tile,
+    .app-main .toolbar,
+    .app-main .table-container,
+    .app-main .table-wrap,
+    .app-main .modal-content,
+    .app-main .dialog-content,
+    .app-main .drawer-content,
+    .app-main .dropdown-menu {
+      background: rgba(255,255,255,.72) !important;
+      border-color: rgba(255,255,255,.82) !important;
+      box-shadow: 0 18px 50px rgba(15,72,94,.10), 0 1px 0 rgba(255,255,255,.92) inset !important;
       backdrop-filter: blur(18px) saturate(118%) !important;
       -webkit-backdrop-filter: blur(18px) saturate(118%) !important;
     }
 
-    /* Mantener controles y tablas legibles sobre el vidrio. */
-    .app-main .card input,
-    .app-main .card select,
-    .app-main .card textarea,
-    .app-main .panel input,
-    .app-main .panel select,
-    .app-main .panel textarea {
-      background: rgba(255,255,255,.82);
+    /* Las superficies que originalmente usan fondo blanco también quedan empavunadas.
+       :is permite cubrir variantes de clases usadas por los distintos módulos. */
+    .app-main :is([class*="card"], [class*="panel"], [class*="surface"], [class*="container"], [class*="section"]):not(.sidebar):not(.sidebar-nav) {
+      background-color: rgba(255,255,255,.72);
+    }
+
+    /* Mantener el vidrio blanco, pero sin volver transparentes los controles. */
+    .app-main input,
+    .app-main select,
+    .app-main textarea,
+    .app-main .form-control,
+    .app-main .input,
+    .app-main .select {
+      background: rgba(255,255,255,.84) !important;
+      border-color: rgba(190,215,225,.80);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+
+    /* Cabeceras de tablas: vidrio blanco ligeramente más sólido para conservar legibilidad. */
+    .app-main table thead,
+    .app-main .table-header,
+    .app-main .card-header,
+    .app-main .panel-header {
+      background: rgba(255,255,255,.58) !important;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+
+    /* No aplicar el acabado a elementos que deben conservar su color funcional. */
+    .app-main button,
+    .app-main .btn,
+    .app-main .badge,
+    .app-main .status,
+    .app-main .chip,
+    .app-main .alert,
+    .app-main .toast,
+    .app-main .progress,
+    .app-main .sidebar,
+    .app-main nav {
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
     }
   `;
   document.head.appendChild(style);
