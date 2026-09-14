@@ -36,3 +36,21 @@ window.__C360_LOADER_CONFIG__ = {
   version: window.APP_CONFIG.VERSION,
   faviconSource: "https://www.calidda.com.pe/favicon.ico"
 };
+
+// Extensiones de interfaz cargadas después de que el documento esté listo.
+// Se mantiene separado del núcleo para no tocar el flujo existente de autenticación.
+(function loadAdministrationExtensions() {
+  function load() {
+    if (window.__S360_ADMIN_DEACTIVATION_LOADED__) return;
+    window.__S360_ADMIN_DEACTIVATION_LOADED__ = true;
+    var script = document.createElement("script");
+    script.src = "js/admin-user-deactivation.js?v=" + encodeURIComponent(window.APP_CONFIG.VERSION);
+    script.defer = true;
+    document.head.appendChild(script);
+  }
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", load, { once: true });
+  } else {
+    load();
+  }
+})();
