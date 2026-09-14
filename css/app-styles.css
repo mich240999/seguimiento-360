@@ -1286,13 +1286,13 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    flex: 0 0 46px;
-    width: 46px;
-    height: 46px;
+    flex: 0 0 34px;
+    width: 34px;
+    height: 34px;
     padding: 0;
     cursor: pointer;
     border: 0;
-    border-radius: 13px;
+    border-radius: 10px;
     background: transparent;
   }
   .sidebar-logo-button:hover .sidebar-logo,
@@ -1303,14 +1303,22 @@
   .sidebar-logo-button:focus-visible { outline: 3px solid rgba(234, 253, 255, .75); outline-offset: 3px; }
   .sidebar-logo-button .sidebar-logo,
   .sidebar-logo-button .sidebar-logo-image { transition: transform var(--transition), box-shadow var(--transition); }
-  .sidebar-brand { justify-content: flex-start; padding: 16px 14px; }
+  .sidebar-logo-button .sidebar-logo,
+  .sidebar-logo-button .sidebar-logo-image {
+    width: 34px;
+    height: 34px;
+    flex-basis: 34px;
+    padding: 4px;
+    border-radius: 10px;
+  }
+  .sidebar-brand { justify-content: flex-start; min-height: 64px; padding: 14px 19px; }
 
   @media (min-width: 1025px) {
     .app-shell.is-sidebar-collapsed .sidebar-logo-button {
-      width: 38px;
-      height: 38px;
-      flex-basis: 38px;
-      margin-left: 2px;
+      width: 34px;
+      height: 34px;
+      flex-basis: 34px;
+      margin-left: 0;
     }
   }
 
@@ -1323,12 +1331,12 @@
     isolation: isolate;
     overflow: hidden;
     padding: clamp(20px, 4vw, 56px);
-    background: #e4f5f8;
+    background: #dff3f7;
   }
   .auth-view::before {
     content: "";
     position: absolute;
-    z-index: -2;
+    z-index: 0;
     inset: -10px;
     background: url("img/calidda-building.png") center / cover no-repeat;
     filter: blur(3px);
@@ -1337,11 +1345,13 @@
   .auth-view::after {
     content: "";
     position: absolute;
-    z-index: -1;
+    z-index: 1;
     inset: 0;
     background: linear-gradient(135deg, rgba(231,250,253,.80), rgba(224,247,251,.58) 48%, rgba(6,119,151,.22));
   }
   .auth-panel {
+    position: relative;
+    z-index: 2;
     width: min(530px, 100%);
     min-height: 0;
     max-width: none;
@@ -1354,6 +1364,15 @@
     -webkit-backdrop-filter: blur(16px);
   }
   .auth-visual { display: none; }
+  .auth-brand-mark {
+    width: 46px;
+    height: 46px;
+    padding: 5px;
+    border: 1px solid #d8ebef;
+    border-radius: 13px;
+    background: #fff;
+    box-shadow: 0 5px 15px rgba(5, 91, 120, .09);
+  }
   .auth-brand { margin-bottom: 34px; }
   .auth-copy h2 { font-size: clamp(28px, 3vw, 40px); }
   .auth-copy p { font-size: 14px; line-height: 1.65; }
