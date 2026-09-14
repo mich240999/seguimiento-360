@@ -1338,7 +1338,7 @@
     position: absolute;
     z-index: 0;
     inset: -10px;
-    background: url("img/calidda-building.png") center / cover no-repeat;
+    background: url("../img/calidda-building.png") center / cover no-repeat;
     filter: blur(3px);
     transform: scale(1.02);
   }
