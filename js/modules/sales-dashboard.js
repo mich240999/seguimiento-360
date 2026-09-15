@@ -63,19 +63,26 @@ function renderSalesDashboardFrame() {
   view.innerHTML =
     '<section class="sales-workspace sd360-workspace">' +
       '<style>' +
-        ".sd360-kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:18px}" +
+        ".sd360-workspace{min-width:0}" +
+        ".sd360-workspace>*{min-width:0}" +
+        ".sd360-workspace .sales-card{min-width:0;overflow:hidden}" +
+        ".sd360-kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:18px}" +
         ".sd360-kpi small{display:block;color:#6b778c;font-weight:700;text-transform:uppercase;letter-spacing:.04em;font-size:11px}" +
         ".sd360-kpi strong{font-size:26px;display:block;margin-top:6px}" +
         ".sd360-kpi span{display:block;color:#6b778c;font-size:12px;margin-top:2px}" +
-        ".sd360-filters{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:12px;margin-bottom:0}" +
-        ".sd360-filters .search-field{margin:0}" +
+        ".sd360-filters{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);gap:12px;margin-bottom:0}" +
+        ".sd360-filters>*{min-width:0}" +
+        ".sd360-filters .search-field{margin:0;min-width:0}" +
         ".sd360-workspace .select-field input{min-height:41px;width:100%;padding:9px 11px;color:var(--ink);background:#fff;border:1px solid var(--border);border-radius:10px;outline:none;font:inherit}" +
         ".sd360-workspace .select-field input:focus{border-color:var(--primary-400);box-shadow:0 0 0 3px rgba(0,161,222,.1)}" +
-        ".sd360-dates{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}" +
-        ".sd360-charts{display:grid;grid-template-columns:2fr 1fr 1fr;gap:14px;margin:18px 0}" +
-        ".sd360-charts canvas{max-height:260px}" +
-        "@media(max-width:1100px){.sd360-charts{grid-template-columns:1fr}.sd360-filters{grid-template-columns:1fr 1fr}}" +
-        "@media(max-width:640px){.sd360-filters{grid-template-columns:1fr}}" +
+        ".sd360-dates{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;margin-top:12px}" +
+        ".sd360-dates>*{min-width:0}" +
+        ".sd360-charts{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr);gap:14px;margin:18px 0}" +
+        ".sd360-charts>*{min-width:0}" +
+        ".sd360-charts canvas{display:block;max-width:100%;max-height:260px}" +
+        ".sd360-workspace .mp-table-wrap{max-width:100%}" +
+        "@media(max-width:1100px){.sd360-charts{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.sd360-charts>*:first-child{grid-column:1 / -1}.sd360-filters{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}" +
+        "@media(max-width:640px){.sd360-filters{grid-template-columns:minmax(0,1fr)}.sd360-charts{grid-template-columns:minmax(0,1fr)}.sd360-dates{grid-template-columns:minmax(0,1fr)}}" +
       "</style>" +
       '<div class="section-header sales-main-header"><div><p class="eyebrow">OPERACIONES</p><h2>Dashboard de Ventas</h2><p>Ventas, abonos y entregas con filtros interactivos. Solo lectura: no modifica registros.</p></div>' +
       '<div class="toolbar toolbar--end"><button id="sd360RefreshButton" class="button button--secondary" type="button"><span class="material-symbols-rounded">refresh</span>Actualizar</button><button id="sd360ExportButton" class="button button--primary" type="button"><span class="material-symbols-rounded">file_download</span>Exportar</button></div></div>' +
