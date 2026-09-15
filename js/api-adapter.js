@@ -360,6 +360,22 @@
         return { correcto: false, mensaje: "Venta no encontrada." };
       }
 
+      case "anularVentaContadoModulo": {
+        const idVenta = args[0];
+        const motivo = args[1] || "";
+        const v = s.ventas.find(x => x.idVenta === idVenta);
+        if (v) {
+          v.estado = "ANULADA";
+          v.estadoEntrega = "ANULADA";
+          v.estadoGeneral = "ANULADA";
+          v.motivoAnulacion = motivo;
+          v.fechaAnulacion = new Date().toISOString();
+          saveStore();
+          return { correcto: true, mensaje: "Venta anulada correctamente." };
+        }
+        return { correcto: false, mensaje: "Venta no encontrada." };
+      }
+
       case "listarAuditoriaAdminMotor":
         return { correcto: true, auditoria: s.auditoria };
 
@@ -454,6 +470,18 @@
 
         return { correcto: true, idVenta, codigoVenta, mensaje: "Venta guardada exitosamente en Supabase." };
       }
+      case "anularVentaContadoModulo": {
+        const idVentaAnular = args[0];
+        const motivoAnular = args[1] || "";
+        const { error: anularError } = await client.from("vta_ventas_contado").update({
+          estado_general: "ANULADA",
+          estado_entrega: "ANULADA",
+          motivo_anulacion: motivoAnular,
+          fecha_anulacion: new Date().toISOString()
+        }).eq("id_venta", idVentaAnular);
+        if (anularError) throw anularError;
+        return { correcto: true, mensaje: "Venta anulada correctamente en Supabase." };
+      }
       default:
         return undefined; // Despacho a local fallback
     }
@@ -513,6 +541,8 @@
       estadoAbono: r.estado_abono,
       estadoEntrega: r.estado_entrega,
       estadoGeneral: r.estado_general,
+      motivoAnulacion: r.motivo_anulacion || "",
+      fechaAnulacion: r.fecha_anulacion || "",
       detalles: (r.vta_ventas_contado_detalle || []).map(d => ({
         idDetalleVenta: d.id_detalle_venta,
         linea: d.linea,

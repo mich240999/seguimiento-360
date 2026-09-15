@@ -1706,6 +1706,17 @@ const SALES_STATE = {
     return '<div class="sales29-test-banner '+(archivada?'is-archived':'')+'"><span class="material-symbols-rounded">'+(archivada?'inventory_2':'science')+'</span><div><strong>'+(archivada?'Venta de prueba archivada':'Venta de prueba')+'</strong><span>'+(archivada?'Este registro se conserva únicamente como historial y no participa en las bandejas activas.':'Este registro está separado de la operación comercial y solo es visible para usuarios autorizados para pruebas.')+'</span></div></div>';
   }
 
+  function salesCancellationNotice29(v){
+    v=v||{};
+    const anulada=[v.estado,v.estadoEntrega,v.estadoGeneral].some(function(s){return String(s||'').toUpperCase()==='ANULADA';});
+    if(!anulada) return '';
+    const motivo=String(v.motivoAnulacion||'').trim();
+    const fecha=v.fechaAnulacion?String(v.fechaAnulacion).split('T')[0]:'';
+    return '<div class="sales29-cancel-warning"><strong>Venta anulada.</strong><br>' +
+      (motivo?'Motivo: '+escapeHtml(motivo):'Sin motivo registrado.') +
+      (fecha?'<br>Fecha: '+escapeHtml(fecha):'') + '</div>';
+  }
+
   function renderSalesTable29(rows) {
     const region = document.getElementById("salesTableRegion");
     if (!region) return;
@@ -4581,6 +4592,7 @@ const SALES_STATE = {
         '<span class="sales-muted">Sin evidencias de entrega</span>';
       const body = '<div class="sales-modal-shell sales-detail-shell">' +
         salesRecordTypeNotice29T(v) +
+        salesCancellationNotice29(v) +
         salesSummaryCards29(v) +
         '<section class="sales29-modal-section sales29-sale-products-section">' +
           '<div class="sales-form-section-head">' +
@@ -5340,6 +5352,10 @@ const SALES_STATE = {
           const current=getSalesRowById29(idVenta);
           if(current){
             current.estado='ANULADA';
+            current.estadoEntrega='ANULADA';
+            current.estadoGeneral='ANULADA';
+            current.motivoAnulacion=reason;
+            current.fechaAnulacion=new Date().toISOString();
             current.puedeAnularObservada=false;
           }
           invalidateSalesDetailCache29(idVenta);

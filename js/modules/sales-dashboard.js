@@ -68,9 +68,10 @@ function renderSalesDashboardFrame() {
         ".sd360-kpi strong{font-size:26px;display:block;margin-top:6px}" +
         ".sd360-kpi span{display:block;color:#6b778c;font-size:12px;margin-top:2px}" +
         ".sd360-filters{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:12px;margin-bottom:0}" +
-        ".sd360-filters label{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:800;color:#42526e;text-transform:uppercase;letter-spacing:.03em}" +
+        ".sd360-filters .search-field{margin:0}" +
+        ".sd360-filters .select-field input{min-height:41px;width:100%;padding:9px 11px;color:var(--ink);background:#fff;border:1px solid var(--border);border-radius:10px;outline:none;font:inherit}" +
+        ".sd360-filters .select-field input:focus{border-color:var(--primary-400);box-shadow:0 0 0 3px rgba(0,161,222,.1)}" +
         ".sd360-dates{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}" +
-        ".sd360-dates label{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:800;color:#42526e;text-transform:uppercase;letter-spacing:.03em}" +
         ".sd360-charts{display:grid;grid-template-columns:2fr 1fr 1fr;gap:14px;margin:18px 0}" +
         ".sd360-charts canvas{max-height:260px}" +
         "@media(max-width:1100px){.sd360-charts{grid-template-columns:1fr}.sd360-filters{grid-template-columns:1fr 1fr}}" +
@@ -82,14 +83,14 @@ function renderSalesDashboardFrame() {
       '<div class="sales-card"><div class="sales-list-head"><div><h3>Filtros</h3><p style="margin:0;color:#64748b">Combinables. Se aplican al instante a indicadores, gráficos y tabla.</p></div>' +
       '<button id="sd360ClearButton" class="button button--ghost" type="button"><span class="material-symbols-rounded">filter_alt_off</span>Limpiar</button></div>' +
       '<div class="sd360-filters">' +
-        '<label>Buscar<input id="sd360Search" type="search" placeholder="Código, cliente, documento o SAP"></label>' +
-        '<label>Abono<select id="sd360AbonoFilter"><option value="TODOS">Todos</option></select></label>' +
-        '<label>Entrega<select id="sd360EntregaFilter"><option value="TODOS">Todas</option></select></label>' +
-        '<label>Oficina<select id="sd360OficinaFilter"><option value="TODOS">Todas</option></select></label>' +
+        '<label class="search-field"><span class="material-symbols-rounded">search</span><input id="sd360Search" type="search" placeholder="Código, cliente, documento o SAP"></label>' +
+        '<label class="select-field"><span>Abono</span><select id="sd360AbonoFilter"><option value="TODOS">Todos</option></select></label>' +
+        '<label class="select-field"><span>Entrega</span><select id="sd360EntregaFilter"><option value="TODOS">Todas</option></select></label>' +
+        '<label class="select-field"><span>Oficina</span><select id="sd360OficinaFilter"><option value="TODOS">Todas</option></select></label>' +
       "</div>" +
       '<div class="sd360-dates">' +
-        '<label>Desde<input id="sd360Desde" type="date"></label>' +
-        '<label>Hasta<input id="sd360Hasta" type="date"></label>' +
+        '<label class="select-field"><span>Desde</span><input id="sd360Desde" type="date"></label>' +
+        '<label class="select-field"><span>Hasta</span><input id="sd360Hasta" type="date"></label>' +
       "</div></div>" +
       '<div id="sd360Charts" class="sd360-charts">' +
         '<div class="sales-card"><h3>Ventas por día</h3><canvas id="sd360ChartDaily"></canvas></div>' +
@@ -166,8 +167,8 @@ function loadSalesDashboardData(silent) {
 
   secureRpc("listarVentasContadoModulo", [], "VENTAS_CONTADO")
     .then(function(response) {
-      var rows = (response && response.ventas) || (response && response.datos) || [];
-      SD360_STATE.rows = Array.isArray(rows) ? rows : [];
+      var rows = (response && response.ventas) || (response && response.registros) || (response && response.datos) || [];
+      SD360_STATE.rows = (Array.isArray(rows) ? rows : []).map(sd360NormalizeRow);
       SD360_STATE.loadedAt = Date.now();
       fillSalesDashboardFilterOptions();
       renderSalesDashboardResults();
@@ -212,6 +213,32 @@ function fillSalesDashboardSelect(id, values, current) {
 }
 
 /**
+ * Normaliza la fila a un formato canónico (demo y producción usan
+ * nombres de campo distintos). Evita celdas vacías según el origen.
+ */
+function sd360NormalizeRow(row) {
+  row = row || {};
+  var client = [row.nombresCliente, row.apellidosCliente].filter(Boolean).join(" ") ||
+    row.nombreCliente || "";
+  return {
+    idVenta: row.idVenta || "",
+    codigoVenta: row.codigoVenta || row.idVenta || "",
+    fechaRegistro: row.fechaRegistro || "",
+    cliente: client,
+    numeroSolicitudSap: row.numeroSolicitudSap || "",
+    codigoSuministro: row.codigoSuministro || row.cuentaContrato || "",
+    numeroDocumentoCliente: row.numeroDocumentoCliente || row.dniCliente || "",
+    distrito: row.distrito || "",
+    nombreOficina: row.nombreOficina || "",
+    idOficina: row.idOficina || "",
+    montoTotalVenta: Number(row.montoTotalVenta || row.totalVenta || row.importeVisible || 0) || 0,
+    estadoAbono: row.estadoAbono || "",
+    estadoEntrega: row.estadoEntrega || row.estado || "",
+    motivoAnulacion: row.motivoAnulacion || ""
+  };
+}
+
+/**
  * Aplica los filtros activos sobre las filas cargadas.
  */
 function applySalesDashboardFilters() {
@@ -231,7 +258,7 @@ function applySalesDashboardFilters() {
     if (text) {
       var haystack = [
         row.codigoVenta, row.numeroSolicitudSap, row.codigoSuministro,
-        row.nombresCliente, row.apellidosCliente, row.numeroDocumentoCliente,
+        row.cliente, row.numeroDocumentoCliente,
         row.distrito, row.nombreOficina
       ].join(" ").toLowerCase();
       if (haystack.indexOf(text) === -1) return false;
@@ -349,15 +376,15 @@ function renderSalesDashboardTable(rows) {
   }
 
   body.innerHTML = rows.slice(0, 200).map(function(row) {
-    var client = [row.nombresCliente, row.apellidosCliente].filter(Boolean).join(" ") || "—";
     var date = row.fechaRegistro ? String(row.fechaRegistro).split("T")[0] : "—";
     return "<tr><td><strong>" + escapeHtml(row.codigoVenta || row.idVenta || "—") + "</strong></td>" +
       "<td>" + escapeHtml(date) + "</td>" +
-      "<td>" + escapeHtml(client) + "</td>" +
+      "<td>" + escapeHtml(row.cliente || "—") + "</td>" +
       "<td>" + escapeHtml(row.nombreOficina || row.idOficina || "—") + "</td>" +
       "<td><strong>" + escapeHtml(sd360Money(Number(row.montoTotalVenta) || 0)) + "</strong></td>" +
       "<td>" + sd360StatusChip(row.estadoAbono) + "</td>" +
-      "<td>" + sd360StatusChip(row.estadoEntrega) + "</td></tr>";
+      "<td" + (row.motivoAnulacion ? ' title="Motivo de anulación: ' + escapeHtml(row.motivoAnulacion) + '"' : "") + ">" +
+      sd360StatusChip(row.estadoEntrega) + "</td></tr>";
   }).join("") + (rows.length > 200 ?
     '<tr><td colspan="7">Mostrando las primeras 200 de ' + rows.length + ". Usa los filtros para acotar.</td></tr>" :
     "");
@@ -377,7 +404,7 @@ function exportSalesDashboardCsv() {
     return [
       row.codigoVenta || row.idVenta || "",
       row.fechaRegistro ? String(row.fechaRegistro).split("T")[0] : "",
-      [row.nombresCliente, row.apellidosCliente].filter(Boolean).join(" "),
+      row.cliente,
       row.numeroDocumentoCliente || "",
       row.nombreOficina || row.idOficina || "",
       Number(row.montoTotalVenta) || 0,

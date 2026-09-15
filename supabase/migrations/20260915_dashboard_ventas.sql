@@ -63,3 +63,9 @@ ON CONFLICT (id_permiso) DO UPDATE SET
     permitido = EXCLUDED.permitido,
     alcance = EXCLUDED.alcance,
     estado = EXCLUDED.estado;
+
+-- 4. Columnas para conservar el motivo de anulación de la venta.
+-- El detalle muestra el motivo tras anular; sin estas columnas se pierde
+-- al recargar desde Supabase.
+ALTER TABLE vta_ventas_contado ADD COLUMN IF NOT EXISTS motivo_anulacion TEXT;
+ALTER TABLE vta_ventas_contado ADD COLUMN IF NOT EXISTS fecha_anulacion TIMESTAMPTZ;
