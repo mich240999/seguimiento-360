@@ -412,6 +412,13 @@ const APP_STORAGE = Object.freeze({
       return;
     }
 
+    if (code === "DASHBOARD_VENTAS") {
+      if (typeof openSalesDashboardWorkspace === "function") {
+        openSalesDashboardWorkspace(module);
+      }
+      return;
+    }
+
     if (code === "VENTAS_CONTADO") {
       if (typeof openCashSalesWorkspace === "function") {
         openCashSalesWorkspace(module);
@@ -1180,6 +1187,10 @@ const APP_STORAGE = Object.freeze({
     }
     if (APP_STATE.module === "MATERIALES_PRECIOS" && typeof refreshMaterialsPricesWorkspace === "function") {
       refreshMaterialsPricesWorkspace(silent);
+      return;
+    }
+    if (APP_STATE.module === "DASHBOARD_VENTAS" && typeof refreshSalesDashboardWorkspace === "function") {
+      refreshSalesDashboardWorkspace(silent);
       return;
     }
     if (APP_STATE.module === "VENTAS_CONTADO" && typeof refreshCashSalesWorkspace === "function") {

@@ -31,6 +31,7 @@ ON CONFLICT (clave) DO NOTHING;
 -- 3. Módulos del Sistema
 INSERT INTO app_modulos (id_modulo, codigo, nombre, descripcion, icono, grupo_menu, orden, tipo_vista, estado)
 VALUES
+    ('MOD-DASH-VTA', 'DASHBOARD_VENTAS', 'Dashboard de Ventas', 'Tablero de ventas, abonos y entregas con filtros interactivos', 'fas fa-chart-line', 'OPERACIONES', 5, 'DASHBOARD', 'ACTIVO'),
     ('MOD-SALES', 'VENTAS_CONTADO', 'Ventas y Seguimiento 360', 'Bandeja de pedidos, abonos, seguimiento y evidencias de entrega', 'fas fa-truck-ramp-box', 'OPERACIONES', 10, 'VENTAS', 'ACTIVO'),
     ('MOD-MP', 'MATERIALES_PRECIOS', 'Materiales y Precios', 'Catálogo maestro, gasodomésticos, listas de precios y solicitudes', 'fas fa-tags', 'OPERACIONES', 20, 'MATERIALES', 'ACTIVO'),
     ('MOD-PROV', 'PROVEEDORES', 'Proveedores y Sedes', 'Directorio de contratistas, canales de venta y cobertura', 'fas fa-handshake', 'GESTION', 30, 'PROVEEDORES', 'ACTIVO'),

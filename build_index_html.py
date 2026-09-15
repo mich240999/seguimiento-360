@@ -114,6 +114,7 @@ template = """<!DOCTYPE html>
   <script src="js/modules/providers.js"></script>
   <script src="js/modules/materials-prices.js"></script>
   <script src="js/modules/sales.js"></script>
+  <script src="js/modules/sales-dashboard.js"></script>
   <script src="js/modules/dynamic.js"></script>
 
   <!-- CONTROLADOR DEL MODAL DE CONFIGURACIÓN SUPABASE -->
