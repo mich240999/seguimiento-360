@@ -69,8 +69,8 @@ function renderSalesDashboardFrame() {
         ".sd360-kpi span{display:block;color:#6b778c;font-size:12px;margin-top:2px}" +
         ".sd360-filters{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:12px;margin-bottom:0}" +
         ".sd360-filters .search-field{margin:0}" +
-        ".sd360-filters .select-field input{min-height:41px;width:100%;padding:9px 11px;color:var(--ink);background:#fff;border:1px solid var(--border);border-radius:10px;outline:none;font:inherit}" +
-        ".sd360-filters .select-field input:focus{border-color:var(--primary-400);box-shadow:0 0 0 3px rgba(0,161,222,.1)}" +
+        ".sd360-workspace .select-field input{min-height:41px;width:100%;padding:9px 11px;color:var(--ink);background:#fff;border:1px solid var(--border);border-radius:10px;outline:none;font:inherit}" +
+        ".sd360-workspace .select-field input:focus{border-color:var(--primary-400);box-shadow:0 0 0 3px rgba(0,161,222,.1)}" +
         ".sd360-dates{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}" +
         ".sd360-charts{display:grid;grid-template-columns:2fr 1fr 1fr;gap:14px;margin:18px 0}" +
         ".sd360-charts canvas{max-height:260px}" +
