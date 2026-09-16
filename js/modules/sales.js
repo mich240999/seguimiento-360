@@ -2161,7 +2161,8 @@ const SALES_STATE = {
     const id =
       String(idArchivo || "").trim();
 
-    if (id) return id;
+    // Un id de Drive nunca es una URL http/data: (Storage/demo usan vista directa).
+    if (id && !/^(https?:|data:)/i.test(id)) return id;
 
     const text =
       String(url || "").trim();
