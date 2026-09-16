@@ -90,6 +90,13 @@
       ],
       auditoria: [
         { idAuditoriaAcceso: 1, fechaHora: new Date().toISOString(), correo: "admin@calidda.com.pe", rol: "SUPERADMIN", modulo: "APP_SHELL", accion: "INICIO_SESION", resultado: "EXITOSO", motivo: "Acceso validado" }
+      ],
+      parametros: [
+        { clave: "NOMBRE_APLICACION", valor: "Seguimiento 360", descripcion: "Nombre comercial visible de la plataforma", tipo: "TEXTO", editable: true, estado: "ACTIVO" },
+        { clave: "EXPIRACION_SESION_MINUTOS", valor: "480", descripcion: "Tiempo de expiración de sesión por inactividad (minutos)", tipo: "NUMERO", editable: true, estado: "ACTIVO" },
+        { clave: "MONEDA_DEFECTO", valor: "PEN", descripcion: "Moneda predeterminada para precios y ventas (PEN/USD)", tipo: "TEXTO", editable: true, estado: "ACTIVO" },
+        { clave: "APP_REFRESH_ENABLED", valor: "TRUE", descripcion: "Actualización automática de cambios de otros usuarios", tipo: "TEXTO", editable: true, estado: "ACTIVO" },
+        { clave: "APP_REFRESH_SECONDS", valor: "300", descripcion: "Intervalo de actualización automática (segundos, mínimo 60)", tipo: "NUMERO", editable: true, estado: "ACTIVO" }
       ]
     };
   }
@@ -390,6 +397,26 @@
       case "listarAuditoriaAdminMotor":
         return { correcto: true, auditoria: s.auditoria };
 
+      case "listarParametrosAdminMotor":
+        return (s.parametros || []).map(function(p) {
+          return { clave: p.clave, valor: p.valor, descripcion: p.descripcion, tipo: p.tipo, editable: p.editable !== false, estado: p.estado };
+        });
+
+      case "guardarParametroAdminMotor": {
+        const parametroDemo = args[0] || {};
+        const claveDemo = String(parametroDemo.clave || "").trim();
+        if (!claveDemo) return { correcto: false, mensaje: "Indica la clave del parámetro." };
+        let valorDemo = parametroDemo.valor;
+        if (typeof valorDemo === "boolean") valorDemo = valorDemo ? "TRUE" : "FALSE";
+        valorDemo = String(valorDemo === null || valorDemo === undefined ? "" : valorDemo).trim();
+        s.parametros = s.parametros || [];
+        const existente = s.parametros.find(function(p) { return p.clave === claveDemo; });
+        if (existente) existente.valor = valorDemo;
+        else s.parametros.push({ clave: claveDemo, valor: valorDemo, descripcion: parametroDemo.descripcion || "", tipo: parametroDemo.tipo || "TEXTO", editable: true, estado: "ACTIVO" });
+        saveStore();
+        return { correcto: true, clave: claveDemo, valor: valorDemo, mensaje: "Parámetro actualizado." };
+      }
+
       case "listarSesionesAuditoriaAdminMotor":
         return { correcto: true, sesiones: [] };
 
@@ -516,6 +543,17 @@
         }).eq("id_venta", idVentaAnular);
         if (anularEntregaError) throw anularEntregaError;
         return { correcto: true, mensaje: "Venta anulada correctamente en Supabase." };
+      }
+      case "guardarParametroAdminMotor": {
+        const parametro = args[0] || {};
+        const claveParam = String(parametro.clave || "").trim();
+        if (!claveParam) throw new Error("Indica la clave del parámetro.");
+        let valorParam = parametro.valor;
+        if (typeof valorParam === "boolean") valorParam = valorParam ? "TRUE" : "FALSE";
+        valorParam = String(valorParam === null || valorParam === undefined ? "" : valorParam).trim();
+        const { error: paramError } = await client.from("sys_parametros").upsert({ clave: claveParam, valor: valorParam, estado: "ACTIVO" }, { onConflict: "clave" });
+        if (paramError) throw paramError;
+        return { correcto: true, clave: claveParam, valor: valorParam, mensaje: "Parámetro actualizado." };
       }
       default:
         return undefined; // Despacho a local fallback

@@ -3698,7 +3698,7 @@ const SALES_STATE = {
       );
     }
 
-    bindSalesSecureFileButtons29U(region);
+    bindSalesSecureFileButtons29U(document.getElementById("salesModalBody"));
   }
   function debounceSales29(fn,wait){let t;return function(){clearTimeout(t);const a=arguments;t=setTimeout(function(){fn.apply(null,a);},wait);};}
 
