@@ -380,6 +380,7 @@
           v.estadoGeneral = "ANULADA";
           v.motivoAnulacion = motivo;
           v.fechaAnulacion = new Date().toISOString();
+          if (v.gestionEntrega) v.gestionEntrega.estadoEntrega = "ANULADA";
           saveStore();
           return { correcto: true, mensaje: "Venta anulada correctamente." };
         }
@@ -510,6 +511,10 @@
           fecha_anulacion: new Date().toISOString()
         }).eq("id_venta", idVentaAnular);
         if (anularError) throw anularError;
+        const { error: anularEntregaError } = await client.from("vta_gestion_entrega").update({
+          estado_entrega: "ANULADA"
+        }).eq("id_venta", idVentaAnular);
+        if (anularEntregaError) throw anularEntregaError;
         return { correcto: true, mensaje: "Venta anulada correctamente en Supabase." };
       }
       default:

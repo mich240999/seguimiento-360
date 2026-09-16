@@ -5509,6 +5509,7 @@ const SALES_STATE = {
             current.estadoGeneral='ANULADA';
             current.motivoAnulacion=reason;
             current.fechaAnulacion=new Date().toISOString();
+            if(current.gestionEntrega) current.gestionEntrega.estadoEntrega='ANULADA';
             current.puedeAnularObservada=false;
           }
           invalidateSalesDetailCache29(idVenta);
