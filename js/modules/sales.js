@@ -2895,7 +2895,7 @@ const SALES_STATE = {
     }) || null;
   }
 
-  function renderExistingDeliveryEvidence29(gestion, tipos) {
+  function renderExistingDeliveryEvidence29(gestion, tipos, idVenta) {
     gestion = gestion || {};
     tipos = Array.isArray(tipos) ? tipos : [];
     const evidencias = Array.isArray(gestion.evidencias)
@@ -2912,15 +2912,17 @@ const SALES_STATE = {
     return '<div class="sales29-evidence-summary">' +
       '<strong>Sustentos registrados</strong><div>' +
       rows.map(function(item) {
-        return '<a target="_blank" href="' + escapeHtml(item.url || '#') + '">' +
-          escapeHtml(item.nombreArchivo || item.tipoEvidencia || 'Sustento') +
-        '</a>';
-      }).join('<br>') +
+        return '<div class="sales29-evidence-file">' +
+          '<span>' + escapeHtml(item.nombreArchivo || item.tipoEvidencia || 'Sustento') + '</span>' +
+          salesSecureFileButtons29U(idVenta, item.idArchivo, item.url, item.nombreArchivo || item.tipoEvidencia || 'Sustento', true) +
+        '</div>';
+      }).join('') +
       '</div></div>';
   }
 
   function renderDeliveryStatusFields29(detail, idProveedor) {
     const gestion = getDeliveryManagementForProvider29(detail, idProveedor) || {};
+    const idVenta = (detail && detail.venta && detail.venta.idVenta) || (detail && detail.idVenta) || "";
     const estado = String(gestion.estadoEntrega || 'PENDIENTE').toUpperCase();
     const fechaProgramada = String(gestion.fechaProgramadaEntrega || '').slice(0,10);
     const observacion = String(gestion.detalleObservacion || '').trim();
@@ -2947,7 +2949,7 @@ const SALES_STATE = {
           '<label class="input-field span-2"><span>Observaciones</span><textarea id="salesDeliveryObservation" rows="4" maxlength="1500" placeholder="Describe el motivo por el cual la entrega quedó observada">' + escapeHtml(observacion) + '</textarea></label>' +
           '<label class="input-field span-2"><span>Sustento de la observación</span><input id="salesEvidenceObservation" type="file" accept="application/pdf,image/png,image/jpeg,image/webp"><small class="sales29-field-help">PDF, PNG, JPG o WEBP; máximo 5 MB.</small></label>' +
         '</div>' +
-        renderExistingDeliveryEvidence29(gestion,['SUSTENTO_OBSERVACION']) +
+        renderExistingDeliveryEvidence29(gestion,['SUSTENTO_OBSERVACION'],idVenta) +
       '</div>';
     } else if (estado === 'ENTREGADA') {
       dynamic = '<div class="sales29-delivery-dynamic">' +
@@ -2958,7 +2960,7 @@ const SALES_STATE = {
           '<label class="input-field"><span>Otro sustento</span><input id="salesEvidenceOtro" type="file" accept="application/pdf,image/png,image/jpeg,image/webp"></label>' +
         '</div>' +
         '<small class="sales29-field-help">Para confirmar la entrega debe existir al menos un sustento de entrega.</small>' +
-        renderExistingDeliveryEvidence29(gestion,['BOLETA_ENTREGA','EVIDENCIA_RECEPCION','ACTA_CONFORMIDAD','OTRO']) +
+        renderExistingDeliveryEvidence29(gestion,['BOLETA_ENTREGA','EVIDENCIA_RECEPCION','ACTA_CONFORMIDAD','OTRO'],idVenta) +
       '</div>';
     } else {
       dynamic = '<div class="sales29-delivery-current">' +
@@ -2995,6 +2997,7 @@ const SALES_STATE = {
     if (status) {
       status.innerHTML = renderDeliveryStatusFields29(detail, provider);
       bindSalesDeliveryStatus29();
+      bindSalesSecureFileButtons29U(status);
     }
   }
 
@@ -3087,6 +3090,7 @@ const SALES_STATE = {
     temp.innerHTML = renderDeliveryStatusFields29(temporal, provider);
     const dynamic = temp.querySelector('#salesDeliveryDynamicFields');
     region.innerHTML = dynamic ? dynamic.innerHTML : '';
+    bindSalesSecureFileButtons29U(region);
   }
 
   function bindSalesDeliveryStatus29() {
