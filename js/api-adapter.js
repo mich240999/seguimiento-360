@@ -333,7 +333,7 @@
       case "obtenerDetalleVentaContadoModulo": {
         const idVenta = args[0];
         const v = s.ventas.find(x => x.idVenta === idVenta || x.codigoVenta === idVenta);
-        return { correcto: !!v, venta: v || null };
+        return { correcto: !!v, venta: v || null, detalles: (v && v.detalles) || [], evidenciasEntrega: (v && v.evidenciasEntrega) || [], gestionesEntrega: (v && v.gestionesEntrega) || [] };
       }
 
       case "guardarVentaContadoModulo": {
