@@ -555,6 +555,22 @@
         if (paramError) throw paramError;
         return { correcto: true, clave: claveParam, valor: valorParam, mensaje: "Parámetro actualizado." };
       }
+      case "guardarGestionEntregaVentaContadoModulo": {
+        const entregaPayload = args[0] || {};
+        const idVentaGestion = String(entregaPayload.idVenta || "").trim();
+        if (!idVentaGestion) throw new Error("Indica la venta a gestionar.");
+        const estadoGestion = String(entregaPayload.estadoEntrega || "PROGRAMADA").toUpperCase();
+        const gestionExistente = await client.from("vta_gestion_entrega").select("id_gestion_entrega").eq("id_venta", idVentaGestion).maybeSingle();
+        if (gestionExistente.error) throw gestionExistente.error;
+        const idGestion = (gestionExistente.data && gestionExistente.data.id_gestion_entrega) || ("ENT-" + Date.now());
+        const filaGestion = { id_gestion_entrega: idGestion, id_venta: idVentaGestion, id_proveedor: entregaPayload.idProveedor || null, estado_entrega: estadoGestion, detalle_observacion: entregaPayload.detalleObservacion || null, fecha_programada_entrega: entregaPayload.fechaProgramadaEntrega || null };
+        if (estadoGestion === "ENTREGADA") filaGestion.fecha_real_entrega = new Date().toISOString();
+        const { error: gestionError } = await client.from("vta_gestion_entrega").upsert(filaGestion, { onConflict: "id_gestion_entrega" });
+        if (gestionError) throw gestionError;
+        const { error: ventaGestionError } = await client.from("vta_ventas_contado").update({ estado_entrega: estadoGestion }).eq("id_venta", idVentaGestion);
+        if (ventaGestionError) throw ventaGestionError;
+        return { correcto: true, mensaje: "Gestión de entrega actualizada." };
+      }
       default:
         return undefined; // Despacho a local fallback
     }
