@@ -380,6 +380,7 @@
         const v = s.ventas.find(x => x.idVenta === entregaPayload.idVenta);
         if (v) {
           v.estadoEntrega = entregaPayload.estadoEntrega || v.estadoEntrega;
+          if (String(entregaPayload.estadoEntrega || "").toUpperCase() === "ENTREGADA") v.estadoGeneral = "ENTREGADA";
           v.gestionEntrega = Object.assign(v.gestionEntrega || {}, entregaPayload);
           v.gestionesEntrega = v.gestionesEntrega || [];
           const posicion = v.gestionesEntrega.findIndex(function(g) {
@@ -592,7 +593,9 @@
         if (estadoGestion === "ENTREGADA") filaGestion.fecha_real_entrega = new Date().toISOString();
         const { error: gestionError } = await client.from("vta_gestion_entrega").upsert(filaGestion, { onConflict: "id_gestion_entrega" });
         if (gestionError) throw gestionError;
-        const { error: ventaGestionError } = await client.from("vta_ventas_contado").update({ estado_entrega: estadoGestion }).eq("id_venta", idVentaGestion);
+        const actualizacionVentaGestion = { estado_entrega: estadoGestion };
+        if (estadoGestion === "ENTREGADA") actualizacionVentaGestion.estado_general = "ENTREGADA";
+        const { error: ventaGestionError } = await client.from("vta_ventas_contado").update(actualizacionVentaGestion).eq("id_venta", idVentaGestion);
         if (ventaGestionError) throw ventaGestionError;
         return { correcto: true, mensaje: "Gestión de entrega actualizada." };
       }
