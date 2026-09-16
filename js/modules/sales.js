@@ -1721,11 +1721,13 @@ const SALES_STATE = {
     const region = document.getElementById("salesTableRegion");
     if (!region) return;
     if (!rows || !rows.length) { region.innerHTML='<div class="empty-state"><span class="material-symbols-rounded">inbox</span><strong>Sin registros</strong><p>No hay ventas para los filtros seleccionados.</p></div>'; return; }
+    const showDeliveryState = String(SALES_STATE.activeView || "").toUpperCase() === "ENTREGAS";
     region.innerHTML = '<div class="table-wrap"><table class="data-table sales29-table"><thead><tr><th>Código venta</th><th>Fecha</th><th>Tipo</th><th>Cliente (Cuenta contrato)</th><th>Nombre del cliente</th><th>Importe</th><th>Abono</th><th>Estado de venta</th><th>Opciones</th></tr></thead><tbody>' +
       rows.map(function(item){
         const amount = item.importeVisible !== undefined ? item.importeVisible : item.totalVenta;
         const archived=String(item.tipoRegistro||'').toUpperCase()==='PRUEBA' && String(item.estadoPrueba||'').toUpperCase()==='ARCHIVADA';
-        return '<tr class="'+(archived?'sales29-row-archived':'')+'"><td><div class="sales29-code-cell"><strong>'+escapeHtml(item.codigoVenta||'')+'</strong>'+salesRecordTypeBadge29T(item,true)+'</div></td><td>'+escapeHtml(item.fechaRegistro||'')+'</td><td>'+escapeHtml(item.nombreTipoVenta||item.tipoVenta||'—')+'</td><td>'+escapeHtml(item.cuentaContrato||'—')+'</td><td>'+escapeHtml(item.nombreCliente||'—')+'</td><td>'+formatSalesMoney(amount,item.moneda)+'</td><td>'+salesPaymentBadge29(item.estadoAbono)+'</td><td>'+salesStatusBadge29(item.estado)+'</td><td>'+renderSalesRowActions29(item)+'</td></tr>';
+        const estadoColumna = showDeliveryState ? (item.estadoEntrega || item.estado) : item.estado;
+        return '<tr class="'+(archived?'sales29-row-archived':'')+'"><td><div class="sales29-code-cell"><strong>'+escapeHtml(item.codigoVenta||'')+'</strong>'+salesRecordTypeBadge29T(item,true)+'</div></td><td>'+escapeHtml(item.fechaRegistro||'')+'</td><td>'+escapeHtml(item.nombreTipoVenta||item.tipoVenta||'—')+'</td><td>'+escapeHtml(item.cuentaContrato||'—')+'</td><td>'+escapeHtml(item.nombreCliente||'—')+'</td><td>'+formatSalesMoney(amount,item.moneda)+'</td><td>'+salesPaymentBadge29(item.estadoAbono)+'</td><td>'+salesStatusBadge29(estadoColumna)+'</td><td>'+renderSalesRowActions29(item)+'</td></tr>';
       }).join('') + '</tbody></table></div>';
     region.querySelectorAll('[data-sales-view-detail]').forEach(function(btn){
       btn.addEventListener('mouseenter', function(){

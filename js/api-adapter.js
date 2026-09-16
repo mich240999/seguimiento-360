@@ -85,6 +85,16 @@
             estadoEntrega: "PROGRAMADA",
             fechaProgramadaEntrega: new Date(Date.now() + 86400000).toISOString().split('T')[0]
           },
+          gestionesEntrega: [
+            {
+              idGestionEntrega: "ENT-2026-0001",
+              idProveedor: "PRV-CONTRATISTA-01",
+              estadoEntrega: "PROGRAMADA",
+              fechaProgramadaEntrega: new Date(Date.now() + 86400000).toISOString().split('T')[0],
+              detalleObservacion: "",
+              evidencias: []
+            }
+          ],
           evidencias: []
         }
       ],
@@ -371,6 +381,20 @@
         if (v) {
           v.estadoEntrega = entregaPayload.estadoEntrega || v.estadoEntrega;
           v.gestionEntrega = Object.assign(v.gestionEntrega || {}, entregaPayload);
+          v.gestionesEntrega = v.gestionesEntrega || [];
+          const posicion = v.gestionesEntrega.findIndex(function(g) {
+            return String(g.idProveedor || "") === String(entregaPayload.idProveedor || "") && String(entregaPayload.idProveedor || "") !== "";
+          });
+          const gestionDemo = {
+            idGestionEntrega: (v.gestionEntrega && v.gestionEntrega.idGestionEntrega) || ("ENT-" + Date.now()),
+            idProveedor: entregaPayload.idProveedor || "",
+            estadoEntrega: entregaPayload.estadoEntrega || v.estadoEntrega,
+            fechaProgramadaEntrega: entregaPayload.fechaProgramadaEntrega || "",
+            detalleObservacion: entregaPayload.detalleObservacion || "",
+            evidencias: entregaPayload.evidencias || []
+          };
+          if (posicion >= 0) v.gestionesEntrega[posicion] = Object.assign(v.gestionesEntrega[posicion], gestionDemo);
+          else v.gestionesEntrega.push(gestionDemo);
           saveStore();
           return { correcto: true, mensaje: "Gestión de entrega actualizada." };
         }
@@ -657,7 +681,17 @@
         idGestionEntrega: r.vta_gestion_entrega[0].id_gestion_entrega,
         estadoEntrega: r.vta_gestion_entrega[0].estado_entrega,
         fechaProgramadaEntrega: r.vta_gestion_entrega[0].fecha_programada_entrega
-      } : null
+      } : null,
+      gestionesEntrega: (r.vta_gestion_entrega || []).map(function(g) {
+        return {
+          idGestionEntrega: g.id_gestion_entrega,
+          idProveedor: g.id_proveedor,
+          estadoEntrega: g.estado_entrega,
+          fechaProgramadaEntrega: g.fecha_programada_entrega,
+          detalleObservacion: g.detalle_observacion || "",
+          evidencias: []
+        };
+      })
     };
   }
 
