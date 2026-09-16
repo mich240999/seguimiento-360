@@ -390,6 +390,7 @@
             idProveedor: entregaPayload.idProveedor || "",
             estadoEntrega: entregaPayload.estadoEntrega || v.estadoEntrega,
             fechaProgramadaEntrega: entregaPayload.fechaProgramadaEntrega || "",
+            fechaRealEntrega: String(entregaPayload.estadoEntrega || "").toUpperCase() === "ENTREGADA" ? new Date().toISOString() : "",
             detalleObservacion: entregaPayload.detalleObservacion || "",
             evidencias: entregaPayload.evidencias || []
           };
@@ -688,6 +689,7 @@
           idProveedor: g.id_proveedor,
           estadoEntrega: g.estado_entrega,
           fechaProgramadaEntrega: g.fecha_programada_entrega,
+          fechaRealEntrega: g.fecha_real_entrega || "",
           detalleObservacion: g.detalle_observacion || "",
           evidencias: []
         };

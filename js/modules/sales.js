@@ -1979,43 +1979,48 @@ const SALES_STATE = {
   function salesMaterialDeliveryDetail29(item, venta) {
     item = item || {};
     venta = venta || {};
+    const gestion = venta.gestionEntrega || {};
 
     const estado = String(
-      item.estadoEntrega || "PENDIENTE"
+      item.estadoEntrega || gestion.estadoEntrega || venta.estadoEntrega || venta.estado || "PENDIENTE"
     ).toUpperCase();
+
+    const fechaProgramada = item.fechaProgramadaEntrega || gestion.fechaProgramadaEntrega || "";
+    const detalleObservacion = item.detalleObservacionEntrega || gestion.detalleObservacion || "";
+    const fechaEntrega = item.fechaEntrega || gestion.fechaRealEntrega || venta.fechaEntrega || "";
 
     let extra = '';
 
     if (
       estado === "PROGRAMADA" &&
-      item.fechaProgramadaEntrega
+      fechaProgramada
     ) {
       extra =
         '<small class="sales29-material-status-detail">' +
           '<span class="material-symbols-rounded">event</span>' +
           'Fecha acordada: ' +
           escapeHtml(
-            String(item.fechaProgramadaEntrega || "").slice(0,10)
+            String(fechaProgramada || "").slice(0,10)
           ) +
         '</small>';
     } else if (
       estado === "OBSERVADA" &&
-      item.detalleObservacionEntrega
+      detalleObservacion
     ) {
       extra =
         '<small class="sales29-material-status-detail is-observed">' +
           '<span class="material-symbols-rounded">info</span>' +
-          escapeHtml(item.detalleObservacionEntrega) +
+          escapeHtml(detalleObservacion) +
         '</small>';
     } else if (
       estado === "ENTREGADA" &&
-      item.fechaEntrega
+      fechaEntrega
     ) {
       extra =
         '<small class="sales29-material-status-detail">' +
           '<span class="material-symbols-rounded">check_circle</span>' +
           'Entrega confirmada: ' +
-          escapeHtml(item.fechaEntrega) +
+          escapeHtml(String(fechaEntrega || "").slice(0,10)) +
         '</small>';
     }
 
@@ -2163,8 +2168,9 @@ const SALES_STATE = {
     const id =
       String(idArchivo || "").trim();
 
-    // Un id de Drive nunca es una URL http/data: (Storage/demo usan vista directa).
-    if (id && !/^(https?:|data:)/i.test(id)) return id;
+    // Solo un id de Drive puro (sin barras, puntos ni protocolo) usa ese flujo.
+    // Rutas de Storage, URLs y data-URLs van a vista directa.
+    if (id && /^[A-Za-z0-9_-]{10,}$/.test(id)) return id;
 
     const text =
       String(url || "").trim();
