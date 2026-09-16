@@ -11,6 +11,10 @@
       "dest": "/js/$1"
     },
     {
+      "src": "/img/(.*)",
+      "dest": "/img/$1"
+    },
+    {
       "src": "/supabase/(.*)",
       "dest": "/supabase/$1"
     },
