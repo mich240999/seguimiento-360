@@ -332,6 +332,16 @@
           estadoGeneral: "EN_PROCESO",
           detalles: vPayload.detalles || []
         }, vPayload);
+        if (nuevaVenta.comprobante && nuevaVenta.comprobante.base64) {
+          const mimeDemo = String(nuevaVenta.comprobante.mimeType || "application/octet-stream");
+          nuevaVenta.urlComprobante = "data:" + mimeDemo + ";base64," + String(nuevaVenta.comprobante.base64).replace(/\s/g, "");
+          nuevaVenta.idArchivoComprobante = nuevaVenta.urlComprobante;
+          nuevaVenta.nombreArchivoComprobante = nuevaVenta.comprobante.nombre || "comprobante";
+          nuevaVenta.nombreComprobante = nuevaVenta.comprobante.nombre || "comprobante";
+          nuevaVenta.mimeComprobante = mimeDemo;
+          nuevaVenta.estadoComprobantePagoCliente = "CARGADO";
+          delete nuevaVenta.comprobante;
+        }
         s.ventas.unshift(nuevaVenta);
         saveStore();
         return { correcto: true, idVenta: idVenta, codigoVenta: codigoVenta, mensaje: "Venta registrada con éxito." };
@@ -449,6 +459,21 @@
           estado_abono: payload.estadoAbono || "PENDIENTE_CONFIRMACION",
           estado_entrega: payload.estadoEntrega || "REGISTRADA"
         };
+        const comprobante = payload.comprobante || null;
+        if (comprobante && comprobante.base64) {
+          const mimeRecibo = String(comprobante.mimeType || "application/octet-stream").toLowerCase();
+          const binRecibo = atob(String(comprobante.base64).replace(/\s/g, ""));
+          const bytesRecibo = new Uint8Array(binRecibo.length);
+          for (let iRecibo = 0; iRecibo < binRecibo.length; iRecibo++) bytesRecibo[iRecibo] = binRecibo.charCodeAt(iRecibo);
+          const nombreRecibo = String(comprobante.nombre || "comprobante").replace(/[^A-Za-z0-9_.-]+/g, "_").slice(-60);
+          const rutaRecibo = "comprobantes/" + idVenta + "/" + Date.now() + "_" + nombreRecibo;
+          const subida = await client.storage.from("evidencias").upload(rutaRecibo, new Blob([bytesRecibo], { type: mimeRecibo }), { contentType: mimeRecibo, upsert: true });
+          if (subida.error) throw new Error("No se pudo guardar el comprobante en Storage: " + subida.error.message);
+          row.url_comprobante = client.storage.from("evidencias").getPublicUrl(rutaRecibo).data.publicUrl;
+          row.nombre_comprobante = comprobante.nombre || "comprobante";
+          row.mime_comprobante = mimeRecibo;
+          row.estado_comprobante = "CARGADO";
+        }
         const { error } = await client.from("vta_ventas_contado").upsert(row);
         if (error) throw error;
 
@@ -543,6 +568,12 @@
       estadoGeneral: r.estado_general,
       motivoAnulacion: r.motivo_anulacion || "",
       fechaAnulacion: r.fecha_anulacion || "",
+      idArchivoComprobante: r.url_comprobante || "",
+      urlComprobante: r.url_comprobante || "",
+      nombreArchivoComprobante: r.nombre_comprobante || "Comprobante de pago",
+      nombreComprobante: r.nombre_comprobante || "",
+      mimeComprobante: r.mime_comprobante || "",
+      estadoComprobantePagoCliente: r.estado_comprobante || (r.url_comprobante ? "CARGADO" : "NO_CARGADO"),
       detalles: (r.vta_ventas_contado_detalle || []).map(d => ({
         idDetalleVenta: d.id_detalle_venta,
         linea: d.linea,

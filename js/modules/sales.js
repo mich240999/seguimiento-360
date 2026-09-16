@@ -2196,14 +2196,28 @@ const SALES_STATE = {
         url
       );
 
-    if (!fileId) {
-      return '<span class="sales-muted">Sin archivo adjunto</span>';
-    }
-
     const cls =
       compact
         ? " button--compact"
         : "";
+
+    if (!fileId) {
+      const direct =
+        String(url || "").trim();
+
+      if (/^(https?:|data:)/i.test(direct)) {
+        return '<div class="sales29-secure-file-actions">' +
+          '<a class="button button--secondary' + cls + '" href="' + escapeHtml(direct) + '" target="_blank" rel="noopener">' +
+            '<span class="material-symbols-rounded">visibility</span>Ver' +
+          "</a>" +
+          '<a class="button button--ghost' + cls + '" href="' + escapeHtml(direct) + '" download="' + escapeHtml(nombre || "archivo") + '">' +
+            '<span class="material-symbols-rounded">download</span>Descargar' +
+          "</a>" +
+        "</div>";
+      }
+
+      return '<span class="sales-muted">Sin archivo adjunto</span>';
+    }
 
     return '<div class="sales29-secure-file-actions">' +
       '<button class="button button--secondary' + cls + '" type="button" ' +

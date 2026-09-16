@@ -69,3 +69,12 @@ ON CONFLICT (id_permiso) DO UPDATE SET
 -- al recargar desde Supabase.
 ALTER TABLE vta_ventas_contado ADD COLUMN IF NOT EXISTS motivo_anulacion TEXT;
 ALTER TABLE vta_ventas_contado ADD COLUMN IF NOT EXISTS fecha_anulacion TIMESTAMPTZ;
+
+-- 5. Columnas para conservar el comprobante de pago del cliente.
+-- Sin estas columnas el archivo adjunto al registrar se pierde y el
+-- detalle muestra "Sin archivo adjunto". Requiere el bucket
+-- "evidencias" de Storage (ver README paso 1.5).
+ALTER TABLE vta_ventas_contado ADD COLUMN IF NOT EXISTS url_comprobante TEXT;
+ALTER TABLE vta_ventas_contado ADD COLUMN IF NOT EXISTS nombre_comprobante VARCHAR(200);
+ALTER TABLE vta_ventas_contado ADD COLUMN IF NOT EXISTS mime_comprobante VARCHAR(100);
+ALTER TABLE vta_ventas_contado ADD COLUMN IF NOT EXISTS estado_comprobante VARCHAR(30) DEFAULT 'NO_CARGADO';
