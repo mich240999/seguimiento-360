@@ -2200,26 +2200,80 @@ const SALES_STATE = {
     return ext ? base + "." + ext : base;
   }
 
+  var SALES_PREVIEW_ZOOM29U = { scale: 1 };
+
+  function applySalesPreviewZoom29U() {
+    const img = document.getElementById("salesPreviewImage");
+    const label = document.getElementById("salesPreviewZoomLabel");
+    if (img) img.style.transform = "scale(" + SALES_PREVIEW_ZOOM29U.scale + ")";
+    if (label) label.textContent = Math.round(SALES_PREVIEW_ZOOM29U.scale * 100) + "%";
+  }
+
+  function changeSalesPreviewZoom29U(delta) {
+    SALES_PREVIEW_ZOOM29U.scale = Math.min(4, Math.max(0.5, Math.round((SALES_PREVIEW_ZOOM29U.scale + delta) * 100) / 100));
+    applySalesPreviewZoom29U();
+  }
+
   function openSalesFilePreview29U(url, nombre, mime) {
     const safeUrl = String(url || "").trim();
     if (!safeUrl) {
       toast("Sin archivo", "No hay comprobante para mostrar.", true);
       return;
     }
+    SALES_PREVIEW_ZOOM29U.scale = 1;
+    const title = nombre || "Comprobante de pago";
     const kind = String(mime || mimeTypeOfSalesUrl29U(safeUrl)).toLowerCase();
     const isPdf = kind.indexOf("pdf") !== -1;
+    const download = salesDownloadName29U(title, safeUrl);
+    const toolbar =
+      '<div class="toolbar">' +
+        (isPdf ? "" :
+        '<button class="button button--secondary button--compact" type="button" data-preview-zoom="out" title="Reducir"><span class="material-symbols-rounded">zoom_out</span></button>' +
+        '<button class="button button--secondary button--compact" type="button" data-preview-zoom="in" title="Ampliar"><span class="material-symbols-rounded">zoom_in</span></button>' +
+        '<button class="button button--ghost button--compact" type="button" data-preview-zoom="reset" title="Tamaño original"><span class="material-symbols-rounded">restart_alt</span></button>' +
+        '<span id="salesPreviewZoomLabel" class="sales-muted">100%</span>') +
+        '<span style="flex:1"></span>' +
+        '<a class="button button--secondary button--compact" href="' + escapeHtml(safeUrl) + '" download="' + escapeHtml(download) + '"><span class="material-symbols-rounded">download</span>Descargar</a>' +
+      "</div>";
     const media = isPdf
-      ? '<embed src="' + escapeHtml(safeUrl) + '" type="application/pdf" style="width:100%;height:70vh;border:0;border-radius:12px;background:#fff">'
-      : '<img src="' + escapeHtml(safeUrl) + '" alt="' + escapeHtml(nombre || "Comprobante") + '" style="width:100%;max-height:70vh;object-fit:contain;border-radius:12px;background:#0f172a">';
+      ? '<embed src="' + escapeHtml(safeUrl) + '" type="application/pdf" style="width:100%;height:68vh;border:0;border-radius:14px;background:#fff">'
+      : '<div id="salesPreviewStage" style="overflow:auto;max-height:68vh;border-radius:14px;background:#0b1526;display:grid;place-items:center;padding:12px">' +
+          '<img id="salesPreviewImage" src="' + escapeHtml(safeUrl) + '" alt="' + escapeHtml(title) + '" style="max-width:100%;max-height:64vh;object-fit:contain;border-radius:8px;transition:transform .15s ease">' +
+        "</div>";
     openModal({
       eyebrow: "COMPROBANTE",
-      title: nombre || "Comprobante de pago",
+      title: title,
       wide: true,
-      body: '<div class="sales-modal-shell">' + media + "</div>",
-      footer: '<a class="button button--secondary" href="' + escapeHtml(safeUrl) + '" download="' + escapeHtml(salesDownloadName29U(nombre, safeUrl)) + '"><span class="material-symbols-rounded">download</span>Descargar</a>' +
-        '<button class="button button--primary" type="button" data-modal-close>Cerrar</button>'
+      body: '<div class="sales-modal-shell">' + toolbar + '<div style="height:12px"></div>' + media +
+        (!isPdf ? '<p class="sales-muted" style="margin:10px 0 0">Rueda del mouse, doble clic o botones para zoom.</p>' : "") + "</div>",
+      footer: '<button class="button button--primary" type="button" data-modal-close>Cerrar</button>'
     });
     bindSalesModalClose29();
+    document.querySelectorAll("[data-preview-zoom]").forEach(function(button) {
+      button.addEventListener("click", function() {
+        const action = button.dataset.previewZoom;
+        if (action === "reset") {
+          SALES_PREVIEW_ZOOM29U.scale = 1;
+          applySalesPreviewZoom29U();
+        } else {
+          changeSalesPreviewZoom29U(action === "in" ? 0.25 : -0.25);
+        }
+      });
+    });
+    const img = document.getElementById("salesPreviewImage");
+    if (img) {
+      img.addEventListener("dblclick", function() {
+        SALES_PREVIEW_ZOOM29U.scale = SALES_PREVIEW_ZOOM29U.scale === 1 ? 2 : 1;
+        applySalesPreviewZoom29U();
+      });
+    }
+    const stage = document.getElementById("salesPreviewStage");
+    if (stage) {
+      stage.addEventListener("wheel", function(event) {
+        event.preventDefault();
+        changeSalesPreviewZoom29U(event.deltaY < 0 ? 0.15 : -0.15);
+      }, { passive: false });
+    }
   }
 
   function salesSecureFileButtons29U(
@@ -3432,6 +3486,11 @@ const SALES_STATE = {
           '<div class="sales-form-section-head"><span class="material-symbols-rounded">payments</span><div><h4>Pago y observaciones</h4><p>El comprobante quedará Pendiente hasta que un aprobador lo valide.</p></div></div>' +
           '<div class="sales-form-grid">' +
             '<label class="input-field span-2"><span>Comprobante de pago ' + (edit?'':'<small>obligatorio</small>') + '</span><input id="salesReceiptInput" type="file" accept="application/pdf,image/png,image/jpeg,image/webp"><small class="sales-muted">PDF, PNG, JPG o WEBP; máximo 5 MB.</small></label>' +
+            (edit && (edit.urlComprobante || edit.idArchivoComprobante) ?
+              '<div class="sales29-info-note span-2"><span class="material-symbols-rounded">attach_file</span><span><strong>Comprobante actual: ' +
+              escapeHtml(edit.nombreArchivoComprobante || edit.nombreComprobante || "archivo") + '</strong><br>' +
+              salesSecureFileButtons29U(edit.idVenta, edit.idArchivoComprobante, edit.urlComprobante, edit.nombreArchivoComprobante || "Comprobante de pago", true) +
+              '<small class="sales-muted">Se conserva automáticamente si no adjuntas uno nuevo.</small></span></div>' : '') +
             '<label class="input-field span-2"><span>Observaciones <small>obligatorio</small></span><textarea id="salesObservationInput" rows="3" maxlength="1500" placeholder="Registra alguna precisión comercial o de la entrega."></textarea></label>' +
           '</div>' +
         '</section>' +
@@ -3637,6 +3696,8 @@ const SALES_STATE = {
         saveCashSale29
       );
     }
+
+    bindSalesSecureFileButtons29U(region);
   }
   function debounceSales29(fn,wait){let t;return function(){clearTimeout(t);const a=arguments;t=setTimeout(function(){fn.apply(null,a);},wait);};}
 
