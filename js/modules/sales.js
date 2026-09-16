@@ -2183,6 +2183,45 @@ const SALES_STATE = {
       : "";
   }
 
+  function mimeTypeOfSalesUrl29U(url) {
+    const text = String(url || "");
+    if (/^data:([^;,]+)/i.test(text)) return text.match(/^data:([^;,]+)/i)[1].toLowerCase();
+    const match = text.split("?")[0].match(/\.([A-Za-z0-9]+)$/);
+    const ext = match ? match[1].toLowerCase() : "";
+    return { pdf: "application/pdf", png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", webp: "image/webp" }[ext] || "";
+  }
+
+  function salesDownloadName29U(nombre, url) {
+    let base = String(nombre || "archivo").trim() || "archivo";
+    if (/\.[A-Za-z0-9]{2,5}$/.test(base)) return base;
+    const fromUrl = String(url || "").split("?")[0].match(/\.([A-Za-z0-9]{2,5})$/);
+    if (fromUrl) return base + "." + fromUrl[1].toLowerCase();
+    const ext = { "application/pdf": "pdf", "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp" }[mimeTypeOfSalesUrl29U(url)];
+    return ext ? base + "." + ext : base;
+  }
+
+  function openSalesFilePreview29U(url, nombre, mime) {
+    const safeUrl = String(url || "").trim();
+    if (!safeUrl) {
+      toast("Sin archivo", "No hay comprobante para mostrar.", true);
+      return;
+    }
+    const kind = String(mime || mimeTypeOfSalesUrl29U(safeUrl)).toLowerCase();
+    const isPdf = kind.indexOf("pdf") !== -1;
+    const media = isPdf
+      ? '<embed src="' + escapeHtml(safeUrl) + '" type="application/pdf" style="width:100%;height:70vh;border:0;border-radius:12px;background:#fff">'
+      : '<img src="' + escapeHtml(safeUrl) + '" alt="' + escapeHtml(nombre || "Comprobante") + '" style="width:100%;max-height:70vh;object-fit:contain;border-radius:12px;background:#0f172a">';
+    openModal({
+      eyebrow: "COMPROBANTE",
+      title: nombre || "Comprobante de pago",
+      wide: true,
+      body: '<div class="sales-modal-shell">' + media + "</div>",
+      footer: '<a class="button button--secondary" href="' + escapeHtml(safeUrl) + '" download="' + escapeHtml(salesDownloadName29U(nombre, safeUrl)) + '"><span class="material-symbols-rounded">download</span>Descargar</a>' +
+        '<button class="button button--primary" type="button" data-modal-close>Cerrar</button>'
+    });
+    bindSalesModalClose29();
+  }
+
   function salesSecureFileButtons29U(
     idVenta,
     idArchivo,
@@ -2207,10 +2246,13 @@ const SALES_STATE = {
 
       if (/^(https?:|data:)/i.test(direct)) {
         return '<div class="sales29-secure-file-actions">' +
-          '<a class="button button--secondary' + cls + '" href="' + escapeHtml(direct) + '" target="_blank" rel="noopener">' +
+          '<button class="button button--secondary' + cls + '" type="button" ' +
+            'data-sales-file-preview="' + escapeHtml(direct) + '" ' +
+            'data-sales-file-name="' + escapeHtml(nombre || "archivo") + '" ' +
+            'data-sales-file-mime="' + escapeHtml(mimeTypeOfSalesUrl29U(direct)) + '">' +
             '<span class="material-symbols-rounded">visibility</span>Ver' +
-          "</a>" +
-          '<a class="button button--ghost' + cls + '" href="' + escapeHtml(direct) + '" download="' + escapeHtml(nombre || "archivo") + '">' +
+          "</button>" +
+          '<a class="button button--ghost' + cls + '" href="' + escapeHtml(direct) + '" download="' + escapeHtml(salesDownloadName29U(nombre, direct)) + '">' +
             '<span class="material-symbols-rounded">download</span>Descargar' +
           "</a>" +
         "</div>";
@@ -2425,6 +2467,33 @@ const SALES_STATE = {
               button.dataset.salesFileDownload,
               "DESCARGAR",
               button.dataset.salesFileName
+            );
+          }
+        );
+      });
+
+    target
+      .querySelectorAll(
+        "[data-sales-file-preview]"
+      )
+      .forEach(function(button) {
+        if (
+          button.dataset.boundSecureFile29u ===
+          "true"
+        ) {
+          return;
+        }
+
+        button.dataset.boundSecureFile29u =
+          "true";
+
+        button.addEventListener(
+          "click",
+          function() {
+            openSalesFilePreview29U(
+              button.dataset.salesFilePreview,
+              button.dataset.salesFileName,
+              button.dataset.salesFileMime
             );
           }
         );
@@ -4174,6 +4243,14 @@ const SALES_STATE = {
       };
 
       if(receipt) data.comprobante=receipt;
+
+      if(String(data.tipoReceptor || "COMPRADOR").toUpperCase() !== "OTRA_PERSONA"){
+        data.tipoReceptor="COMPRADOR";
+        data.nombreReceptor=data.nombreCliente||"";
+        data.dniReceptor=data.dni||data.dniCliente||"";
+        data.telefonoReceptor=data.telefono||data.telefonoCliente||"";
+        data.relacionReceptor="";
+      }
       return data;
     };
 

@@ -457,7 +457,12 @@
           direccion_instalacion: payload.direccionInstalacion,
           monto_total_venta: payload.montoTotalVenta || 0,
           estado_abono: payload.estadoAbono || "PENDIENTE_CONFIRMACION",
-          estado_entrega: payload.estadoEntrega || "REGISTRADA"
+          estado_entrega: payload.estadoEntrega || "REGISTRADA",
+          tipo_receptor: payload.tipoReceptor || "COMPRADOR",
+          nombre_receptor: payload.nombreReceptor || null,
+          dni_receptor: payload.dniReceptor || null,
+          telefono_receptor: payload.telefonoReceptor || null,
+          parentesco_receptor: payload.relacionReceptor || null
         };
         const comprobante = payload.comprobante || null;
         if (comprobante && comprobante.base64) {
@@ -574,6 +579,11 @@
       nombreComprobante: r.nombre_comprobante || "",
       mimeComprobante: r.mime_comprobante || "",
       estadoComprobantePagoCliente: r.estado_comprobante || (r.url_comprobante ? "CARGADO" : "NO_CARGADO"),
+      tipoReceptor: r.tipo_receptor || "",
+      nombreReceptor: r.nombre_receptor || "",
+      dniReceptor: r.dni_receptor || "",
+      telefonoReceptor: r.telefono_receptor || "",
+      relacionReceptor: r.parentesco_receptor || "",
       detalles: (r.vta_ventas_contado_detalle || []).map(d => ({
         idDetalleVenta: d.id_detalle_venta,
         linea: d.linea,

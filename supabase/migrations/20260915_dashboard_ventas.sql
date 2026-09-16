@@ -78,3 +78,12 @@ ALTER TABLE vta_ventas_contado ADD COLUMN IF NOT EXISTS url_comprobante TEXT;
 ALTER TABLE vta_ventas_contado ADD COLUMN IF NOT EXISTS nombre_comprobante VARCHAR(200);
 ALTER TABLE vta_ventas_contado ADD COLUMN IF NOT EXISTS mime_comprobante VARCHAR(100);
 ALTER TABLE vta_ventas_contado ADD COLUMN IF NOT EXISTS estado_comprobante VARCHAR(30) DEFAULT 'NO_CARGADO';
+
+-- 6. Columnas para conservar la persona autorizada a recibir el pedido.
+-- El formulario las envía pero se perdían al guardar; la gestión de
+-- entrega las lee desde la venta.
+ALTER TABLE vta_ventas_contado ADD COLUMN IF NOT EXISTS tipo_receptor VARCHAR(20) DEFAULT 'COMPRADOR';
+ALTER TABLE vta_ventas_contado ADD COLUMN IF NOT EXISTS nombre_receptor VARCHAR(180);
+ALTER TABLE vta_ventas_contado ADD COLUMN IF NOT EXISTS dni_receptor VARCHAR(30);
+ALTER TABLE vta_ventas_contado ADD COLUMN IF NOT EXISTS telefono_receptor VARCHAR(50);
+ALTER TABLE vta_ventas_contado ADD COLUMN IF NOT EXISTS parentesco_receptor VARCHAR(100);
