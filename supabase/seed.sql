@@ -10,6 +10,7 @@ VALUES
     ('ROL-ADMIN', 'ADMIN', 'Administrador General', 'Gestión de usuarios, auditoría, catálogos y módulos', 90, 'ACTIVO', TRUE, 'SISTEMA'),
     ('ROL-COORD-VENTAS', 'COORDINADOR_VENTAS', 'Coordinador de Ventas', 'Supervisión de pedidos, confirmación de abonos y asignaciones', 70, 'ACTIVO', TRUE, 'SISTEMA'),
     ('ROL-GESTOR-ENTREGA', 'GESTOR_ENTREGA', 'Gestor de Entregas', 'Programación, despacho y validación de evidencias de entrega', 60, 'ACTIVO', TRUE, 'SISTEMA'),
+    ('ROL-DESPACHADOR', 'DESPACHADOR', 'Despachador de Entregas', 'Toma despachos programados y confirma entregas con evidencia', 50, 'ACTIVO', FALSE, 'SISTEMA'),
     ('ROL-PROVEEDOR', 'PROVEEDOR', 'Contratista / Proveedor', 'Consulta de listas de precios y gestión de pedidos asignados', 40, 'ACTIVO', TRUE, 'SISTEMA'),
     ('ROL-VENDEDOR', 'VENDEDOR', 'Asesor Comercial / Vendedor', 'Registro de ventas contado y seguimiento de cartera', 30, 'ACTIVO', TRUE, 'SISTEMA'),
     ('ROL-AUDITOR', 'AUDITOR', 'Auditor de Seguridad', 'Solo lectura de bitácoras, accesos y operaciones del sistema', 20, 'ACTIVO', TRUE, 'SISTEMA')
@@ -34,6 +35,7 @@ VALUES
     ('MOD-DASH-VTA', 'DASHBOARD_VENTAS', 'Dashboard de Ventas', 'Tablero de ventas, abonos y entregas con filtros interactivos', 'fas fa-chart-line', 'OPERACIONES', 5, 'DASHBOARD', 'ACTIVO'),
     ('MOD-SALES', 'VENTAS_CONTADO', 'Ventas y Seguimiento 360', 'Bandeja de pedidos, abonos, seguimiento y evidencias de entrega', 'fas fa-truck-ramp-box', 'OPERACIONES', 10, 'VENTAS', 'ACTIVO'),
     ('MOD-CAL-ENT', 'CALENDARIO_ENTREGAS', 'Calendario de Entregas', 'Entregas programadas por día para el personal de reparto', 'fas fa-calendar-days', 'OPERACIONES', 15, 'CALENDARIO', 'ACTIVO'),
+    ('MOD-DESP', 'DESPACHO', 'Despacho de Entregas', 'Bandeja de despacho: ventas programadas y en ruta del proveedor propio', 'fas fa-truck-fast', 'OPERACIONES', 18, 'DESPACHO', 'ACTIVO'),
     ('MOD-MP', 'MATERIALES_PRECIOS', 'Materiales y Precios', 'Catálogo maestro, gasodomésticos, listas de precios y solicitudes', 'fas fa-tags', 'OPERACIONES', 20, 'MATERIALES', 'ACTIVO'),
     ('MOD-PROV', 'PROVEEDORES', 'Proveedores y Sedes', 'Directorio de contratistas, canales de venta y cobertura', 'fas fa-handshake', 'GESTION', 30, 'PROVEEDORES', 'ACTIVO'),
     ('MOD-ADM-USR', 'ADMIN_USUARIOS', 'Usuarios y Seguridad', 'Gestión de cuentas, perfiles, asignación de roles y estados', 'fas fa-users-gear', 'ADMINISTRACION', 40, 'ADMINISTRACION', 'ACTIVO'),

@@ -66,7 +66,7 @@ function renderSalesDashboardFrame() {
         ".sd360-workspace{min-width:0}" +
         ".sd360-workspace>*{min-width:0}" +
         ".sd360-workspace .sales-card{min-width:0;overflow:hidden}" +
-        ".sd360-kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:18px}" +
+        ".sd360-kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:14px}" +
         ".sd360-kpi small{display:block;color:#6b778c;font-weight:700;text-transform:uppercase;letter-spacing:.04em;font-size:11px}" +
         ".sd360-kpi strong{font-size:26px;display:block;margin-top:6px;white-space:nowrap;line-height:1.2;overflow:hidden}" +
         ".sd360-kpi span{display:block;color:#6b778c;font-size:12px;margin-top:2px}" +

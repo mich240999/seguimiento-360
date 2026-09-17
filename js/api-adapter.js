@@ -190,6 +190,7 @@
             { idModulo: "MOD-DASH-VTA", codigo: "DASHBOARD_VENTAS", nombre: "Dashboard de Ventas", icono: "fas fa-chart-line", orden: 5 },
             { idModulo: "MOD-SALES", codigo: "VENTAS_CONTADO", nombre: "Ventas y Seguimiento 360", icono: "fas fa-truck-ramp-box", orden: 10 },
             { idModulo: "MOD-CAL-ENT", codigo: "CALENDARIO_ENTREGAS", nombre: "Calendario de Entregas", icono: "fas fa-calendar-days", orden: 15 },
+            { idModulo: "MOD-DESP", codigo: "DESPACHO", nombre: "Despacho de Entregas", icono: "fas fa-truck-fast", orden: 18 },
             { idModulo: "MOD-MP", codigo: "MATERIALES_PRECIOS", nombre: "Materiales y Precios", icono: "fas fa-tags", orden: 20 },
             { idModulo: "MOD-PROV", codigo: "PROVEEDORES", nombre: "Proveedores y Sedes", icono: "fas fa-handshake", orden: 30 },
             { idModulo: "MOD-ADM-USR", codigo: "ADMIN_USUARIOS", nombre: "Usuarios y Seguridad", icono: "fas fa-users-gear", orden: 40 },
@@ -200,6 +201,7 @@
           permisos: {
             DASHBOARD_VENTAS: { VISUALIZAR_MODULO: true, VER_RESUMEN: true, EXPORTAR: true },
             CALENDARIO_ENTREGAS: { VISUALIZAR_MODULO: true, VER_CALENDARIO: true, EXPORTAR: true },
+            DESPACHO: { VISUALIZAR_MODULO: true, VER_DESPACHO: true, GESTIONAR_DESPACHO: true, EXPORTAR: true },
             VENTAS_CONTADO: { VISUALIZAR_MODULO: true, REGISTRAR_VENTA: true, EDITAR_VENTA: true, CONFIRMAR_ABONO: true, PROGRAMAR_ENTREGA: true, CONFIRMAR_ENTREGA: true, ANULAR_VENTA: true },
             MATERIALES_PRECIOS: { VISUALIZAR_MODULO: true, GESTIONAR_CATALOGO: true, GESTIONAR_PRECIOS: true, SOLICITAR_PRECIOS: true, APROBAR_PRECIOS: true },
             PROVEEDORES: { VISUALIZAR_MODULO: true, CREAR_PROVEEDOR: true, EDITAR_PROVEEDOR: true, IMPORTAR_PROVEEDORES: true },
@@ -294,13 +296,35 @@
       case "resolverPrecioMaterialesPreciosModulo":
       case "resolverPrecioVentaContadoModulo":
       case "resolverPrecioVentaContadoRapidoModulo": {
-        const idMat = args[0] || (args[1] && args[1].idMaterial);
+        const rawScope = (args[0] && typeof args[0] === "object" && !Array.isArray(args[0])) ? args[0] : {};
+        const idMat = (typeof args[0] === "string" ? args[0] : (rawScope.idMaterial || rawScope.id_material)) || (args[1] && args[1].idMaterial);
+        const rolScope = String(rawScope.rol || (s.usuarios && s.usuarios[0] && s.usuarios[0].rol) || "").toUpperCase();
+        const esAdminScope = (rolScope === "SUPERADMIN" || rolScope === "ADMIN");
+        const provScope = String(rawScope.idProveedor || rawScope.id_proveedor || "").trim();
+        const ofiScope = String(rawScope.idOficina || "").trim();
+        const gruScope = String(rawScope.idGrupo || "").trim();
         const mat = s.materiales.find(m => m.idMaterial === idMat || m.codigoMaterial === idMat);
+        if (mat && !esAdminScope && provScope && mat.idProveedor && String(mat.idProveedor) !== provScope) {
+          return { correcto: false, precioEncontrado: false, encontrado: false, mensaje: "El material no pertenece a tu proveedor." };
+        }
+        if (mat && !esAdminScope && gruScope && mat.idGrupo && String(mat.idGrupo) !== gruScope) {
+          return { correcto: false, precioEncontrado: false, encontrado: false, mensaje: "El material no pertenece a tu grupo." };
+        }
+        if (mat && !esAdminScope && !gruScope && ofiScope && mat.idOficina && String(mat.idOficina) !== ofiScope) {
+          return { correcto: false, precioEncontrado: false, encontrado: false, mensaje: "El material no pertenece a tu oficina." };
+        }
+        if (!mat || (!mat.idProveedor && !mat.idOficina && !mat.idGrupo)) {
+          try { console.warn("[SGT360] Alcance de catálogo (respaldo local): material sin alcance registrado, respuesta fail-open."); } catch (e) {}
+        }
         return {
           correcto: true,
           precioEncontrado: !!mat,
+          encontrado: !!mat,
           precio: mat ? mat.precioBase : 0,
+          precioBase: mat ? mat.precioBase : 0,
           moneda: "PEN",
+          idMaterial: mat ? mat.idMaterial : String(idMat || ""),
+          idProveedor: mat ? (mat.idProveedor || provScope) : provScope,
           nombreMaterial: mat ? mat.nombreMaterial : ""
         };
       }
@@ -608,6 +632,14 @@
         const { error: ventaGestionError } = await client.from("vta_ventas_contado").update(actualizacionVentaGestion).eq("id_venta", idVentaGestion);
         if (ventaGestionError) throw ventaGestionError;
         return { correcto: true, mensaje: "Gestión de entrega actualizada." };
+      }
+      case "listarDespachoModulo": {
+        const baseDespacho = await dispatchSupabase(client, "listarVentasContadoModulo", args, moduleCode, localCache);
+        const todasDespacho = (baseDespacho && baseDespacho.ventas) || [];
+        const soloDespacho = todasDespacho.filter(function(v) {
+          return ["PROGRAMADA", "EN_RUTA"].indexOf(String(v.estadoEntrega || v.estado || "").toUpperCase()) !== -1;
+        });
+        return { correcto: true, registros: soloDespacho, ventas: soloDespacho };
       }
       default:
         return undefined; // Despacho a local fallback

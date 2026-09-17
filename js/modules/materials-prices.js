@@ -78,6 +78,11 @@ const MP_STATE = {
     return Boolean(permissions && permissions[resource] && permissions[resource].permitido);
   }
 
+  function isMpProviderUser_() {
+    var user = APP_STATE.context && APP_STATE.context.usuario ? APP_STATE.context.usuario : {};
+    return Boolean(user.idProveedor) || String(user.rol || "").toUpperCase() === "PROVEEDOR";
+  }
+
   function mpCanSeeTab(tab) {
     const rules = {
       summary: ["VER_RESUMEN", "VER_MATERIALES", "VER_PRECIOS", "VER_LISTAS_OFICIALES", "VER_MIS_LISTAS_PRECIO", "VER_SOLICITUDES_PRECIO"],
@@ -886,14 +891,16 @@ const MP_STATE = {
     MP_STATE.officialPriceRows = rows.slice();
     if (!content) return;
     if (!rows.length) { content.innerHTML = mpEmpty("No hay precios de materiales para mostrar."); return; }
-    content.innerHTML = '<div class="mp-table-wrap"><table class="mp-table mp-price-table"><thead><tr><th>Proveedor</th><th>Negocio</th><th>Alcance</th><th>Código SAP Material</th><th>Nombre corto del material</th><th>Combo</th><th>Precio</th><th>Fecha</th><th>Acciones</th></tr></thead><tbody>' + rows.map(function(row) {
+    var hideFeeForProvider = isMpProviderUser_();
+    content.innerHTML = '<div class="mp-table-wrap"><table class="mp-table mp-price-table"><thead><tr><th>Proveedor</th><th>Responsable venta</th><th>Negocio</th><th>Alcance</th><th>Código SAP Material</th><th>Nombre corto del material</th><th>Combo</th><th>Precio</th>' + (hideFeeForProvider ? '' : '<th>Fee %</th>') + '<th>Fecha</th><th>Acciones</th></tr></thead><tbody>' + rows.map(function(row) {
       const combo = getMpComboDetail(row);
       const rawPrice = resolveMpPriceValue(row);
       const priceText = formatMpMoney(rawPrice, row.moneda || row.MONEDA);
+      const feeText = (row.fee === null || row.fee === undefined || String(row.fee).trim() === "") ? "—" : String(row.fee) + " %";
       const dateStart = row.fechaInicio || row.FECHA_INICIO || "";
       const dateEnd = row.fechaFin || row.FECHA_FIN || "";
       const dateCell = '<div class="mp-vigencia-cell"><div><strong>I:</strong> ' + escapeHtml(dateStart || "—") + '</div><div><strong>F:</strong> ' + escapeHtml(dateEnd || "—") + '</div></div>';
-      return '<tr><td>' + escapeHtml(row.proveedor || "Proveedor no definido") + '</td><td>' + escapeHtml(row.negocio || "—") + '</td><td>' + escapeHtml(mpScopeLabel(row)) + '</td><td><strong>' + escapeHtml(row.codigoSap || row.CODIGO_SAP || "—") + '</strong><br><small>' + escapeHtml(row.codigoMaterial || row.CODIGO_MATERIAL || "") + '</small></td><td class="mp-material-name">' + escapeHtml(row.nombreCortoMaterial || row.descripcionMaterial || row.NOMBRE_MATERIAL || "—") + '</td><td>' + (combo ? '<small>' + escapeHtml(combo) + '</small>' : '<span class="sales-muted">—</span>') + '</td><td class="mp-money-cell"><strong>' + escapeHtml(priceText) + '</strong></td><td>' + dateCell + '</td><td><div class="mp-actions"><button class="button button--ghost button--compact" type="button" data-mp-edit-price="' + escapeHtml(row.idDetallePrecio || row.idPrecio || row.ID_DETALLE_PRECIO || "") + '">Modificar</button></div></td></tr>';
+      return '<tr><td>' + escapeHtml(row.proveedor || "Proveedor no definido") + '</td><td>' + escapeHtml(row.responsableVenta || row.RESPONSABLE_VENTA || "—") + '</td><td>' + escapeHtml(row.negocio || "—") + '</td><td>' + escapeHtml(mpScopeLabel(row)) + '</td><td><strong>' + escapeHtml(row.codigoSap || row.CODIGO_SAP || "—") + '</strong><br><small>' + escapeHtml(row.codigoMaterial || row.CODIGO_MATERIAL || "") + '</small></td><td class="mp-material-name">' + escapeHtml(row.nombreCortoMaterial || row.descripcionMaterial || row.NOMBRE_MATERIAL || "—") + '</td><td>' + (combo ? '<small>' + escapeHtml(combo) + '</small>' : '<span class="sales-muted">—</span>') + '</td><td class="mp-money-cell"><strong>' + escapeHtml(priceText) + '</strong></td>' + (hideFeeForProvider ? '' : '<td>' + escapeHtml(feeText) + '</td>') + '<td>' + dateCell + '</td><td><div class="mp-actions"><button class="button button--ghost button--compact" type="button" data-mp-edit-price="' + escapeHtml(row.idDetallePrecio || row.idPrecio || row.ID_DETALLE_PRECIO || "") + '">Modificar</button></div></td></tr>';
     }).join("") + '</tbody></table></div>' + mpPaginationHtml(result, "prices");
     bindMpPagination("prices", function() { loadOfficialPricesTable(false); });
     document.querySelectorAll("[data-mp-edit-price]").forEach(function(button) {
@@ -1155,6 +1162,15 @@ const MP_STATE = {
               )
             ) +
             campoPrecioAnchoCompleto_(
+              mpInputInfo(
+                "responsableVenta",
+                "Responsable venta",
+                "text",
+                (prefill && (prefill.responsableVenta || prefill.RESPONSABLE_VENTA)) || "",
+                "Columna nueva al lado de proveedor en el Excel GSD."
+              )
+            ) +
+            campoPrecioAnchoCompleto_(
               mpSelect(
                 "idNegocio",
                 "Negocio",
@@ -1215,6 +1231,8 @@ const MP_STATE = {
             mpInput("fechaInicio", "Fecha inicio", "date") +
             mpInput("fechaFin", "Fecha fin", "date") +
           '</div>' +
+          (isMpProviderUser_() ? '' : '<div class="mp-form-grid">' + mpInput("fee", "Fee % Cálidda", "number") + '</div>') +
+          '<p class="mp-note">Vigencia mensual: si dejas las fechas vacías se usa el día 1 al último día del mes de carga. El fee (% que se lleva Cálidda) está oculto para el rol proveedor.</p>' +
 
           '<div class="mp-form-grid mp-price-grid--two">' +
             '<label>Combo / detalle incluido' +
@@ -1282,7 +1300,10 @@ const MP_STATE = {
       if (form.fechaFin) form.fechaFin.value = String(prefill.fechaFin || "").slice(0, 10);
       if (form.detalleCombo) form.detalleCombo.value = getMpComboDetail(prefill);
       if (form.comentarioComercial) form.comentarioComercial.value = prefill.comentarioComercial || "";
+      if (form.responsableVenta) form.responsableVenta.value = prefill.responsableVenta || prefill.RESPONSABLE_VENTA || "";
+      if (form.fee) form.fee.value = (prefill.fee === null || prefill.fee === undefined) ? "" : prefill.fee;
     }
+    setMpMonthlyVigenciaDefaults_(form);
 
     form.addEventListener("submit", function(event) {
       event.preventDefault();
@@ -1503,7 +1524,20 @@ const MP_STATE = {
     if (!String(data.fechaFin || "").trim()) return { ok: false, field: "fechaFin", message: "Selecciona la fecha de fin." };
     if (String(data.fechaFin) < String(data.fechaInicio)) return { ok: false, field: "fechaFin", message: "La fecha fin no puede ser menor que la fecha inicio." };
     if (String(data.idGrupo || "").trim() && !String(data.idOficina || "").trim()) return { ok: false, field: "idOficina", message: "Para usar grupo debes seleccionar una oficina de ventas." };
+    if (data.fee !== undefined && String(data.fee || "").trim() !== "") {
+      var feeNumber = Number(data.fee);
+      if (!Number.isFinite(feeNumber) || feeNumber < 0 || feeNumber > 100) return { ok: false, field: "fee", message: "El fee debe ser un porcentaje entre 0 y 100." };
+    }
     return { ok: true };
+  }
+
+  function setMpMonthlyVigenciaDefaults_(form) {
+    if (!form) return;
+    var now = new Date();
+    var first = now.toISOString().slice(0, 8) + "01";
+    var last = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);
+    if (form.fechaInicio && !String(form.fechaInicio.value || "").trim()) form.fechaInicio.value = first;
+    if (form.fechaFin && !String(form.fechaFin.value || "").trim()) form.fechaFin.value = last;
   }
 
   function showMpPriceInlineAlert(message) {
@@ -1664,8 +1698,10 @@ const MP_STATE = {
             '<div class="mp-help-card">' +
               '<strong>Reglas de control</strong>' +
               '<ul>' +
-                '<li>CODIGO_MATERIAL es la única identificación del material; CODIGO_SAP_MATERIAL fue retirado.</li>' +
-                '<li>Todo precio debe terminar asociado a un proveedor y a un negocio.</li>' +
+                '<li>Identifica el material por CODIGO_HANA (equivale al código SAP) o CODIGO_MATERIAL.</li>' +
+                '<li>Todo precio debe terminar asociado a un proveedor y a un negocio. RESPONSABLE_VENTA va al lado de PROVEEDOR.</li>' +
+                '<li>FEE es el % que se lleva Cálidda y está oculto para el rol proveedor.</li>' +
+                '<li>Vigencia mensual: FECHA_INICIO día 1 y FECHA_FIN último día del mes de carga.</li>' +
                 '<li>CODIGO_OFICINA y CODIGO_GRUPO son opcionales.</li>' +
                 '<li>Sin oficina ni grupo = General.</li>' +
                 '<li>Con oficina y sin grupo = Oficina.</li>' +
@@ -2302,7 +2338,8 @@ const MP_STATE = {
         '<li>En RUTA_TIPIFICACION selecciona una combinación completa Producto principal → Tipo → Subtipo.</li>' +
         '<li>La hoja DICCIONARIOS muestra únicamente rutas válidas para carga y el árbol completo como referencia.</li>' +
         '<li>No ingreses Producto, Tipo y Subtipo por separado ni uses UUID/IDs técnicos.</li>' +
-        '<li>CODIGO_SAP puede quedar vacío o indicar EN CREACION.</li>' +
+        '<li>CODIGO_SAP puede quedar vacío o indicar EN CREACION. CODIGO_HANA equivale al código SAP.</li>' +
+        '<li>El Excel GSD aporta PROVEEDOR, MARCA, TIPO, SUBTIPO, INCLUYE_CONEXION, CODIGO_HANA, PRODUCTO_PRINCIPAL y COMBO.</li>' +
         '<li>La primera acción solo valida; nada se graba hasta confirmar.</li>' +
       '</ul></div></div></div>' +
       '<div id="mpBulkMaterialResult" class="mp-material-bulk-result"></div>' +

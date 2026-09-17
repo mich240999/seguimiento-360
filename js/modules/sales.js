@@ -3852,6 +3852,47 @@ const SALES_STATE = {
   }
   function populateOfferFilters29(){ const f=SALES_STATE.offerFilters||{}; fillSelect29("salesOfferProduct",f.productos);fillSelect29("salesOfferType",f.tipos);fillSelect29("salesOfferSubtype",f.subtipos); }
   function fillSelect29(id,rows){const el=document.getElementById(id);if(!el)return;const old=el.value;el.innerHTML='<option value="">Todos</option>'+(rows||[]).map(function(x){return '<option value="'+escapeHtml(x.id||x.codigo)+'">'+escapeHtml(x.nombre||x.codigo)+'</option>';}).join('');if([].slice.call(el.options).some(function(o){return o.value===old;}))el.value=old;}
+  function salesOfferScope29_(){
+    var ctx = SALES_STATE.context || {};
+    var u = ctx.usuario || {};
+    var ses = {};
+
+    try {
+      ses = (
+        (typeof APP_STATE !== "undefined" && APP_STATE && APP_STATE.context && APP_STATE.context.sesion) ||
+        {}
+      );
+    } catch (e) { ses = {}; }
+
+    var rol = String(u.rol || ses.rol || "").toUpperCase();
+    var prov = String(u.idProveedor || ses.idProveedor || "").trim();
+
+    return {
+      rol: rol,
+      esAdmin: (rol === "SUPERADMIN" || rol === "ADMIN"),
+      idProveedor: prov,
+      tieneAlcance: Boolean(rol || prov)
+    };
+  }
+
+  function salesOfferInScope29_(x, scope, oficina, grupo){
+    x = x || {};
+    scope = scope || {};
+
+    if (scope.esAdmin) return true;
+    if (!scope.tieneAlcance) return true;
+
+    if (scope.idProveedor && x.idProveedor && String(x.idProveedor) !== scope.idProveedor) return false;
+
+    var lo = String(x.idOficina || "").trim();
+    var lg = String(x.idGrupo || "").trim();
+
+    if (lg && grupo && lg !== String(grupo)) return false;
+    if (!lg && lo && oficina && lo !== String(oficina)) return false;
+
+    return true;
+  }
+
   function filterOffersClient29(){
     const p = valueSales29("salesOfferProduct");
     const t = valueSales29("salesOfferType");
@@ -3862,9 +3903,22 @@ const SALES_STATE = {
         valueSales29("salesOfferSearch")
       );
 
+    var scope29 = salesOfferScope29_();
+    var oficina29 = valueSales29("salesOfficeSelect");
+    var grupo29 = valueSales29("salesGroupSelect");
+
+    if (!scope29.esAdmin && !scope29.tieneAlcance && !SALES_STATE.scopeWarnedAt) {
+      SALES_STATE.scopeWarnedAt = Date.now();
+
+      try {
+        console.warn("[SGT360] Alcance de catálogo: sin datos de usuario en contexto, se muestra todo (fail-open).");
+      } catch (e) {}
+    }
+
     const rows =
       (SALES_STATE.offers || [])
         .filter(function(x){
+          if (!salesOfferInScope29_(x, scope29, oficina29, grupo29)) return false;
           if (p && x.idProducto !== p) return false;
           if (t && x.idTipoMaterial !== t) return false;
           if (s && x.idSubtipoMaterial !== s) return false;
@@ -4035,7 +4089,7 @@ const SALES_STATE = {
       });
   }
 
-  function addOfferToCart29(id){const offer=(SALES_STATE.offers||[]).find(function(x){return x.idDetallePrecio===id;});if(!offer)return;const existing=SALES_STATE.cart.find(function(x){return x.idDetallePrecio===id;});if(existing)existing.cantidad=Math.min(99,Number(existing.cantidad||1)+1);else SALES_STATE.cart.push(Object.assign({},offer,{cantidad:1}));renderCart29();}
+  function addOfferToCart29(id){const offer=(SALES_STATE.offers||[]).find(function(x){return x.idDetallePrecio===id;});if(!offer)return;if(!salesOfferInScope29_(offer,salesOfferScope29_(),valueSales29("salesOfficeSelect"),valueSales29("salesGroupSelect"))){toast("Fuera de tu alcance","Esa oferta no pertenece a tu proveedor, oficina o grupo.",true);return;}const existing=SALES_STATE.cart.find(function(x){return x.idDetallePrecio===id;});if(existing)existing.cantidad=Math.min(99,Number(existing.cantidad||1)+1);else SALES_STATE.cart.push(Object.assign({},offer,{cantidad:1}));renderCart29();}
   function renderCart29(){
     const target=document.getElementById("salesCartRegion");
     if(!target)return;

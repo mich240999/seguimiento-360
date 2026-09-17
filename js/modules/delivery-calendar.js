@@ -62,7 +62,7 @@ function renderDeliveryCalendarFrame() {
         ".dc360-workspace .sales-card{min-width:0;overflow:hidden}" +
         ".dc360-topbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}" +
         ".dc360-topbar h3{margin:0;font-size:20px;min-width:180px}" +
-        ".dc360-layout{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:14px;margin-top:18px}" +
+        ".dc360-layout{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:14px;margin-top:14px}" +
         ".dc360-layout>*{min-width:0}" +
         ".dc360-weekdays{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin-bottom:6px}" +
         ".dc360-weekdays span{text-align:center;font-size:11px;font-weight:800;color:#6b778c;text-transform:uppercase;letter-spacing:.05em}" +
