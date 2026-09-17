@@ -293,6 +293,8 @@ function renderSalesDashboardKpis(rows) {
   var ticket = total ? amount / total : 0;
   var confirmed = rows.filter(function(row) { return String(row.estadoAbono || "") === "ABONO_CONFIRMADO"; }).length;
   var delivered = rows.filter(function(row) { return String(row.estadoEntrega || "") === "ENTREGADA"; }).length;
+  var deliveredAmount = rows.filter(function(row) { return String(row.estadoEntrega || "") === "ENTREGADA"; })
+    .reduce(function(sum, row) { return sum + (Number(row.montoTotalVenta) || 0); }, 0);
   var pending = rows.filter(function(row) {
     return String(row.estadoAbono || "") !== "ABONO_CONFIRMADO" ||
       String(row.estadoEntrega || "") !== "ENTREGADA";
@@ -304,6 +306,7 @@ function renderSalesDashboardKpis(rows) {
     ["Ticket promedio", sd360Money(ticket), "por venta"],
     ["Abonos confirmados", total ? Math.round((confirmed / total) * 100) + "%" : "—", confirmed + " de " + total],
     ["Entregas completadas", total ? Math.round((delivered / total) * 100) + "%" : "—", delivered + " de " + total],
+    ["Monto completado", sd360Money(deliveredAmount), "S/ en ventas entregadas"],
     ["Pendientes", String(pending), "abono o entrega"]
   ];
 
