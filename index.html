@@ -793,26 +793,28 @@
 <template id="materialsPricesWorkspaceTemplate">
   <section class="mp-workspace" aria-label="Materiales y Precios">
     <header class="providers-header mp-header">
-      <div class="providers-actions">
-        <button id="mpRefreshButton" class="button button--secondary" type="button">
-          <span class="material-symbols-rounded">refresh</span>Actualizar
-        </button>
+      <div class="toolbar sales-main-toolbar mp-tabs-bar">
+        <nav id="mpTabs" class="mp-tabs" aria-label="Secciones de Materiales y Precios">
+          <button type="button" data-mp-tab="summary">Resumen</button>
+          <button type="button" data-mp-tab="materials">Materiales</button>
+          <button type="button" data-mp-tab="prices">Precios</button>
+          <button type="button" data-mp-tab="lists">Listas</button>
+        </nav>
+        <span class="sales-tabs-spacer"></span>
+        <div class="providers-actions">
+          <button id="mpRefreshButton" class="button button--secondary" type="button">
+            <span class="material-symbols-rounded">refresh</span>Actualizar
+          </button>
+        </div>
       </div>
     </header>
-
-    <nav id="mpTabs" class="mp-tabs" aria-label="Secciones de Materiales y Precios">
-      <button type="button" data-mp-tab="summary">Resumen</button>
-      <button type="button" data-mp-tab="materials">Materiales</button>
-      <button type="button" data-mp-tab="prices">Precios</button>
-      <button type="button" data-mp-tab="lists">Listas</button>
-    </nav>
 
     <div id="mpRegion" class="mp-region"></div>
   </section>
 </template>
 
 <style>
-  .mp-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 18px}
+  .mp-tabs{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 12px}
   .mp-tabs button{border:1px solid var(--border-color,#d8e0ea);background:#fff;border-radius:999px;padding:9px 14px;font-weight:700;color:#42526e;cursor:pointer}
   .mp-tabs button.is-active{background:var(--primary-500,#00A1DE);border-color:var(--primary-500,#00A1DE);color:#fff}
   .mp-region{display:block}
@@ -1311,6 +1313,11 @@
   .sales29-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px}.sales29-tab{border:1px solid #dbe4ef;background:#fff;border-radius:14px;padding:9px 13px;display:inline-flex;align-items:center;gap:8px;font:inherit;font-weight:700;color:#475569;cursor:pointer}.sales29-tab:hover{border-color:#9ccfe5;color:#002b45}.sales29-tab.is-active{background:#002b45;color:#fff;border-color:#002b45}.sales29-tab .material-symbols-rounded{font-size:19px}
   .sales29-table th,.sales29-table td{vertical-align:middle}.sales29-progress{display:inline-flex;padding:4px 9px;border:1px solid #dbe4ef;border-radius:999px;font-size:12px;font-weight:700;background:#fff}
   .sales-main-toolbar{margin-bottom:12px;gap:10px}
+  .sales-tabs-bar{align-items:center;flex-wrap:wrap}
+  .sales-tabs-bar #salesTaskTabs{margin:0}
+  .sales-tabs-spacer{flex:1 1 auto}
+  .mp-tabs-bar .mp-tabs{margin:0}
+  .mp-tabs-bar .providers-actions{justify-content:flex-end}
   .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
   .sales29-table{min-width:840px}
   @media(max-width:720px){

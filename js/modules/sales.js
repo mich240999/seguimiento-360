@@ -366,9 +366,8 @@ const SALES_STATE = {
     const view = document.getElementById("dynamicModuleView");
     if (!view) return;
     view.innerHTML = '<section class="sales-workspace sales29-workspace">' +
-      '<div class="toolbar toolbar--end sales-main-toolbar"><button id="salesRefreshButton" class="button button--secondary" type="button"><span class="material-symbols-rounded">refresh</span>Actualizar</button><button id="salesNewButton" class="button button--primary" type="button"><span class="material-symbols-rounded">add_shopping_cart</span>Nueva venta</button></div>' +
+      '<div class="toolbar sales-main-toolbar sales-tabs-bar"><div id="salesTaskTabs" class="sales29-tabs"></div><span class="sales-tabs-spacer"></span><button id="salesRefreshButton" class="button button--secondary" type="button"><span class="material-symbols-rounded">refresh</span>Actualizar</button><button id="salesNewButton" class="button button--primary" type="button"><span class="material-symbols-rounded">add_shopping_cart</span>Nueva venta</button></div>' +
       '<div id="salesContextWarnings"></div>' +
-      '<div id="salesTaskTabs" class="sales29-tabs"></div>' +
       '<div class="sales-card"><div id="salesListRegion">' + loadingHtml(5) + '</div></div>' +
       '</section>';
     on("salesRefreshButton", "click", function() {
