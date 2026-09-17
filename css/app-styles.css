@@ -429,7 +429,7 @@
   .sync-indicator { display: flex; align-items: center; gap: 7px; padding: 8px 11px; color: var(--muted); background: var(--surface-soft); border: 1px solid var(--border); border-radius: 999px; font-size: 11px; }
   .status-dot { width: 8px; height: 8px; flex: 0 0 auto; border-radius: 50%; background: var(--warning); box-shadow: 0 0 0 3px rgba(201,130,18,.13); }
   .status-dot--ok { background: var(--success); box-shadow: 0 0 0 3px rgba(21,128,92,.13); }
-  .app-content { padding: 28px; }
+  .app-content { padding: 22px; }
   .view-panel { width: min(1480px, 100%); margin: 0 auto; }
   .hero-card {
     display: flex; align-items: center; justify-content: space-between; gap: 24px;
