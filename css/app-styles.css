@@ -1517,8 +1517,9 @@
     padding: 20px; box-sizing: border-box;
     background:
       radial-gradient(1000px 520px at 12% 0%, rgba(0,210,255,.35), transparent 60%),
+      radial-gradient(800px 480px at 85% 12%, rgba(46,204,113,.35), transparent 60%),
       radial-gradient(900px 520px at 88% 100%, rgba(0,120,180,.32), transparent 60%),
-      linear-gradient(135deg, #07354d, #0a7aa5 60%, #0aa2c6);
+      linear-gradient(135deg, #07354d, #0a7aa5 55%, #129a6c 100%);
   }
   body .auth-view::before, body .auth-view::after { content: none; }
   body .auth-view .auth-visual { display: none; }
@@ -1538,13 +1539,6 @@
   body .auth-view .provider-button { min-height: 48px; }
   body .auth-view .auth-footnote { margin-top: 12px; }
   body .auth-view .inline-message { margin-top: 12px; }
-  body .auth-view .auth-divider {
-    display: flex; align-items: center; gap: 12px; margin: 2px 0;
-    color: var(--muted); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
-  }
-  body .auth-view .auth-divider::before, body .auth-view .auth-divider::after {
-    content: ""; flex: 1; height: 1px; background: var(--border);
-  }
   @media (max-width: 560px), (max-height: 720px) {
     body .auth-view { height: auto; min-height: 100vh; overflow: visible; }
     body .auth-view .auth-panel { max-height: none; border-radius: 22px; }
