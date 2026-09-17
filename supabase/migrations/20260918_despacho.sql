@@ -61,7 +61,13 @@ ON CONFLICT (id_permiso) DO UPDATE SET
 -- CONFIRMAR_ENTREGA (patrón calendario de entregas). No otorga nada nuevo
 -- a roles sin acceso a entregas.
 INSERT INTO seg_permisos (id_permiso, tipo_sujeto, id_sujeto, modulo, recurso, permitido, alcance, estado)
-SELECT
+SELECT DISTINCT ON (p.tipo_sujeto, p.id_sujeto, CASE p.recurso
+        WHEN 'VISUALIZAR_MODULO' THEN 'VISUALIZAR_MODULO'
+        WHEN 'VER_LISTADO' THEN 'VER_DESPACHO'
+        WHEN 'PROGRAMAR_ENTREGA' THEN 'GESTIONAR_DESPACHO'
+        WHEN 'CONFIRMAR_ENTREGA' THEN 'GESTIONAR_DESPACHO'
+        WHEN 'EXPORTAR' THEN 'EXPORTAR'
+    END)
     'PERM-DESP-' || p.id_sujeto || '-' ||
     CASE p.recurso
         WHEN 'VISUALIZAR_MODULO' THEN 'VISUALIZAR_MODULO'
@@ -107,6 +113,13 @@ WHERE p.modulo = 'VENTAS_CONTADO'
         WHEN 'EXPORTAR' THEN 'EXPORTAR'
       END IS NOT NULL
   AND LENGTH('PERM-DESP-' || p.id_sujeto || '-' || p.recurso) <= 50
+ORDER BY p.tipo_sujeto, p.id_sujeto, CASE p.recurso
+        WHEN 'VISUALIZAR_MODULO' THEN 'VISUALIZAR_MODULO'
+        WHEN 'VER_LISTADO' THEN 'VER_DESPACHO'
+        WHEN 'PROGRAMAR_ENTREGA' THEN 'GESTIONAR_DESPACHO'
+        WHEN 'CONFIRMAR_ENTREGA' THEN 'GESTIONAR_DESPACHO'
+        WHEN 'EXPORTAR' THEN 'EXPORTAR'
+    END, p.recurso
 ON CONFLICT (id_permiso) DO UPDATE SET
     permitido = EXCLUDED.permitido,
     alcance = EXCLUDED.alcance,
@@ -115,7 +128,7 @@ ON CONFLICT (id_permiso) DO UPDATE SET
 -- 6. Gestionar implica ver: segunda pasada que otorga VER_DESPACHO a
 -- quienes programan o confirman entregas en ventas.
 INSERT INTO seg_permisos (id_permiso, tipo_sujeto, id_sujeto, modulo, recurso, permitido, alcance, estado)
-SELECT
+SELECT DISTINCT ON (p.tipo_sujeto, p.id_sujeto)
     'PERM-DESP-' || p.id_sujeto || '-VER_DESPACHO',
     p.tipo_sujeto,
     p.id_sujeto,
@@ -130,6 +143,7 @@ WHERE p.modulo = 'VENTAS_CONTADO'
   AND p.permitido = TRUE
   AND p.recurso IN ('PROGRAMAR_ENTREGA', 'CONFIRMAR_ENTREGA')
   AND LENGTH('PERM-DESP-' || p.id_sujeto || '-VER_DESPACHO') <= 50
+ORDER BY p.tipo_sujeto, p.id_sujeto, p.recurso
 ON CONFLICT (id_permiso) DO UPDATE SET
     permitido = EXCLUDED.permitido,
     alcance = EXCLUDED.alcance,
