@@ -53,6 +53,19 @@
     </div>
 
     <div class="auth-actions">
+      <form id="supabaseEmailLogin" class="supabase-auth-form" novalidate>
+        <label class="supabase-auth-label">Correo electrónico
+          <input id="authEmail" class="supabase-auth-input" type="email" autocomplete="username" inputmode="email" placeholder="nombre@empresa.com" required>
+        </label>
+        <label class="supabase-auth-label">Contraseña
+          <input id="authPassword" class="supabase-auth-input" type="password" autocomplete="current-password" placeholder="Ingresa tu contraseña" required minlength="6">
+        </label>
+        <button id="authEmailSubmit" class="provider-button supabase-auth-submit" type="submit">
+          <span class="material-symbols-rounded" aria-hidden="true">login</span><span>Ingresar</span>
+        </button>
+        <button id="authForgotPassword" class="supabase-auth-forgot" type="button">¿Olvidaste tu contraseña?</button>
+      </form>
+      <div class="auth-divider" aria-hidden="true"><span>o continúa con</span></div>
       <a id="authGoogleButton" class="provider-button" href="#" aria-disabled="true">
         <span class="provider-logo provider-logo--google" aria-hidden="true">
           <svg viewBox="0 0 24 24" role="img" focusable="false">
@@ -75,18 +88,6 @@
         </span>
         <span>Continuar con Microsoft</span>
       </a>
-      <form id="supabaseEmailLogin" class="supabase-auth-form" novalidate>
-        <label class="supabase-auth-label">Correo electrónico
-          <input id="authEmail" class="supabase-auth-input" type="email" autocomplete="username" inputmode="email" placeholder="nombre@empresa.com" required>
-        </label>
-        <label class="supabase-auth-label">Contraseña
-          <input id="authPassword" class="supabase-auth-input" type="password" autocomplete="current-password" placeholder="Ingresa tu contraseña" required minlength="6">
-        </label>
-        <button id="authEmailSubmit" class="provider-button supabase-auth-submit" type="submit">
-          <span class="material-symbols-rounded" aria-hidden="true">login</span><span>Ingresar</span>
-        </button>
-        <button id="authForgotPassword" class="supabase-auth-forgot" type="button">¿Olvidaste tu contraseña?</button>
-      </form>
     </div>
 
     <div id="authMessage" class="inline-message" role="status" hidden></div>

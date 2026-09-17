@@ -1509,3 +1509,43 @@
   .profile-menu-item .material-symbols-rounded { font-size: 20px; color: var(--muted); }
   .profile-menu-item--danger, .profile-menu-item--danger .material-symbols-rounded { color: #b42318; }
   .profile-menu-item--danger:hover { background: rgba(180,35,24,.08); }
+
+  /* Login moderno genérico: tarjeta centrada que entra en pantalla sin scroll. */
+  body .auth-view {
+    display: flex; align-items: center; justify-content: center;
+    height: 100vh; height: 100dvh; min-height: 0; overflow: hidden;
+    padding: 20px; box-sizing: border-box;
+    background:
+      radial-gradient(1000px 520px at 12% 0%, rgba(0,210,255,.35), transparent 60%),
+      radial-gradient(900px 520px at 88% 100%, rgba(0,120,180,.32), transparent 60%),
+      linear-gradient(135deg, #07354d, #0a7aa5 60%, #0aa2c6);
+  }
+  body .auth-view::before, body .auth-view::after { content: none; }
+  body .auth-view .auth-visual { display: none; }
+  body .auth-view .auth-panel {
+    width: min(480px, 100%); max-width: 480px; max-height: 100%;
+    margin: 0; padding: clamp(20px, 3.5vh, 34px) clamp(20px, 4vw, 40px);
+    background: rgba(255,255,255,.95); border: 1px solid rgba(255,255,255,.7);
+    border-radius: 26px; box-shadow: 0 30px 80px rgba(0,20,40,.35);
+    backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+  }
+  body .auth-view .auth-brand--center { margin-bottom: 16px; gap: 12px; }
+  body .auth-brand-mark--lg { width: 62px; height: 62px; border-radius: 18px; padding: 8px; }
+  body .auth-brand--center h1 { font-size: clamp(20px, 2.4vw, 27px); }
+  body .auth-view .auth-actions { margin-top: 16px; gap: 10px; }
+  body .auth-view .supabase-auth-form { padding: 14px; gap: 10px; }
+  body .auth-view .supabase-auth-input { padding: 11px 13px; }
+  body .auth-view .provider-button { min-height: 48px; }
+  body .auth-view .auth-footnote { margin-top: 12px; }
+  body .auth-view .inline-message { margin-top: 12px; }
+  body .auth-view .auth-divider {
+    display: flex; align-items: center; gap: 12px; margin: 2px 0;
+    color: var(--muted); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+  }
+  body .auth-view .auth-divider::before, body .auth-view .auth-divider::after {
+    content: ""; flex: 1; height: 1px; background: var(--border);
+  }
+  @media (max-width: 560px), (max-height: 720px) {
+    body .auth-view { height: auto; min-height: 100vh; overflow: visible; }
+    body .auth-view .auth-panel { max-height: none; border-radius: 22px; }
+  }
