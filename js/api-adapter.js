@@ -380,7 +380,11 @@
       case "guardarGestionEntregaVentaContadoModulo": {
         const entregaPayload = args[0] || {};
         const v = s.ventas.find(x => x.idVenta === entregaPayload.idVenta);
-        if (v) {
+        if (!v) return { correcto: false, mensaje: "Venta no encontrada." };
+        if (String(v.estadoAbono || "").toUpperCase() !== "ABONO_CONFIRMADO") {
+          return { correcto: false, mensaje: "Confirma el abono de la venta antes de gestionar su entrega." };
+        }
+        {
           v.estadoEntrega = entregaPayload.estadoEntrega || v.estadoEntrega;
           if (String(entregaPayload.estadoEntrega || "").toUpperCase() === "ENTREGADA") v.estadoGeneral = "ENTREGADA";
           v.gestionEntrega = Object.assign(v.gestionEntrega || {}, entregaPayload);
@@ -587,6 +591,10 @@
         const entregaPayload = args[0] || {};
         const idVentaGestion = String(entregaPayload.idVenta || "").trim();
         if (!idVentaGestion) throw new Error("Indica la venta a gestionar.");
+        const abonoVentaGestion = await client.from("vta_ventas_contado").select("estado_abono").eq("id_venta", idVentaGestion).maybeSingle();
+        if (abonoVentaGestion.error) throw abonoVentaGestion.error;
+        if (!abonoVentaGestion.data) throw new Error("No se encontró la venta.");
+        if (String(abonoVentaGestion.data.estado_abono || "").toUpperCase() !== "ABONO_CONFIRMADO") throw new Error("Confirma el abono de la venta antes de gestionar su entrega.");
         const estadoGestion = String(entregaPayload.estadoEntrega || "PROGRAMADA").toUpperCase();
         const gestionExistente = await client.from("vta_gestion_entrega").select("id_gestion_entrega").eq("id_venta", idVentaGestion).maybeSingle();
         if (gestionExistente.error) throw gestionExistente.error;

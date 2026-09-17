@@ -56,14 +56,7 @@ const DYNAMIC_STATE = {
     const canCreate = dynamicPermission("CREAR");
 
     view.innerHTML = '<section class="dynamic-workspace">' +
-      '<div class="section-header"><div><p class="eyebrow">' +
-      escapeHtml(module.grupoMenu || "MÓDULO") +
-      '</p><h2>' + escapeHtml(module.nombre) + '</h2><p>' +
-      escapeHtml(
-        module.descripcion ||
-        "Consulta y administra la información configurada."
-      ) +
-      '</p></div>' +
+      '<div class="toolbar toolbar--end sales-main-toolbar">' +
       (canCreate ?
         '<button id="dynamicNewButton" class="button button--primary" type="button"><span class="material-symbols-rounded">add</span>Nuevo registro</button>' :
         "") +

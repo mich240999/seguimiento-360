@@ -84,8 +84,7 @@ function renderSalesDashboardFrame() {
         "@media(max-width:1100px){.sd360-charts{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.sd360-charts>*:first-child{grid-column:1 / -1}.sd360-filters{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}" +
         "@media(max-width:640px){.sd360-filters{grid-template-columns:minmax(0,1fr)}.sd360-charts{grid-template-columns:minmax(0,1fr)}.sd360-dates{grid-template-columns:minmax(0,1fr)}}" +
       "</style>" +
-      '<div class="section-header sales-main-header"><div><p class="eyebrow">OPERACIONES</p><h2>Dashboard de Ventas</h2><p>Ventas, abonos y entregas con filtros interactivos. Solo lectura: no modifica registros.</p></div>' +
-      '<div class="toolbar toolbar--end"><button id="sd360RefreshButton" class="button button--secondary" type="button"><span class="material-symbols-rounded">refresh</span>Actualizar</button><button id="sd360ExportButton" class="button button--primary" type="button"><span class="material-symbols-rounded">file_download</span>Exportar</button></div></div>' +
+      '<div class="toolbar toolbar--end sales-main-toolbar"><button id="sd360RefreshButton" class="button button--secondary" type="button"><span class="material-symbols-rounded">refresh</span>Actualizar</button><button id="sd360ExportButton" class="button button--primary" type="button"><span class="material-symbols-rounded">file_download</span>Exportar</button></div>' +
       '<div class="sales-card"><div id="sd360Kpis" class="sd360-kpi-grid">' + sd360LoadingHtml(6) + "</div></div>" +
       '<div class="sales-card"><div class="sales-list-head"><div><h3>Filtros</h3><p style="margin:0;color:#64748b">Combinables. Se aplican al instante a indicadores, gráficos y tabla.</p></div>' +
       '<button id="sd360ClearButton" class="button button--ghost" type="button"><span class="material-symbols-rounded">filter_alt_off</span>Limpiar</button></div>' +

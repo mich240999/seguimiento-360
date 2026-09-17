@@ -88,8 +88,7 @@ function renderDeliveryCalendarFrame() {
         "@media(max-width:1100px){.dc360-layout{grid-template-columns:minmax(0,1fr)}.dc360-filters{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}" +
         "@media(max-width:640px){.dc360-filters{grid-template-columns:minmax(0,1fr)}.dc360-day{min-height:64px}}" +
       "</style>" +
-      '<div class="section-header sales-main-header"><div><p class="eyebrow">OPERACIONES</p><h2>Calendario de Entregas</h2><p>Entregas programadas por día para el personal de reparto. Solo lectura.</p></div>' +
-      '<div class="toolbar toolbar--end"><button id="dc360RefreshButton" class="button button--secondary" type="button"><span class="material-symbols-rounded">refresh</span>Actualizar</button></div></div>' +
+      '<div class="toolbar toolbar--end sales-main-toolbar"><button id="dc360RefreshButton" class="button button--secondary" type="button"><span class="material-symbols-rounded">refresh</span>Actualizar</button></div>' +
       '<div class="sales-card"><div class="dc360-filters">' +
         '<label class="search-field"><span class="material-symbols-rounded">search</span><input id="dc360Search" type="search" placeholder="Código, cliente o dirección"></label>' +
         '<label class="select-field"><span>Estado</span><select id="dc360EstadoFilter"><option value="TODOS">Todos</option></select></label>' +

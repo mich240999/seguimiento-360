@@ -366,8 +366,7 @@ const SALES_STATE = {
     const view = document.getElementById("dynamicModuleView");
     if (!view) return;
     view.innerHTML = '<section class="sales-workspace sales29-workspace">' +
-      '<div class="section-header sales-main-header"><div><p class="eyebrow">VENTAS</p><h2>Ventas al contado</h2><p>Registra ventas y atiende cada etapa desde una bandeja según tus permisos.</p></div>' +
-      '<div class="toolbar toolbar--end"><button id="salesRefreshButton" class="button button--secondary" type="button"><span class="material-symbols-rounded">refresh</span>Actualizar</button><button id="salesNewButton" class="button button--primary" type="button"><span class="material-symbols-rounded">add_shopping_cart</span>Nueva venta</button></div></div>' +
+      '<div class="toolbar toolbar--end sales-main-toolbar"><button id="salesRefreshButton" class="button button--secondary" type="button"><span class="material-symbols-rounded">refresh</span>Actualizar</button><button id="salesNewButton" class="button button--primary" type="button"><span class="material-symbols-rounded">add_shopping_cart</span>Nueva venta</button></div>' +
       '<div id="salesContextWarnings"></div>' +
       '<div id="salesTaskTabs" class="sales29-tabs"></div>' +
       '<div class="sales-card"><div id="salesListRegion">' + loadingHtml(5) + '</div></div>' +
@@ -1297,7 +1296,7 @@ const SALES_STATE = {
       ? '<label class="input-field"><span>Registros</span><select id="salesFilterRecordType"><option value="COMERCIAL">Ventas comerciales</option><option value="PRUEBA_ACTIVA">Ventas de prueba</option>' +
         (SALES_STATE.activeView === "REGISTRADAS" ? '<option value="PRUEBA_ARCHIVADA">Pruebas archivadas</option>' : '') + '</select></label>'
       : '';
-    region.innerHTML = '<div class="sales-list-head"><div><h3>' + escapeHtml(title[0]) + '</h3><p class="sales-muted">' + escapeHtml(title[1]) + '</p></div>' +
+    region.innerHTML = '<div class="sales-list-head"><div><h3>' + escapeHtml(title[0]) + '</h3></div>' +
       '<div class="toolbar toolbar--end">' + ((SALES_STATE.context && SALES_STATE.context.permisos && SALES_STATE.context.permisos.puedeExportar) ? '<button id="salesExportButton" class="button button--secondary" type="button"><span class="material-symbols-rounded">download</span>Exportar</button>' : '') + '</div></div>' +
       '<div class="toolbar sales-filter-bar">' +
         '<label class="input-field search-field"><span>Buscar</span><input id="salesFilterText" placeholder="Código, cuenta contrato o cliente" value="' + escapeHtml(SALES_STATE.filters.texto || '') + '"></label>' +
@@ -3053,6 +3052,8 @@ const SALES_STATE = {
           '<span class="material-symbols-rounded">local_shipping</span>' +
           '<div><h4>Estado de entrega</h4><p>Actualiza la gestión según lo acordado o sucedido con el cliente.</p></div>' +
         '</div>' +
+        (String(venta.estadoAbono || '').toUpperCase() !== 'ABONO_CONFIRMADO' ?
+          '<div class="sales29-info-note"><span class="material-symbols-rounded">lock</span><span>El abono está pendiente. Confírmalo en su bandeja antes de gestionar la entrega.</span></div>' : '') +
         '<div id="salesDeliveryManagementFieldsRegion">' +
           (loading ?
             '<div class="sales29-inline-loader"><span class="material-symbols-rounded">progress_activity</span><span>Cargando estado actual...</span></div>' :
@@ -5365,6 +5366,12 @@ const SALES_STATE = {
       return;
     }
 
+    const saleRow = getSalesRowById29(idVenta) || {};
+    if(String(saleRow.estadoAbono || '').toUpperCase() !== 'ABONO_CONFIRMADO'){
+      toast('Abono pendiente','Confirma el abono de la venta antes de gestionar su entrega.',true);
+      return;
+    }
+
     if(status === 'PROGRAMADA' && !fechaProgramada){
       toast('Fecha requerida','Selecciona la fecha acordada con el cliente.',true);
       return;
@@ -5455,6 +5462,10 @@ const SALES_STATE = {
         'VENTAS_CONTADO'
       )
         .then(function(r){
+          if (r && r.correcto === false) {
+            toast('No se pudo guardar', r.mensaje || 'La gestión no fue aceptada.', true);
+            return;
+          }
           invalidateSalesDetailCache29(idVenta);
           SALES_STATE.viewCache = {};
           SALES_STATE.syncRevision = String(r && r.revisionDatos || "");
