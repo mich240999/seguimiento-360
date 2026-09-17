@@ -2672,15 +2672,24 @@ const ADMIN_STATE = {
       });
     }
     if (provider) provider.addEventListener("change", function() {
-      refreshUserAssignmentOptions("", "");
+      const officeSel = document.getElementById("userOfficeSelect");
+      const groupSel = document.getElementById("userGroupSelect");
+      refreshUserAssignmentOptions(officeSel ? officeSel.value : "", groupSel ? groupSel.value : "");
       updateUserAssignmentRequirements();
     });
     if (office) office.addEventListener("change", function() {
-      refreshUserAssignmentOptions(office.value, "");
+      const groupSel = document.getElementById("userGroupSelect");
+      const currentGroup = groupSel ? groupSel.value : "";
+      const keepGroup = ADMIN_STATE.groups.some(function(item) {
+        return item.idGrupo === currentGroup && item.idOficina === office.value;
+      });
+      refreshUserAssignmentOptions(office.value, keepGroup ? currentGroup : "");
     });
     if (role) role.addEventListener("change", function() {
       updateUserAssignmentRequirements();
-      refreshUserAssignmentOptions("", "");
+      const officeSel = document.getElementById("userOfficeSelect");
+      const groupSel = document.getElementById("userGroupSelect");
+      refreshUserAssignmentOptions(officeSel ? officeSel.value : "", groupSel ? groupSel.value : "");
     });
 
     configureUserDocumentField();
@@ -2757,19 +2766,27 @@ const ADMIN_STATE = {
       return item.idProveedor === providerId;
     });
     // Vendedores y coordinadores usan toda la estructura comercial vigente.
-    // La relación proveedor-oficina limita solo a los demás roles.
-    const allowedOfficeIds = isCommercialRole ?
+    // La relación proveedor-oficina limita solo a los demás roles. Si el
+    // proveedor aún no tiene canal configurado se ofrecen todas las oficinas
+    // activas (fail-open) para no bloquear la asignación; el canal se
+    // completará después desde Proveedores.
+    const allowedOfficeIds = (isCommercialRole || !(provider && provider.idsOficina && provider.idsOficina.length)) ?
       ADMIN_STATE.offices.map(function(item) { return item.idOficina; }) :
-      (provider ? (provider.idsOficina || []) : []);
+      provider.idsOficina;
     const officeValue = selectedOffice || officeSelect.value;
     const groupValue = selectedGroup || groupSelect.value;
     const offices = ADMIN_STATE.offices.filter(function(item) {
       return allowedOfficeIds.indexOf(item.idOficina) !== -1 &&
         (String(item.estado || "ACTIVO").toUpperCase() !== "INACTIVO" || item.idOficina === officeValue);
     });
+    // Conserva el valor ya asignado aunque ya no figure en el catálogo, para
+    // no perderlo al re-renderizar ni al guardar.
+    if (officeValue && !offices.some(function(item) { return item.idOficina === officeValue; })) {
+      offices.push({ idOficina: officeValue, nombre: "Asignada (" + officeValue + ")", estado: "ACTIVO" });
+    }
 
     officeSelect.innerHTML = '<option value="">' +
-      (isCommercialRole ? "Selecciona una oficina" : (providerId ? "Sin oficina específica" : "Selecciona primero un proveedor")) + "</option>" +
+      (isCommercialRole ? "Selecciona una oficina" : "Sin oficina específica") + "</option>" +
       offices.map(function(item) {
         return '<option value="' + escapeHtml(item.idOficina) + '" ' +
           (item.idOficina === officeValue ? "selected" : "") + '>' +
@@ -2781,6 +2798,12 @@ const ADMIN_STATE = {
       return item.idOficina === effectiveOffice &&
         (String(item.estado || "ACTIVO").toUpperCase() !== "INACTIVO" || item.idGrupo === groupValue);
     });
+    if (groupValue && effectiveOffice && !groups.some(function(item) { return item.idGrupo === groupValue; })) {
+      const known = ADMIN_STATE.groups.filter(function(item) { return item.idGrupo === groupValue; })[0] || {};
+      if (!known.idGrupo || String(known.idOficina || "") === String(effectiveOffice)) {
+        groups.push({ idGrupo: groupValue, idOficina: effectiveOffice, nombre: known.nombre || ("Asignado (" + groupValue + ")"), estado: "ACTIVO" });
+      }
+    }
     groupSelect.innerHTML = '<option value="">' +
       (isCommercialRole ? "Selecciona un grupo" : "Sin grupo") + "</option>" + groups.map(function(item) {
       return '<option value="' + escapeHtml(item.idGrupo) + '" ' +
@@ -2788,8 +2811,11 @@ const ADMIN_STATE = {
         escapeHtml(item.nombre + " · " + item.idGrupo) + "</option>";
     }).join("");
 
-    officeSelect.disabled = !providerId && !isCommercialRole;
-    groupSelect.disabled = !effectiveOffice;
+    // Los controles siempre se envían: un select deshabilitado queda fuera del
+    // FormData y su valor nunca llegaba a guardarUsuarioAdminMotor. La guía
+    // visual la dan el placeholder y el required, no el disabled.
+    officeSelect.disabled = false;
+    groupSelect.disabled = false;
   }
 
   function updateUserAssignmentRequirements() {

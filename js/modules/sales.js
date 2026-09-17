@@ -667,7 +667,7 @@ const SALES_STATE = {
     if (p.puedeGestionarEntrega) {
       tabs.push({
         id:"ENTREGAS",
-        label:"Gestión de entregas",
+        label:"Programación de entregas",
         icon:"local_shipping"
       });
     }
@@ -1344,7 +1344,7 @@ const SALES_STATE = {
 
   function salesViewTitle() {
     if (SALES_STATE.activeView === "ABONOS") return ["Validación de abonos", "Revisa los comprobantes pendientes u observados. Aprobar lleva la venta a Por entregar."];
-    if (SALES_STATE.activeView === "ENTREGAS") return ["Gestión de entregas", "Gestiona únicamente ventas con abono aprobado y registra evidencias u observaciones de entrega."];
+    if (SALES_STATE.activeView === "ENTREGAS") return ["Programación de entregas", "Programa entregas de ventas con abono aprobado. La ejecución (EN_RUTA a ENTREGADA) se gestiona en Despacho."];
     if (String(SALES_STATE.activeView || "").toUpperCase() === "DESPACHO") return ["Despacho de entregas", "Toma despachos programados y confirma entregas con evidencia. Solo ventas PROGRAMADA y EN_RUTA de tu proveedor."];
     return ["Ventas registradas", "Consulta y modifica ventas. Las tareas de abono y entrega se atienden en sus bandejas específicas."];
   }
@@ -2999,9 +2999,14 @@ const SALES_STATE = {
     const statuses = [
       ['PENDIENTE','Pendiente'],
       ['PROGRAMADA','Programada'],
-      ['OBSERVADA','Observada'],
-      ['ENTREGADA','Entregada']
+      ['OBSERVADA','Observada']
     ];
+
+    const isDispatchState29_ = (estado === 'ENTREGADA' || estado === 'EN_RUTA');
+
+    const dispatchNotice29_ = isDispatchState29_
+      ? '<div class="sales29-info-note"><span class="material-symbols-rounded">local_shipping</span><span>Estado actual: ' + escapeHtml(estado) + '. La ejecución de la entrega (EN_RUTA a ENTREGADA) se gestiona en la pestaña Despacho, no aquí. En Ventas solo se llega hasta programar.</span></div>'
+      : '';
 
     let dynamic = '';
 
@@ -3020,16 +3025,10 @@ const SALES_STATE = {
         '</div>' +
         renderExistingDeliveryEvidence29(gestion,['SUSTENTO_OBSERVACION'],idVenta) +
       '</div>';
-    } else if (estado === 'ENTREGADA') {
+    } else if (isDispatchState29_) {
       dynamic = '<div class="sales29-delivery-dynamic">' +
-        '<div class="sales-form-grid sales29-delivery-evidence-grid">' +
-          '<label class="input-field"><span>Boleta de entrega</span><input id="salesEvidenceBoleta" type="file" accept="application/pdf,image/png,image/jpeg,image/webp"></label>' +
-          '<label class="input-field"><span>Evidencia de recepción</span><input id="salesEvidenceRecepcion" type="file" accept="application/pdf,image/png,image/jpeg,image/webp"></label>' +
-          '<label class="input-field"><span>Acta de conformidad</span><input id="salesEvidenceActa" type="file" accept="application/pdf,image/png,image/jpeg,image/webp"></label>' +
-          '<label class="input-field"><span>Otro sustento</span><input id="salesEvidenceOtro" type="file" accept="application/pdf,image/png,image/jpeg,image/webp"></label>' +
-        '</div>' +
-        '<small class="sales29-field-help">Para confirmar la entrega debe existir al menos un sustento de entrega.</small>' +
-        renderExistingDeliveryEvidence29(gestion,['BOLETA_ENTREGA','EVIDENCIA_RECEPCION','ACTA_CONFORMIDAD','OTRO'],idVenta) +
+        dispatchNotice29_ +
+        renderExistingDeliveryEvidence29(gestion,[],idVenta) +
       '</div>';
     } else {
       dynamic = '<div class="sales29-delivery-current">' +
@@ -5487,6 +5486,11 @@ const SALES_STATE = {
     const saleRow = getSalesRowById29(idVenta) || {};
     if(String(saleRow.estadoAbono || '').toUpperCase() !== 'ABONO_CONFIRMADO'){
       toast('Abono pendiente','Confirma el abono de la venta antes de gestionar su entrega.',true);
+      return;
+    }
+
+    if(String(status || '').toUpperCase() === 'ENTREGADA' || String(status || '').toUpperCase() === 'EN_RUTA'){
+      toast('Solo en Despacho','La ejecución de la entrega (EN_RUTA a ENTREGADA) se gestiona en la pestaña Despacho, no en Programación de entregas.',true);
       return;
     }
 

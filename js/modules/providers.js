@@ -53,6 +53,7 @@ const PROVIDERS_STATE = {
     on("providersImportInput", "change", handleProvidersImportFile);
     on("providersExportButton", "click", exportProvidersModule);
     on("providersTemplateButton", "click", downloadProvidersTemplate);
+    ensureProvidersChannelBulkUI();
   }
 
   function providerPermission(resource) {
@@ -73,6 +74,8 @@ const PROVIDERS_STATE = {
       const element = document.getElementById(id);
       if (element) element.hidden = !providerPermission(mapping[id]);
     });
+    const channelBulkButton = document.getElementById("providersChannelBulkButton");
+    if (channelBulkButton) channelBulkButton.hidden = !(providerPermission("IMPORTAR") || providerPermission("EDITAR"));
   }
 
   function refreshProvidersWorkspace(silent) {
@@ -882,4 +885,507 @@ const PROVIDERS_STATE = {
 
   function bindProviderModalClose() {
     document.querySelectorAll("[data-modal-close]").forEach(function(item) { item.addEventListener("click", closeModal); });
+  }
+
+  /* AGENTE C 2026-09-19: carga masiva para ACTUALIZAR oficinas (canal de ventas)
+   * y grupos de vendedores por proveedor. Archivo simple CSV/XLSX con columnas
+   * PROVEEDOR, OFICINA, GRUPO. Crea las oficinas y grupos que falten y fusiona
+   * rel_proveedor_oficinas + codigo_canales_venta/codigo_grupos_vendedores sin
+   * borrar las asignaciones existentes. Flujo validar -> previsualizar ->
+   * confirmar con reporte por fila. Todo se resuelve en cliente con los RPC
+   * existentes (listarProveedoresModulo, obtenerOpcionesProveedorModulo,
+   * guardarOficinaAdminMotor, guardarGrupoAdminMotor, guardarProveedorModulo). */
+  var PROVIDERS_CHANNEL_BULK_STATE = { fileName: "", rows: [], busy: false };
+
+  function ensureProvidersChannelBulkUI() {
+    if (document.getElementById("providersChannelBulkButton")) {
+      applyProvidersChannelBulkVisibility();
+      return;
+    }
+    const bar = document.querySelector(".providers-workspace .providers-actions");
+    if (!bar) return;
+    const button = document.createElement("button");
+    button.id = "providersChannelBulkButton";
+    button.className = "button button--secondary";
+    button.type = "button";
+    button.innerHTML = '<span class="material-symbols-rounded">storefront</span> Actualizar canal/grupos';
+    button.addEventListener("click", openProvidersChannelBulkIntro_);
+    const importButton = document.getElementById("providersImportButton");
+    if (importButton && importButton.parentNode === bar) bar.insertBefore(button, importButton.nextSibling);
+    else bar.appendChild(button);
+    const input = document.createElement("input");
+    input.id = "providersChannelBulkInput";
+    input.type = "file";
+    input.accept = ".csv,.xlsx,.xls,text/csv";
+    input.hidden = true;
+    input.addEventListener("change", handleProvidersChannelBulkFile);
+    bar.appendChild(input);
+    applyProvidersChannelBulkVisibility();
+  }
+
+  function applyProvidersChannelBulkVisibility() {
+    const button = document.getElementById("providersChannelBulkButton");
+    if (button) button.hidden = !(providerPermission("IMPORTAR") || providerPermission("EDITAR"));
+  }
+
+  function openProvidersChannelBulkIntro_() {
+    openModal({
+      eyebrow: "CARGA MASIVA",
+      title: "Actualizar canal y grupos",
+      body: '<div class="providers-detail-section"><p>Actualiza las oficinas (canal de ventas) y grupos de vendedores de cada proveedor desde un archivo simple. Las oficinas y grupos que no existan <strong>se crean</strong> y se asignan sin borrar las asignaciones vigentes.</p>' +
+        '<div class="providers-detail-grid">' +
+        '<div class="providers-detail-item"><span>PROVEEDOR</span><strong>Obligatorio</strong><small class="providers-field-hint">Debe existir (razón social, nombre comercial o código interno).</small></div>' +
+        '<div class="providers-detail-item"><span>OFICINA</span><strong>Obligatorio si hay grupo</strong><small class="providers-field-hint">Se crea si no existe.</small></div>' +
+        '<div class="providers-detail-item"><span>GRUPO</span><strong>Opcional</strong><small class="providers-field-hint">Se crea bajo la oficina de su fila.</small></div>' +
+        '<div class="providers-detail-item"><span>Flujo</span><strong>Validar, previsualizar y confirmar</strong><small class="providers-field-hint">Nada se guarda hasta confirmar.</small></div>' +
+        '</div><p class="providers-import-note">El grupo siempre pertenece a la oficina de su misma fila. Una fila solo con proveedor y sin oficina ni grupo se omite.</p></div>',
+      footer: '<button class="button button--ghost" type="button" data-modal-close>Cerrar</button>' +
+        '<button id="providersChannelTemplateBtn" class="button button--secondary" type="button">Descargar plantilla</button>' +
+        '<button id="providersChannelPickBtn" class="button button--primary" type="button">Seleccionar archivo</button>'
+    });
+    bindProviderModalClose();
+    on("providersChannelTemplateBtn", "click", downloadProvidersChannelTemplate_);
+    on("providersChannelPickBtn", "click", function() {
+      const input = document.getElementById("providersChannelBulkInput");
+      if (input) input.click();
+    });
+  }
+
+  function downloadProvidersChannelTemplate_() {
+    downloadProviderTextFile(
+      "plantilla_proveedor_canal_grupos.csv",
+      "\uFEFFPROVEEDOR,OFICINA,GRUPO\r\nEJEMPLO Proveedor,EJEMPLO Oficina,EJEMPLO Grupo\r\n",
+      "text/csv;charset=utf-8"
+    );
+    toast("Plantilla lista", "Columnas: PROVEEDOR, OFICINA, GRUPO.");
+  }
+
+  function handleProvidersChannelBulkFile(event) {
+    const input = event && event.target;
+    const file = input && input.files ? input.files[0] : null;
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast("Archivo demasiado grande", "El máximo permitido es 5 MB.", true);
+      input.value = "";
+      return;
+    }
+    const name = String(file.name || "");
+    if (/\.(xlsx|xlsm|xls)$/i.test(name)) {
+      if (!window.XLSX) {
+        toast("Falta la librería XLSX", "Usa un archivo CSV o recarga el módulo de Materiales y Precios primero.", true);
+        input.value = "";
+        return;
+      }
+      const readerBin = new FileReader();
+      readerBin.onload = function() {
+        try {
+          const workbook = window.XLSX.read(readerBin.result, { type: "array" });
+          const sheet = workbook.Sheets[workbook.SheetNames[0]];
+          const aoa = window.XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false });
+          openProvidersChannelPreview_(mapProvidersChannelRows_(aoa), name);
+        } catch (error) {
+          toast("No fue posible leer el Excel", errorMessage(error), true);
+        }
+      };
+      readerBin.onerror = function() {
+        toast("No fue posible leer el archivo", "Selecciona nuevamente el archivo.", true);
+      };
+      readerBin.readAsArrayBuffer(file);
+    } else {
+      const reader = new FileReader();
+      reader.onload = function() {
+        try {
+          openProvidersChannelPreview_(parseProvidersChannelCsv_(String(reader.result || "")), name);
+        } catch (error) {
+          toast("No fue posible validar el archivo", errorMessage(error), true);
+        }
+      };
+      reader.onerror = function() {
+        toast("No fue posible leer el archivo", "Selecciona nuevamente el CSV.", true);
+      };
+      reader.readAsText(file, "UTF-8");
+    }
+    input.value = "";
+  }
+
+  function providersChannelNormHeader_(value) {
+    let text = String(value == null ? "" : value);
+    try { text = text.normalize("NFD").replace(/[\u0300-\u036f]/g, ""); } catch (ignore) {}
+    return text.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  }
+
+  function mapProvidersChannelRows_(aoa) {
+    aoa = aoa || [];
+    let headerIdx = -1;
+    let map = {};
+    for (let r = 0; r < aoa.length; r++) {
+      const cells = aoa[r] || [];
+      const candidate = {};
+      for (let c = 0; c < cells.length; c++) {
+        const key = providersChannelNormHeader_(cells[c]);
+        if ((key === "PROVEEDOR" || key === "RAZONSOCIAL" || key === "NOMBRECOMERCIAL" || key === "PROVEEDORNOMBRE" || key === "NOMBREPROVEEDOR") && candidate.proveedor == null) candidate.proveedor = c;
+        else if ((key === "OFICINA" || key === "OFICINAS" || key === "CANAL" || key === "CANALVENTA" || key === "CANALESVENTA" || key === "OFICINAVENTA" || key === "NOMBREOFICINA") && candidate.oficina == null) candidate.oficina = c;
+        else if ((key === "GRUPO" || key === "GRUPOS" || key === "GRUPOVENDEDOR" || key === "GRUPOVENDEDORES" || key === "GRUPOSVENDEDORES" || key === "GRUPOVENTA" || key === "GRUPOVENTAS" || key === "NOMBREGRUPO") && candidate.grupo == null) candidate.grupo = c;
+      }
+      if (candidate.proveedor != null) { headerIdx = r; map = candidate; break; }
+    }
+    if (headerIdx === -1) throw new Error("No se encontró el encabezado (se esperaba PROVEEDOR, OFICINA, GRUPO).");
+    const out = [];
+    for (let i = headerIdx + 1; i < aoa.length; i++) {
+      const row = aoa[i] || [];
+      const cell = function(idx) { return (idx == null || idx >= row.length) ? "" : String(row[idx] == null ? "" : row[idx]).trim(); };
+      const prov = cell(map.proveedor);
+      const ofi = cell(map.oficina);
+      const gru = cell(map.grupo);
+      if (!prov && !ofi && !gru) continue;
+      if (/^EJEMPLO/i.test(prov)) continue;
+      out.push({ linea: out.length + 1, proveedor: prov, oficina: ofi, grupo: gru });
+    }
+    return out;
+  }
+
+  function splitProvidersChannelLine_(line, delimiter) {
+    const cells = [];
+    let cur = "";
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line.charAt(i);
+      if (inQuotes) {
+        if (ch === '"') {
+          if (line.charAt(i + 1) === '"') { cur += '"'; i++; }
+          else inQuotes = false;
+        } else cur += ch;
+      } else if (ch === '"') inQuotes = true;
+      else if (ch === delimiter) { cells.push(cur); cur = ""; }
+      else cur += ch;
+    }
+    cells.push(cur);
+    return cells.map(function(item) { return String(item).trim(); });
+  }
+
+  function parseProvidersChannelCsv_(text) {
+    const cleaned = String(text || "").replace(/^\uFEFF/, "");
+    const rows = [];
+    cleaned.split(/\r\n|\r|\n/).forEach(function(line) {
+      if (String(line).trim() !== "") rows.push(line);
+    });
+    if (!rows.length) throw new Error("El archivo está vacío.");
+    const first = rows[0];
+    const semis = (first.match(/;/g) || []).length;
+    const commas = (first.match(/,/g) || []).length;
+    const delimiter = semis >= commas ? ";" : ",";
+    const aoa = rows.map(function(line) { return splitProvidersChannelLine_(line, delimiter); });
+    return mapProvidersChannelRows_(aoa);
+  }
+
+  function findProviderChannel_(providers, name) {
+    const wanted = String(name || "").trim().toLowerCase();
+    if (!wanted) return null;
+    for (let i = 0; i < (providers || []).length; i++) {
+      const item = providers[i] || {};
+      if (String(item.idProveedor || "").trim().toLowerCase() === wanted) return item;
+      if (String(item.razonSocial || "").trim().toLowerCase() === wanted) return item;
+      if (String(item.nombreComercial || "").trim().toLowerCase() === wanted) return item;
+    }
+    return null;
+  }
+
+  function findOfficeChannel_(offices, name) {
+    const wanted = String(name || "").trim().toLowerCase();
+    if (!wanted) return null;
+    for (let i = 0; i < (offices || []).length; i++) {
+      const item = offices[i] || {};
+      if (String(item.idOficina || "").trim().toLowerCase() === wanted) return item;
+      if (String(item.nombre || "").trim().toLowerCase() === wanted) return item;
+    }
+    return null;
+  }
+
+  function findGroupChannel_(groups, officeId, name) {
+    const wanted = String(name || "").trim().toLowerCase();
+    if (!wanted || !officeId) return null;
+    for (let i = 0; i < (groups || []).length; i++) {
+      const item = groups[i] || {};
+      if (String(item.idOficina || "") !== String(officeId)) continue;
+      if (String(item.idGrupo || "").trim().toLowerCase() === wanted) return item;
+      if (String(item.nombre || "").trim().toLowerCase() === wanted) return item;
+    }
+    return null;
+  }
+
+  function providersChannelSlug_(prefix, name, takenIds) {
+    let text = String(name || "");
+    try { text = text.normalize("NFD").replace(/[\u0300-\u036f]/g, ""); } catch (ignore) {}
+    const slug = text.toUpperCase().replace(/[^A-Z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 24) || "NUEVO";
+    const base = String(prefix || "") + slug;
+    let candidate = base;
+    let suffix = 2;
+    takenIds = takenIds || [];
+    while (takenIds.indexOf(candidate) !== -1) {
+      candidate = (base + "-" + suffix).slice(0, 40);
+      suffix += 1;
+    }
+    takenIds.push(candidate);
+    return candidate;
+  }
+
+  function validateProvidersChannelRows_(rows, catalog) {
+    return (rows || []).map(function(row) {
+      const item = { linea: row.linea, proveedor: row.proveedor, oficina: row.oficina, grupo: row.grupo, estado: "OK", accion: "ACTUALIZAR", detalle: "" };
+      if (!row.proveedor) { item.estado = "ERROR"; item.accion = "OMITIR"; item.detalle = "Falta PROVEEDOR."; return item; }
+      const provider = findProviderChannel_(catalog.providers, row.proveedor);
+      if (!provider) { item.estado = "ERROR"; item.accion = "OMITIR"; item.detalle = "Proveedor no existe: créalo primero (Nuevo proveedor o carga de materiales)."; return item; }
+      item.idProveedor = provider.idProveedor;
+      if (!row.oficina && !row.grupo) { item.estado = "SIN_CAMBIOS"; item.accion = "OMITIR"; item.detalle = "Sin oficina ni grupo: nada que actualizar."; return item; }
+      if (!row.oficina && row.grupo) { item.estado = "ERROR"; item.accion = "OMITIR"; item.detalle = "El grupo requiere OFICINA en la misma fila."; return item; }
+      const office = findOfficeChannel_(catalog.offices, row.oficina);
+      const notes = [];
+      if (!office) notes.push("Se creará la oficina");
+      else item.idOficina = office.idOficina;
+      if (row.grupo) {
+        const group = office ? findGroupChannel_(catalog.groups, office.idOficina, row.grupo) : null;
+        if (office && !group) notes.push("se creará el grupo");
+        if (office && group) {
+          item.idGrupo = group.idGrupo;
+          const hasOffice = (provider.idsOficina || []).indexOf(office.idOficina) !== -1;
+          const hasGroup = (provider.idsGrupo || []).indexOf(group.idGrupo) !== -1;
+          if (hasOffice && hasGroup) { item.estado = "SIN_CAMBIOS"; item.accion = "OMITIR"; item.detalle = "Ya asignado al proveedor."; return item; }
+        }
+      } else if (office) {
+        if ((provider.idsOficina || []).indexOf(office.idOficina) !== -1) { item.estado = "SIN_CAMBIOS"; item.accion = "OMITIR"; item.detalle = "Oficina ya asignada al proveedor."; return item; }
+      }
+      if (notes.length) { item.estado = "ADVERTENCIA"; item.detalle = notes.join(" y ") + "."; }
+      else item.detalle = "Se actualizará la asignación del proveedor.";
+      return item;
+    });
+  }
+
+  function openProvidersChannelPreview_(rows, fileName) {
+    if (!rows || !rows.length) {
+      toast("Sin filas para validar", "El archivo no trae filas con PROVEEDOR, OFICINA o GRUPO.", true);
+      return;
+    }
+    openModal({
+      wide: true,
+      eyebrow: "PREVISUALIZACIÓN",
+      title: "Validando canal y grupos",
+      body: '<div class="providers-office-loading"><span class="spinner" aria-hidden="true"></span><div><strong>Validando ' + escapeHtml(rows.length) + ' fila(s)</strong><small>Todavía no se modificará ningún dato.</small></div></div>',
+      footer: '<button class="button button--ghost" type="button" data-modal-close>Cancelar</button>'
+    });
+    bindProviderModalClose();
+    Promise.all([
+      secureRpc("listarProveedoresModulo", [{ texto: "", estado: "TODOS", pagina: 1, tamano: 5000 }], "PROVEEDORES"),
+      secureRpc("obtenerOpcionesProveedorModulo", [], "PROVEEDORES")
+    ]).then(function(results) {
+      const provResult = results[0] || {};
+      const options = results[1] || {};
+      const catalog = {
+        providers: provResult.registros || provResult.proveedores || [],
+        offices: options.oficinas || [],
+        groups: options.grupos || []
+      };
+      const validated = validateProvidersChannelRows_(rows, catalog);
+      PROVIDERS_CHANNEL_BULK_STATE = { fileName: fileName || "archivo", rows: validated, busy: false };
+      renderProvidersChannelPreview_(validated);
+    }).catch(function(error) {
+      const body = document.getElementById("modalBody");
+      if (body) body.innerHTML = '<p>' + escapeHtml(errorMessage(error)) + '</p>';
+      toast("No fue posible validar", errorMessage(error), true);
+    });
+  }
+
+  function providersChannelBadge_(estado) {
+    const code = String(estado || "").toUpperCase();
+    if (code === "OK") return '<span class="status-chip is-active">LISTO</span>';
+    if (code === "ADVERTENCIA") return '<span class="status-chip is-active">CREARÁ</span>';
+    if (code === "SIN_CAMBIOS") return '<span class="providers-field-hint">Sin cambios</span>';
+    return '<span class="status-chip is-inactive">ERROR</span>';
+  }
+
+  function renderProvidersChannelPreview_(validated) {
+    const body = document.getElementById("modalBody");
+    const footer = document.getElementById("modalFooter");
+    if (!body || !footer) return;
+    const count = function(code) { return validated.filter(function(item) { return item.estado === code; }).length; };
+    const ready = count("OK") + count("ADVERTENCIA");
+    text("modalTitle", "Revisar canal y grupos (" + String(PROVIDERS_CHANNEL_BULK_STATE.fileName || "archivo") + ")");
+    body.innerHTML = '<div class="providers-summary">' +
+      '<article class="providers-summary-card"><strong>' + validated.length + '</strong><span>Filas leídas</span></article>' +
+      '<article class="providers-summary-card"><strong>' + count("OK") + '</strong><span>Listas</span></article>' +
+      '<article class="providers-summary-card"><strong>' + count("ADVERTENCIA") + '</strong><span>Crearán catálogo</span></article>' +
+      '<article class="providers-summary-card"><strong>' + count("ERROR") + '</strong><span>Con errores</span></article>' +
+      '</div><div class="providers-table-wrap">' + tableHtml([
+        { label: "Línea", render: function(row) { return escapeHtml(row.linea); } },
+        { label: "Proveedor", render: function(row) { return "<strong>" + escapeHtml(row.proveedor) + "</strong>"; } },
+        { label: "Oficina", render: function(row) { return escapeHtml(row.oficina || "—"); } },
+        { label: "Grupo", render: function(row) { return escapeHtml(row.grupo || "—"); } },
+        { label: "Resultado", render: function(row) { return providersChannelBadge_(row.estado); } },
+        { label: "Detalle", render: function(row) { return escapeHtml(row.detalle || ""); } }
+      ], validated) + '</div><p class="providers-import-note">Solo las filas listas se guardarán al confirmar. Las filas con error o sin cambios se omiten y quedan en el reporte.</p>';
+    footer.innerHTML = '<button class="button button--ghost" type="button" data-modal-close>Cancelar</button>' +
+      '<button id="providersChannelConfirmBtn" class="button button--primary" type="button" ' + (ready ? "" : "disabled") + '>Confirmar (' + ready + ')</button>';
+    bindProviderModalClose();
+    on("providersChannelConfirmBtn", "click", confirmProvidersChannelBulk_);
+  }
+
+  function applyProvidersChannelRow_(row, catalog, byProvider) {
+    const provider = findProviderChannel_(catalog.providers, row.proveedor);
+    if (!provider) {
+      return Promise.resolve({ linea: row.linea, proveedor: row.proveedor, oficina: row.oficina, grupo: row.grupo, estado: "ERROR", detalle: "El proveedor ya no existe." });
+    }
+    let office = findOfficeChannel_(catalog.offices, row.oficina);
+    let officeCreated = false;
+    let groupCreated = false;
+    let chain = Promise.resolve();
+    if (!office) {
+      const taken = catalog.offices.map(function(item) { return item.idOficina; });
+      const newOfficeId = providersChannelSlug_("OFI-", row.oficina, taken);
+      chain = chain.then(function() {
+        return secureRpc("guardarOficinaAdminMotor", [{ idOficina: newOfficeId, nombre: row.oficina, estado: "ACTIVO" }], "PROVEEDORES");
+      }).then(function() {
+        office = { idOficina: newOfficeId, nombre: row.oficina };
+        catalog.offices.push(office);
+        officeCreated = true;
+      });
+    }
+    return chain.then(function() {
+      if (!row.grupo) return null;
+      const group = findGroupChannel_(catalog.groups, office.idOficina, row.grupo);
+      if (group) return group;
+      const takenGroups = catalog.groups.map(function(item) { return item.idGrupo; });
+      const newGroupId = providersChannelSlug_("GRP-", row.grupo, takenGroups);
+      return secureRpc("guardarGrupoAdminMotor", [{ idGrupo: newGroupId, idOficina: office.idOficina, nombre: row.grupo, estado: "ACTIVO" }], "PROVEEDORES").then(function() {
+        const created = { idGrupo: newGroupId, idOficina: office.idOficina, nombre: row.grupo };
+        catalog.groups.push(created);
+        groupCreated = true;
+        return created;
+      });
+    }).then(function(group) {
+      let entry = byProvider[provider.idProveedor];
+      if (!entry) {
+        entry = {
+          payload: {
+            idProveedor: provider.idProveedor,
+            razonSocial: provider.razonSocial,
+            nombreComercial: provider.nombreComercial,
+            codigoSap: provider.codigoSap,
+            ruc: provider.ruc,
+            descripcion: provider.descripcion,
+            idsOficina: (provider.idsOficina || []).slice(),
+            idsGrupo: (provider.idsGrupo || []).slice(),
+            estado: provider.estado
+          },
+          rows: []
+        };
+        byProvider[provider.idProveedor] = entry;
+      }
+      if (entry.payload.idsOficina.indexOf(office.idOficina) === -1) entry.payload.idsOficina.push(office.idOficina);
+      if (group && entry.payload.idsGrupo.indexOf(group.idGrupo) === -1) entry.payload.idsGrupo.push(group.idGrupo);
+      entry.rows.push(row.linea);
+      const created = [];
+      if (officeCreated) created.push("Oficina creada");
+      if (groupCreated) created.push("grupo creado");
+      return { linea: row.linea, proveedor: row.proveedor, oficina: row.oficina, grupo: row.grupo, estado: "OK", detalle: (created.length ? created.join(" y ") + ". " : "") + "Pendiente de guardar." };
+    }).catch(function(error) {
+      return { linea: row.linea, proveedor: row.proveedor, oficina: row.oficina, grupo: row.grupo, estado: "ERROR", detalle: errorMessage(error) };
+    });
+  }
+
+  function confirmProvidersChannelBulk_() {
+    const state = PROVIDERS_CHANNEL_BULK_STATE;
+    if (!state || state.busy || !state.rows) return;
+    const actionable = state.rows.filter(function(item) { return item.estado === "OK" || item.estado === "ADVERTENCIA"; });
+    if (!actionable.length) return;
+    state.busy = true;
+    const confirmButton = document.getElementById("providersChannelConfirmBtn");
+    if (confirmButton) confirmButton.disabled = true;
+    const body = document.getElementById("modalBody");
+    if (body) body.innerHTML = '<div class="providers-office-loading"><span class="spinner" aria-hidden="true"></span><div><strong>Aplicando ' + actionable.length + ' asignación(es)…</strong><small>No cierres esta ventana.</small></div></div>';
+    secureRpc("listarProveedoresModulo", [{ texto: "", estado: "TODOS", pagina: 1, tamano: 5000 }], "PROVEEDORES").then(function(provResult) {
+      const fresh = provResult.registros || provResult.proveedores || [];
+      return secureRpc("obtenerOpcionesProveedorModulo", [], "PROVEEDORES").then(function(options) {
+        return { providers: fresh, offices: (options.oficinas || []), groups: (options.grupos || []) };
+      });
+    }).then(function(catalog) {
+      const results = [];
+      const byProvider = {};
+      let chain = Promise.resolve();
+      actionable.forEach(function(row) {
+        chain = chain.then(function() {
+          return applyProvidersChannelRow_(row, catalog, byProvider).then(function(result) { results.push(result); });
+        });
+      });
+      return chain.then(function() {
+        let saveChain = Promise.resolve();
+        Object.keys(byProvider).forEach(function(id) {
+          saveChain = saveChain.then(function() {
+            const entry = byProvider[id];
+            return secureRpc("guardarProveedorModulo", [entry.payload], "PROVEEDORES").then(function() {
+              entry.rows.forEach(function(linea) {
+                for (let i = 0; i < results.length; i++) {
+                  if (results[i].linea === linea && results[i].estado !== "ERROR") {
+                    results[i].estado = "OK";
+                    results[i].detalle = (results[i].detalle ? results[i].detalle.replace("Pendiente de guardar.", "").trim() + " " : "") + "Asignación guardada.";
+                  }
+                }
+              });
+            }).catch(function(error) {
+              entry.rows.forEach(function(linea) {
+                for (let i = 0; i < results.length; i++) {
+                  if (results[i].linea === linea) { results[i].estado = "ERROR"; results[i].detalle = errorMessage(error); }
+                }
+              });
+            });
+          });
+        });
+        return saveChain.then(function() { return results; });
+      });
+    }).then(function(results) {
+      state.rows.forEach(function(row) {
+        if (row.estado === "ERROR" || row.estado === "SIN_CAMBIOS") {
+          results.push({ linea: row.linea, proveedor: row.proveedor, oficina: row.oficina, grupo: row.grupo, estado: row.estado, detalle: row.detalle });
+        }
+      });
+      results.sort(function(a, b) { return a.linea - b.linea; });
+      state.busy = false;
+      PROVIDERS_STATE.options = null;
+      PROVIDERS_STATE.optionsPromise = null;
+      invalidateProvidersLocalCache();
+      refreshProvidersWorkspace(true);
+      renderProvidersChannelReport_(results);
+    }).catch(function(error) {
+      state.busy = false;
+      toast("No fue posible confirmar", errorMessage(error), true);
+      if (confirmButton) confirmButton.disabled = false;
+    });
+  }
+
+  function renderProvidersChannelReport_(results) {
+    const ok = results.filter(function(item) { return item.estado === "OK"; }).length;
+    const errors = results.filter(function(item) { return item.estado === "ERROR"; }).length;
+    const skipped = results.length - ok - errors;
+    const createdOffices = results.filter(function(item) { return item.estado === "OK" && item.detalle.indexOf("Oficina creada") !== -1; }).length;
+    const createdGroups = results.filter(function(item) { return item.estado === "OK" && item.detalle.indexOf("grupo creado") !== -1; }).length;
+    openModal({
+      wide: true,
+      eyebrow: "REPORTE DE CARGA",
+      title: "Canal y grupos actualizados",
+      body: '<div class="providers-summary">' +
+        '<article class="providers-summary-card"><strong>' + ok + '</strong><span>Asignadas</span></article>' +
+        '<article class="providers-summary-card"><strong>' + createdOffices + '</strong><span>Oficinas creadas</span></article>' +
+        '<article class="providers-summary-card"><strong>' + createdGroups + '</strong><span>Grupos creados</span></article>' +
+        '<article class="providers-summary-card"><strong>' + errors + '</strong><span>Con error</span></article>' +
+        '<article class="providers-summary-card"><strong>' + skipped + '</strong><span>Omitidas</span></article>' +
+        '</div><div class="providers-table-wrap">' + tableHtml([
+          { label: "Línea", render: function(row) { return escapeHtml(row.linea); } },
+          { label: "Proveedor", render: function(row) { return "<strong>" + escapeHtml(row.proveedor) + "</strong>"; } },
+          { label: "Oficina", render: function(row) { return escapeHtml(row.oficina || "—"); } },
+          { label: "Grupo", render: function(row) { return escapeHtml(row.grupo || "—"); } },
+          { label: "Estado", render: function(row) { return providersChannelBadge_(row.estado); } },
+          { label: "Detalle", render: function(row) { return escapeHtml(row.detalle || ""); } }
+        ], results) + '</div>',
+      footer: '<button class="button button--primary" type="button" data-modal-close>Cerrar</button>'
+    });
+    bindProviderModalClose();
+    toast("Carga de canal completada", ok + " asignada(s) · " + errors + " con error · " + skipped + " omitida(s).", errors > 0);
   }

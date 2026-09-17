@@ -99,8 +99,12 @@ function renderDispatchFrame() {
     ? (document.getElementById("salesListRegion") || document.getElementById("dynamicModuleView"))
     : document.getElementById("dynamicModuleView");
   if (!view) return;
+  var embeddedClass = DISP360_STATE.embedded ? " is-embedded" : "";
+  var toolbarButtons = DISP360_STATE.embedded
+    ? '<button id="disp360ExportButton" class="button button--primary" type="button"><span class="material-symbols-rounded">file_download</span>Exportar</button>'
+    : '<button id="disp360RefreshButton" class="button button--secondary" type="button"><span class="material-symbols-rounded">refresh</span>Actualizar</button><button id="disp360ExportButton" class="button button--primary" type="button"><span class="material-symbols-rounded">file_download</span>Exportar</button>';
   view.innerHTML =
-    '<section class="sales-workspace disp360-workspace">' +
+    '<section class="sales-workspace disp360-workspace' + embeddedClass + '">' +
       '<style>' +
         ".disp360-workspace{min-width:0}" +
         ".disp360-workspace>*{min-width:0}" +
@@ -114,9 +118,17 @@ function renderDispatchFrame() {
         ".disp360-scope{display:flex;align-items:center;gap:8px;color:#64748b;font-size:13px}" +
         ".disp360-scope .material-symbols-rounded{font-size:18px}" +
         ".disp360-workspace .mp-table-wrap{max-width:100%}" +
+        ".disp360-workspace.is-embedded{gap:10px}" +
+        ".disp360-workspace.is-embedded .sales-main-toolbar{margin-bottom:0}" +
+        ".disp360-workspace.is-embedded .sales-card{padding:12px}" +
+        ".disp360-workspace.is-embedded .disp360-kpi-grid{gap:8px}" +
+        ".disp360-workspace.is-embedded .disp360-kpi strong{font-size:22px;margin-top:4px}" +
+        ".disp360-workspace.is-embedded .sales-list-head{margin-bottom:6px}" +
+        ".disp360-workspace.is-embedded .disp360-filters{gap:8px;margin-top:6px}" +
+        ".disp360-workspace.is-embedded .mp-table th,.disp360-workspace.is-embedded .mp-table td{padding:7px 10px}" +
         "@media(max-width:640px){.disp360-filters{grid-template-columns:minmax(0,1fr)}}" +
       "</style>" +
-      '<div class="toolbar toolbar--end sales-main-toolbar"><button id="disp360RefreshButton" class="button button--secondary" type="button"><span class="material-symbols-rounded">refresh</span>Actualizar</button><button id="disp360ExportButton" class="button button--primary" type="button"><span class="material-symbols-rounded">file_download</span>Exportar</button></div>' +
+      '<div class="toolbar toolbar--end sales-main-toolbar">' + toolbarButtons + '</div>' +
       '<div class="sales-card"><div id="disp360Kpis" class="disp360-kpi-grid"></div></div>' +
       '<div class="sales-card"><div class="sales-list-head"><div><h3>Despachos propios</h3><p id="disp360Scope" class="disp360-scope" style="margin:4px 0 0"></p></div></div>' +
       '<div class="disp360-filters">' +

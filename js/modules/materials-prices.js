@@ -924,13 +924,17 @@ const MP_STATE = {
     const canReview = mpPermission("VER_SOLICITUDES_PRECIO");
     const canPending = mpPermission("DESCARGAR_CONSOLIDADO_PENDIENTES");
     const canTemplate = canUpload;
-    region.innerHTML = '<section class="mp-panel"><div class="mp-section-head"><div class="mp-section-title"><h3>' + (canReview ? 'Listas cargadas por proveedor' : 'Mis listas') + '</h3><p>Carga listas desde este apartado. La lista queda pendiente de revisión y no afecta precios oficiales hasta ser aprobada/publicada.</p></div><div class="mp-section-actions">' +
+    region.innerHTML = '<section class="mp-panel"><div class="mp-section-head"><div class="mp-section-title"><h3>' + (canReview ? 'Listas cargadas por proveedor' : 'Mis listas') + '</h3><p>Carga listas desde este apartado. La lista queda pendiente de revisión y no afecta precios oficiales hasta ser aprobada/publicada. Alcance: sin oficina ni grupo = <strong>General</strong> (aplica a todos); con oficina = <strong>Oficina</strong>; con oficina y grupo = <strong>Grupo</strong>. La carga masiva XLSX crea listas oficiales directamente: cada fila es un material dentro de una lista y las filas con mismo proveedor, oficina, grupo, negocio, nombre, moneda y vigencia forman una lista.</p></div><div class="mp-section-actions">' +
       (canTemplate ? '<button id="mpTemplateButton" class="button button--ghost" type="button"><span class="material-symbols-rounded">download</span>Plantilla CSV</button>' : '') +
       (canUpload ? '<button id="mpUploadListButton" class="button button--primary" type="button"><span class="material-symbols-rounded">upload_file</span>Cargar lista</button>' : '') +
+      (canUpload ? '<button id="mpListsBulkButton" class="button button--secondary" type="button"><span class="material-symbols-rounded">upload_file</span>Carga masiva XLSX</button>' : '') +
+      (canTemplate ? '<button id="mpListsTemplateXlsxButton" class="button button--ghost" type="button"><span class="material-symbols-rounded">download</span>Descargar plantilla XLSX</button>' : '') +
       (canPending ? '<button id="mpDownloadPending" class="button button--secondary" type="button"><span class="material-symbols-rounded">download</span>Consolidado pendientes</button>' : '') +
       '</div></div></section><div id="mpRequestsContent">' + loadingHtml(6) + '</div>';
     on("mpTemplateButton", "click", downloadMaterialsPricesTemplate);
     on("mpUploadListButton", "click", openUploadListModal);
+    on("mpListsBulkButton", "click", openMpListsBulkModal);
+    on("mpListsTemplateXlsxButton", "click", function() { descargarPlantillaListasBulkXlsx_(); });
     on("mpDownloadPending", "click", function() {
       secureRpc("exportarConsolidadoPendientesPreciosModulo", [{ incluirRechazadas: true }], "MATERIALES_PRECIOS")
         .then(downloadCsvResult)
@@ -1025,6 +1029,651 @@ const MP_STATE = {
     };
     reader.readAsText(file, "UTF-8");
   }
+
+  /* MP-LISTAS-BULK-INI (AGENTE B 2026-09-17): carga masiva XLSX de Listas de precios.
+   * Crea listas oficiales (pre_listas_precios) con sus detalles
+   * (pre_lista_precio_detalle) desde la hoja CARGA_LISTAS. Flujo validar ->
+   * previsualizar -> confirmar; nada se graba hasta confirmar.
+   * COLUMNAS CARGA_LISTAS (encabezado tolerante a mayúsculas/tildes y orden libre):
+   *   PROVEEDOR (obligatorio, nombre comercial/razón social/código o id),
+   *   OFICINA (opcional; vacía = General/todos),
+   *   GRUPO (opcional; requiere OFICINA y debe pertenecer a esa oficina),
+   *   NEGOCIO (opcional en el archivo; lo exige el RPC de cabecera: si viene vacío
+   *     y hay un solo negocio vigente se usa ese, si hay varios se reporta error),
+   *   NOMBRE_LISTA (opcional; filas con mismo proveedor/oficina/grupo/negocio/
+   *     nombre/moneda/vigencia forman UNA lista; vacío = "Lista <proveedor> <alcance>"),
+   *   MONEDA (opcional, vacía = PEN),
+   *   FECHA_INICIO / FECHA_FIN (opcionales; vacías = día 1 -> fin del mes de carga,
+   *     igual que precios individuales; aceptan AAAA-MM-DD, DD/MM/AAAA y fechas Excel),
+   *   CODIGO_HANA (obligatorio por fila; equivale al código SAP; también se acepta
+   *     CODIGO_MATERIAL como clave contra el maestro),
+   *   PRECIO (obligatorio, >= 0),
+   *   RESPONSABLE_VENTA y FEE (opcionales; FEE 0-100).
+   * RPC usados (existentes, sin tablas nuevas): guardarListaOficialPrecioModulo por
+   * cada lista + guardarDetalleListaPrecioModulo por cada detalle.
+   * NOTA DE COLUMNAS (sin migración): NOMBRE_LISTA/FEE/RESPONSABLE_VENTA/MONEDA se
+   * persisten en Supabase (columnas nombre/fee/responsable_venta/moneda existentes);
+   * en el backend GAS clásico guardarLista/Detalle ignoran NOMBRE distinto de su
+   * predeterminado y no guardan FEE/RESPONSABLE_VENTA/MONEDA distinta de PEN.
+   */
+  function mpListasBulkXlsx_() {
+    if (typeof window !== "undefined" && window && window.XLSX) return window.XLSX;
+    if (typeof XLSX !== "undefined") return XLSX;
+    return null;
+  }
+
+  function mpListasBulkMapColumns_(headers) {
+    var map = {};
+    (headers || []).forEach(function(raw, idx) {
+      var key = mpGsdNorm_(raw);
+      if (!key) return;
+      if (key.indexOf("PROVEEDOR") === 0 && map.proveedor == null) map.proveedor = idx;
+      else if (key.indexOf("OFICINA") === 0 && map.oficina == null) map.oficina = idx;
+      else if (key.indexOf("CANAL") === 0 && map.oficina == null) map.oficina = idx;
+      else if (key.indexOf("GRUPO") === 0 && map.grupo == null) map.grupo = idx;
+      else if (key.indexOf("NEGOCIO") === 0 && map.negocio == null) map.negocio = idx;
+      else if ((key.indexOf("NOMBRELISTA") === 0 || key === "NOMBRELISTA" || key === "LISTA" || key === "NOMBRE") && map.nombreLista == null) map.nombreLista = idx;
+      else if (key.indexOf("MONEDA") === 0 && map.moneda == null) map.moneda = idx;
+      else if ((key.indexOf("FECHAINICIO") === 0 || key === "INICIO" || key === "VIGENCIAINICIO" || key === "DESDE") && map.fechaInicio == null) map.fechaInicio = idx;
+      else if ((key.indexOf("FECHAFIN") === 0 || key === "FIN" || key === "VIGENCIAFIN" || key === "HASTA") && map.fechaFin == null) map.fechaFin = idx;
+      else if ((key === "CODIGOHANA" || key === "CODHANA" || key === "HANA" || key === "CODIGOSAP" || key === "CODSAP" || key === "SAP" || key === "CODIGOMATERIAL" || key === "CODMATERIAL") && map.codigoHana == null) map.codigoHana = idx;
+      else if (key.indexOf("PRECIO") === 0 && map.precio == null) map.precio = idx;
+      else if (key.indexOf("RESPONSABLE") !== -1 && key.indexOf("VENTA") !== -1 && map.responsableVenta == null) map.responsableVenta = idx;
+      else if (key.indexOf("FEE") === 0 && map.fee == null) map.fee = idx;
+    });
+    return map;
+  }
+
+  function mpListasBulkFindHeaderRow_(aoa) {
+    var best = -1;
+    var bestScore = 0;
+    var limit = Math.min((aoa || []).length, 20);
+    for (var r = 0; r < limit; r++) {
+      var row = aoa[r] || [];
+      var celdas = 0;
+      for (var c = 0; c < row.length; c++) {
+        if (String(row[c] == null ? "" : row[c]).trim() !== "") celdas++;
+      }
+      if (celdas < 2) continue;
+      var map = mpListasBulkMapColumns_(row);
+      var score = Object.keys(map).length;
+      if (score < 3) continue;
+      var hasKey = map.proveedor != null && (map.codigoHana != null || map.precio != null);
+      if (hasKey && score > bestScore) {
+        bestScore = score;
+        best = r;
+      }
+    }
+    return best;
+  }
+
+  function mpListasBulkParseFecha_(value) {
+    if (value == null || value === "") return "";
+    if (typeof Date !== "undefined" && value instanceof Date) {
+      if (isNaN(value.getTime())) return "";
+      var y = value.getFullYear();
+      var mo = ("0" + (value.getMonth() + 1)).slice(-2);
+      var d = ("0" + value.getDate()).slice(-2);
+      return y + "-" + mo + "-" + d;
+    }
+    var text = String(value).trim();
+    if (!text) return "";
+    var m = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (m) {
+      var mm = ("0" + m[2]).slice(-2);
+      var dd = ("0" + m[3]).slice(-2);
+      return m[1] + "-" + mm + "-" + dd;
+    }
+    m = text.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/);
+    if (m) {
+      var yy = m[3].length === 2 ? "20" + m[3] : m[3];
+      return yy + "-" + ("0" + m[2]).slice(-2) + "-" + ("0" + m[1]).slice(-2);
+    }
+    if (/^\d+(\.\d+)?$/.test(text)) {
+      var serial = Number(text);
+      if (isFinite(serial) && serial > 20000 && serial < 80000) {
+        var base = new Date(Math.round((serial - 25569) * 86400 * 1000));
+        var by = base.getUTCFullYear();
+        var bm = ("0" + (base.getUTCMonth() + 1)).slice(-2);
+        var bd = ("0" + base.getUTCDate()).slice(-2);
+        return by + "-" + bm + "-" + bd;
+      }
+    }
+    return "";
+  }
+
+  function mpListasBulkParseWorkbook_(workbook) {
+    var XLSXLib = mpListasBulkXlsx_();
+    if (!XLSXLib) throw new Error("Librería XLSX no disponible. Abre la aplicación para cargar el Excel.");
+    if (!workbook || !workbook.SheetNames || !workbook.SheetNames.length) {
+      throw new Error("El Excel no contiene hojas legibles.");
+    }
+    var names = workbook.SheetNames;
+    var picked = names[0];
+    var pickedScore = -2;
+    for (var i = 0; i < names.length; i++) {
+      var nombreHoja = names[i];
+      var hojaWs = workbook.Sheets[nombreHoja];
+      var hojaAoa = null;
+      try {
+        hojaAoa = XLSXLib.utils.sheet_to_json(hojaWs, { header: 1, defval: "", raw: true, blankrows: false });
+      } catch (ignoreHoja) { hojaAoa = null; }
+      var hojaHeader = hojaAoa ? mpListasBulkFindHeaderRow_(hojaAoa) : -1;
+      var hojaScore = hojaHeader === -1 ? -1 : Object.keys(mpListasBulkMapColumns_(hojaAoa[hojaHeader])).length;
+      if (hojaScore >= 0 && mpGsdNorm_(nombreHoja).indexOf("CARGA") === 0) hojaScore += 0.5;
+      if (hojaScore > pickedScore) {
+        pickedScore = hojaScore;
+        picked = nombreHoja;
+      }
+    }
+    var ws = workbook.Sheets[picked];
+    if (!ws) throw new Error("La hoja " + picked + " no se pudo leer.");
+    var aoa = XLSXLib.utils.sheet_to_json(ws, { header: 1, defval: "", raw: true, blankrows: false });
+    if (!aoa || !aoa.length) throw new Error("La hoja " + picked + " está vacía.");
+    var headerRow = mpListasBulkFindHeaderRow_(aoa);
+    if (headerRow === -1) {
+      throw new Error("No se encontró el encabezado (se esperaban columnas PROVEEDOR, CODIGO_HANA y PRECIO, más OFICINA/GRUPO/NOMBRE_LISTA/MONEDA/FECHA_INICIO/FECHA_FIN opcionales). Descarga la plantilla XLSX.");
+    }
+    var map = mpListasBulkMapColumns_(aoa[headerRow]);
+    var filas = [];
+    for (var r = headerRow + 1; r < aoa.length; r++) {
+      var row = aoa[r] || [];
+      var allEmpty = row.every(function(c) { return String(c == null ? "" : c).trim() === ""; });
+      if (allEmpty) continue;
+      var codigoHana = mpGsdCell_(row, map.codigoHana);
+      if (mpGsdNorm_(codigoHana).indexOf("EJEMPLO") === 0) continue;
+      var vacia = !mpGsdCell_(row, map.proveedor) && !codigoHana && !String(map.precio != null ? row[map.precio] : "").trim() &&
+        !mpGsdCell_(row, map.oficina) && !mpGsdCell_(row, map.grupo) && !mpGsdCell_(row, map.nombreLista);
+      if (vacia) continue;
+      filas.push({
+        fila: r + 1,
+        proveedor: mpGsdCell_(row, map.proveedor),
+        oficina: mpGsdCell_(row, map.oficina),
+        grupo: mpGsdCell_(row, map.grupo),
+        negocio: mpGsdCell_(row, map.negocio),
+        nombreLista: mpGsdCell_(row, map.nombreLista),
+        moneda: mpGsdCell_(row, map.moneda),
+        fechaInicioRaw: map.fechaInicio != null ? row[map.fechaInicio] : "",
+        fechaFinRaw: map.fechaFin != null ? row[map.fechaFin] : "",
+        codigoHana: codigoHana,
+        precioRaw: map.precio != null ? row[map.precio] : "",
+        responsableVenta: mpGsdCell_(row, map.responsableVenta),
+        feeRaw: map.fee != null ? row[map.fee] : ""
+      });
+    }
+    return { hoja: picked, mapa: map, filas: filas };
+  }
+
+  function mpListasBulkParseFileBuffer_(buffer, nombreArchivo) {
+    var XLSXLib = mpListasBulkXlsx_();
+    if (!XLSXLib) throw new Error("Librería XLSX no disponible. Abre la aplicación para cargar el Excel.");
+    if (buffer == null) throw new Error("Archivo vacío: selecciona un .xlsx con datos de listas.");
+    var workbook = null;
+    try {
+      if (typeof buffer === "string") workbook = XLSXLib.read(buffer, { type: "string", cellDates: true });
+      else workbook = XLSXLib.read(buffer, { type: "array", cellDates: true });
+    } catch (errorLectura) {
+      throw new Error("No se pudo leer el archivo .xlsx (¿formato válido?). Detalle: " + String((errorLectura && errorLectura.message) || errorLectura));
+    }
+    return mpListasBulkParseWorkbook_(workbook);
+  }
+
+  function mpListasBulkAlcance_(idOficina, idGrupo) {
+    if (idGrupo) return "GRUPO";
+    if (idOficina) return "OFICINA";
+    return "GENERAL";
+  }
+
+  function mpListasBulkValidarFilas_(filas, opts, materiales) {
+    opts = opts || getMpEmptyOptions();
+    var vigenciaDefecto = mpGsdMonthRange_();
+    var matPorCodigo = {};
+    (materiales || []).forEach(function(m) {
+      if (!m) return;
+      var id = String(m.idMaterial || m.id || "").trim();
+      [m.codigoSap, m.codigoHana, m.codigoMaterial, id].forEach(function(code) {
+        var key = mpGsdNorm_(code);
+        if (key && !matPorCodigo[key] && id) matPorCodigo[key] = { idMaterial: id, estado: String(m.estado || "ACTIVO").toUpperCase() };
+      });
+    });
+    var detalle = [];
+    var okItems = [];
+    var grupos = [];
+    var gruposPorClave = {};
+    var vistosMaterialEnLista = {};
+    var totalOk = 0;
+    var totalErrores = 0;
+    var totalAdvertencias = 0;
+    (filas || []).forEach(function(f) {
+      var motivos = [];
+      var avisos = [];
+      var proveedor = f.proveedor ? mpGsdResolverPorNombre_(opts.proveedores, f.proveedor) : null;
+      if (!proveedor) motivos.push("PROVEEDOR no reconocido (" + (f.proveedor || "vacío") + "). Usa un nombre, código o id de DICCIONARIOS.");
+      var idProveedor = proveedor ? String(proveedor.id || proveedor.idProveedor || "") : "";
+      var oficina = f.oficina ? mpGsdResolverPorNombre_(opts.oficinas, f.oficina) : null;
+      if (f.oficina && !oficina) motivos.push("OFICINA no reconocida (" + f.oficina + "). Vacía = General.");
+      var idOficina = oficina ? String(oficina.id || oficina.idOficina || "") : "";
+      var grupo = f.grupo ? mpGsdResolverPorNombre_(opts.grupos, f.grupo) : null;
+      if (f.grupo && !grupo) motivos.push("GRUPO no reconocido (" + f.grupo + ").");
+      var idGrupo = grupo ? String(grupo.id || grupo.idGrupo || "") : "";
+      if (idGrupo && !idOficina) motivos.push("GRUPO requiere OFICINA (vacía = General no admite grupo).");
+      if (idGrupo && idOficina) {
+        var idOficinaGrupo = String(grupo.idOficina || grupo.oficinaId || "");
+        if (idOficinaGrupo && idOficinaGrupo !== idOficina) motivos.push("El GRUPO (" + f.grupo + ") no pertenece a la OFICINA (" + f.oficina + ").");
+      }
+      var negocio = f.negocio ? mpGsdResolverPorNombre_(opts.negocios, f.negocio) : null;
+      if (f.negocio && !negocio) motivos.push("NEGOCIO no reconocido (" + f.negocio + ").");
+      var idNegocio = negocio ? String(negocio.id || "") : "";
+      if (!idNegocio) {
+        if ((opts.negocios || []).length === 1) {
+          idNegocio = String(opts.negocios[0].id || "");
+          avisos.push("NEGOCIO vacío: se usa el único negocio vigente (" + (opts.negocios[0].nombre || idNegocio) + ").");
+        } else {
+          motivos.push("Falta NEGOCIO (lo exige la cabecera de lista). Indica el nombre o código del negocio.");
+        }
+      }
+      var moneda = String(f.moneda || "").trim().toUpperCase() || "PEN";
+      if (!/^[A-Z]{3}$/.test(moneda)) motivos.push("MONEDA inválida (" + (f.moneda || "vacía") + "). Usa 3 letras, ej. PEN.");
+      var inicio = mpListasBulkParseFecha_(f.fechaInicioRaw);
+      var fin = mpListasBulkParseFecha_(f.fechaFinRaw);
+      var rawInicio = String(f.fechaInicioRaw == null ? "" : f.fechaInicioRaw).trim();
+      var rawFin = String(f.fechaFinRaw == null ? "" : f.fechaFinRaw).trim();
+      if (rawInicio && !inicio) motivos.push("FECHA_INICIO no válida (" + rawInicio.slice(0, 20) + "). Usa AAAA-MM-DD o DD/MM/AAAA.");
+      if (rawFin && !fin) motivos.push("FECHA_FIN no válida (" + rawFin.slice(0, 20) + "). Usa AAAA-MM-DD o DD/MM/AAAA.");
+      if (!rawInicio && !rawFin) {
+        inicio = vigenciaDefecto.inicio;
+        fin = vigenciaDefecto.fin;
+        avisos.push("Vigencia vacía: se usa el mes de carga (" + inicio + " → " + fin + ").");
+      } else if ((!inicio && rawInicio) || (!fin && rawFin)) {
+        // Ya se reportó el formato inválido arriba.
+      } else if (!inicio || !fin) {
+        motivos.push("Indica FECHA_INICIO y FECHA_FIN juntas, o deja ambas vacías para usar el mes de carga.");
+      } else if (fin < inicio) {
+        motivos.push("FECHA_FIN (" + fin + ") menor que FECHA_INICIO (" + inicio + ").");
+      }
+      var matKey = mpGsdNorm_(f.codigoHana);
+      var mat = matKey ? (matPorCodigo[matKey] || null) : null;
+      if (!f.codigoHana) motivos.push("Falta CODIGO_HANA (=código SAP del material).");
+      else if (!mat) motivos.push("CODIGO_HANA no existe en el maestro (" + f.codigoHana + "). Créalo en la pestaña Materiales.");
+      else if (mat.estado && mat.estado !== "ACTIVO") motivos.push("El material (" + f.codigoHana + ") está inactivo.");
+      var precio = mpGsdParseNumber_(f.precioRaw);
+      var precioCrudo = String(f.precioRaw == null ? "" : f.precioRaw).trim().slice(0, 40);
+      if (precio == null) motivos.push("PRECIO ausente o no numérico" + (precioCrudo ? " (recibido: \"" + precioCrudo + "\")" : " (celda vacía)") + ".");
+      else if (!(precio >= 0)) motivos.push("PRECIO debe ser mayor o igual a 0 (recibido: " + precio + ").");
+      var fee = mpGsdParseFee_(f.feeRaw);
+      if (fee.error) motivos.push(fee.error);
+      var alcance = mpListasBulkAlcance_(idOficina, idGrupo);
+      var nombreLista = String(f.nombreLista || "").trim();
+      var claveGrupo = [idProveedor, idOficina, idGrupo, idNegocio, mpGsdNorm_(nombreLista), moneda, inicio, fin].join("|");
+      var dupKey = claveGrupo + "||" + matKey;
+      if (matKey && vistosMaterialEnLista[dupKey] !== undefined) {
+        motivos.push("CODIGO_HANA duplicado dentro de la misma lista (ya está en la fila " + vistosMaterialEnLista[dupKey] + "). Deja una sola fila por material y lista.");
+      } else if (matKey) {
+        vistosMaterialEnLista[dupKey] = f.fila;
+      }
+      var etiquetaLista = (nombreLista || ("Lista " + (proveedor ? (proveedor.nombre || idProveedor) : (f.proveedor || "?")) + " " + alcance)) + " [" + (inicio || "?") + " → " + (fin || "?") + "]";
+      if (motivos.length) {
+        totalErrores += 1;
+        detalle.push({ fila: f.fila, lista: etiquetaLista, material: f.codigoHana || "—", precio: precioCrudo || "—", estado: "ERROR", motivo: motivos.join(" ") });
+        return;
+      }
+      var estado = avisos.length ? "ADVERTENCIA" : "OK";
+      if (avisos.length) totalAdvertencias += 1;
+      totalOk += 1;
+      var cabecera = null;
+      if (!gruposPorClave[claveGrupo]) {
+        cabecera = {
+          idProveedor: idProveedor,
+          idNegocio: idNegocio,
+          idOficina: idOficina,
+          idGrupo: idGrupo,
+          nombre: nombreLista || ("Lista " + (proveedor.nombre || idProveedor) + " " + alcance),
+          moneda: moneda,
+          fechaInicio: inicio,
+          fechaFin: fin,
+          responsableVenta: String(f.responsableVenta || "").trim(),
+          origen: "CARGA_MASIVA_LISTAS",
+          estado: "ACTIVA"
+        };
+        gruposPorClave[claveGrupo] = { clave: claveGrupo, etiqueta: etiquetaLista, alcance: alcance, cabecera: cabecera, items: [] };
+        grupos.push(gruposPorClave[claveGrupo]);
+      } else {
+        cabecera = gruposPorClave[claveGrupo].cabecera;
+        if (!cabecera.responsableVenta && String(f.responsableVenta || "").trim()) cabecera.responsableVenta = String(f.responsableVenta || "").trim();
+      }
+      var item = {
+        fila: f.fila,
+        detalle: {
+          idMaterial: mat.idMaterial,
+          precioBase: precio,
+          moneda: moneda,
+          fee: fee.valor,
+          responsableVenta: String(f.responsableVenta || "").trim()
+        }
+      };
+      gruposPorClave[claveGrupo].items.push(item);
+      okItems.push(item);
+      detalle.push({ fila: f.fila, lista: etiquetaLista, material: f.codigoHana, precio: String(precio), estado: estado, motivo: avisos.length ? avisos.join(" ") : "OK" });
+    });
+    return { totalFilas: (filas || []).length, totalListas: grupos.length, totalOk: totalOk, totalErrores: totalErrores, totalAdvertencias: totalAdvertencias, detalle: detalle, okItems: okItems, grupos: grupos };
+  }
+
+  function mpListasBulkBuildWorkbook_(opts) {
+    var XLSXLib = mpListasBulkXlsx_();
+    if (!XLSXLib) throw new Error("Librería XLSX no disponible.");
+    opts = opts || {};
+    var headers = ["PROVEEDOR", "OFICINA", "GRUPO", "NEGOCIO", "NOMBRE_LISTA", "MONEDA", "FECHA_INICIO", "FECHA_FIN", "CODIGO_HANA", "PRECIO", "RESPONSABLE_VENTA", "FEE"];
+    var anchos = [24, 20, 20, 20, 24, 10, 14, 14, 20, 12, 22, 10];
+    var vigencia = mpGsdMonthRange_();
+    var ejemplo = ["EJEMPLO Proveedor", "", "", "EJEMPLO Negocio", "EJEMPLO Lista General", "PEN", vigencia.inicio, vigencia.fin, "EJEMPLO-BORRAR-ESTA-FILA", 100, "EJEMPLO Responsable", 10];
+    var wb = XLSXLib.utils.book_new();
+    var ws = XLSXLib.utils.aoa_to_sheet([headers, ejemplo]);
+    ws["!cols"] = anchos.map(function(wch) { return { wch: wch }; });
+    XLSXLib.utils.book_append_sheet(wb, ws, "CARGA_LISTAS");
+    var dict = [["CATEGORIA", "VALOR (escribe esto)", "NOMBRE", "NOTA"]];
+    (opts.negocios || []).forEach(function(x) { dict.push(["NEGOCIO", x.nombre || x.id || "", x.nombre || "", "Lo exige la cabecera de lista"]); });
+    (opts.proveedores || []).forEach(function(x) { dict.push(["PROVEEDOR", x.nombre || x.id || "", x.nombre || "", "Obligatorio por fila"]); });
+    (opts.oficinas || []).forEach(function(x) { dict.push(["OFICINA", x.nombre || x.id || "", x.nombre || "", "Vacía = General (toda la red)"]); });
+    (opts.grupos || []).forEach(function(x) { dict.push(["GRUPO", x.nombre || x.id || "", x.nombre || "", "Requiere OFICINA; debe pertenecer a esa oficina"]); });
+    dict.push(["MATERIAL", "CODIGO_HANA", "Código SAP del maestro", "Debe existir en la pestaña Materiales"]);
+    dict.push(["NOTA", "General", "", "Sin OFICINA ni GRUPO: la lista aplica a todos"]);
+    dict.push(["NOTA", "Oficina", "", "Con OFICINA y sin GRUPO: solo ese canal"]);
+    dict.push(["NOTA", "Grupo", "", "Con OFICINA y GRUPO: solo esos vendedores"]);
+    dict.push(["NOTA", "Vigencia mensual", "", "FECHAS vacías = día 1 → fin del mes de carga"]);
+    dict.push(["NOTA", "NOMBRE_LISTA", "", "Filas con mismo proveedor/oficina/grupo/negocio/nombre/moneda/vigencia = UNA lista"]);
+    dict.push(["NOTA", "FEE", "", "Opcional 0-100 (% Cálidda, oculto al rol proveedor)"]);
+    var wsDict = XLSXLib.utils.aoa_to_sheet(dict);
+    wsDict["!cols"] = [{ wch: 16 }, { wch: 30 }, { wch: 34 }, { wch: 52 }];
+    XLSXLib.utils.book_append_sheet(wb, wsDict, "DICCIONARIOS");
+    return wb;
+  }
+
+  function descargarPlantillaListasBulkXlsx_() {
+    var XLSXLib = mpListasBulkXlsx_();
+    if (!XLSXLib) {
+      toast("Plantilla no disponible", "La librería XLSX no está cargada. Revisa tu conexión e inténtalo de nuevo.", true);
+      return;
+    }
+    try {
+      var opts = MP_STATE.options || getMpEmptyOptions();
+      var wb = mpListasBulkBuildWorkbook_(opts);
+      var bytes = XLSXLib.write(wb, { bookType: "xlsx", type: "array" });
+      var blob = new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      if (!blob.size) throw new Error("La plantilla XLSX generada está vacía.");
+      var url = URL.createObjectURL(blob);
+      var link = document.createElement("a");
+      link.href = url;
+      link.download = "Plantilla_Carga_Listas_Precios.xlsx";
+      link.target = "_blank";
+      link.rel = "noopener";
+      document.body.appendChild(link);
+      link.click();
+      window.setTimeout(function() {
+        try { link.remove(); } catch (ignoreRemove) {}
+        try { URL.revokeObjectURL(url); } catch (ignoreRevoke) {}
+      }, 30000);
+      toast("Plantilla descargada", "Se inició la descarga de Plantilla_Carga_Listas_Precios.xlsx (hojas CARGA_LISTAS y DICCIONARIOS).");
+    } catch (error) {
+      toast("No se pudo generar la plantilla", errorMessage(error), true);
+    }
+  }
+
+  function openMpListsBulkModal() {
+    openMpModal("Carga masiva de listas (XLSX)", "Valida y previsualiza antes de grabar: cada fila es un material dentro de una lista oficial (pre_listas_precios + detalle). Nada se graba hasta confirmar.", '<div class="mp-inline-loader"><span class="material-symbols-rounded">hourglass_empty</span>Cargando opciones...</div>', true);
+    ensureMpOptionsForModal(renderMpListsBulkModalBody_);
+  }
+
+  function renderMpListsBulkModalBody_(opts) {
+    opts = opts || getMpEmptyOptions();
+    var body = document.getElementById("mpModalBody");
+    if (!body) return;
+    body.innerHTML = '<form id="mpListsBulkForm" class="mp-modern-form">' +
+      '<section class="mp-upload-hero"><div><h4>Carga masiva de listas oficiales</h4>' +
+      '<p>Descarga la plantilla XLSX, completa la hoja CARGA_LISTAS y valida antes de grabar. Las filas con mismo proveedor, oficina, grupo, negocio, nombre, moneda y vigencia forman UNA lista oficial.</p></div>' +
+      '<div class="mp-upload-badges"><span class="mp-badge"><span class="material-symbols-rounded">fact_check</span>Prevalidación</span>' +
+      '<span class="mp-badge"><span class="material-symbols-rounded">table_rows</span>XLSX</span></div></section>' +
+      '<div class="mp-upload-layout"><div class="mp-modal-section"><h4>Archivo de carga</h4>' +
+      '<p>Cada fila = un material (CODIGO_HANA) con su PRECIO dentro de una lista. La primera acción solo valida; nada se graba hasta confirmar.</p>' +
+      '<div class="mp-form-grid">' +
+      '<label class="mp-file-field mp-form-span-2">Archivo XLSX<input id="mpListsBulkFile" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required></label>' +
+      '</div></div>' +
+      '<div class="mp-upload-sidebar"><div class="mp-help-card"><strong>Para qué sirve cada columna</strong><ul>' +
+      '<li><strong>PROVEEDOR</strong> (obligatorio): nombre, código o id del proveedor dueño de la lista.</li>' +
+      '<li><strong>OFICINA</strong> (opcional): vacía = <strong>General</strong>, la lista aplica a toda la red.</li>' +
+      '<li><strong>GRUPO</strong> (opcional): requiere OFICINA; con ambas = alcance <strong>Grupo</strong>.</li>' +
+      '<li><strong>NEGOCIO</strong>: lo exige la cabecera; si hay un solo negocio vigente puede quedar vacío.</li>' +
+      '<li><strong>NOMBRE_LISTA</strong> (opcional): agrupa filas en una lista; vacío = nombre automático.</li>' +
+      '<li><strong>MONEDA</strong> (opcional): vacía = PEN.</li>' +
+      '<li><strong>FECHA_INICIO / FECHA_FIN</strong> (opcionales): vacías = día 1 → fin del mes de carga.</li>' +
+      '<li><strong>CODIGO_HANA</strong> (obligatorio): código SAP; debe existir en Materiales.</li>' +
+      '<li><strong>PRECIO</strong> (obligatorio): mayor o igual a 0.</li>' +
+      '<li><strong>RESPONSABLE_VENTA / FEE</strong> (opcionales): FEE 0-100.</li>' +
+      '</ul></div></div></div>' +
+      '<div id="mpListsBulkResult" class="mp-material-bulk-result"></div>' +
+      '<div class="mp-upload-actions">' +
+      '<button id="mpListsBulkTemplateLink" class="button button--ghost" type="button"><span class="material-symbols-rounded">download</span>Descargar plantilla XLSX</button>' +
+      '<button id="mpListsBulkSubmit" class="button button--primary" type="submit"><span class="material-symbols-rounded">fact_check</span>Prevalidar listas</button>' +
+      '</div></form>';
+    on("mpListsBulkTemplateLink", "click", function() { descargarPlantillaListasBulkXlsx_(); });
+    var form = document.getElementById("mpListsBulkForm");
+    if (form) {
+      form.addEventListener("submit", function(event) {
+        event.preventDefault();
+        submitMpListsBulkForm_(form);
+      });
+    }
+  }
+
+  function submitMpListsBulkForm_(form) {
+    var input = document.getElementById("mpListsBulkFile");
+    var file = input && input.files ? input.files[0] : null;
+    if (!file) {
+      toast("Archivo requerido", "Selecciona un archivo XLSX de listas.", true);
+      return;
+    }
+    if (!/\.xlsx$/i.test(file.name || "")) {
+      toast("Formato no válido", "La carga masiva de listas requiere un archivo .xlsx.", true);
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast("Archivo muy grande", "El archivo no puede superar 5 MB.", true);
+      return;
+    }
+    var resultBox = document.getElementById("mpListsBulkResult");
+    var submit = document.getElementById("mpListsBulkSubmit");
+    if (submit) {
+      submit.disabled = true;
+      submit.dataset.originalHtml = submit.innerHTML;
+      submit.innerHTML = '<span class="material-symbols-rounded">progress_activity</span>Prevalidando listas…';
+    }
+    if (resultBox) resultBox.innerHTML = '<div class="mp-inline-loader"><span class="material-symbols-rounded">fact_check</span>Validando archivo. Todavía no se grabará ninguna lista...</div>';
+    var reader = new FileReader();
+    reader.onload = function() {
+      var parsed = null;
+      try {
+        parsed = mpListasBulkParseFileBuffer_(reader.result, file.name);
+      } catch (parseError) {
+        if (resultBox) resultBox.innerHTML = mpError(parseError);
+        toast("No se pudo leer", errorMessage(parseError), true);
+        restaurarBotonListasBulk_(submit);
+        return;
+      }
+      if (!parsed || !parsed.filas || !parsed.filas.length) {
+        if (resultBox) resultBox.innerHTML = mpError(new Error("El Excel no trae filas de datos (revisa CODIGO_HANA y elimina la fila EJEMPLO)."));
+        restaurarBotonListasBulk_(submit);
+        return;
+      }
+      prevalidarListasBulkLocal_(parsed, resultBox, submit);
+    };
+    reader.onerror = function() {
+      if (resultBox) resultBox.innerHTML = mpError(new Error("No se pudo leer el archivo seleccionado."));
+      restaurarBotonListasBulk_(submit);
+    };
+    try {
+      reader.readAsArrayBuffer(file);
+    } catch (readError) {
+      if (resultBox) resultBox.innerHTML = mpError(readError);
+      restaurarBotonListasBulk_(submit);
+    }
+  }
+
+  function restaurarBotonListasBulk_(submit) {
+    if (!submit) return;
+    submit.disabled = false;
+    submit.innerHTML = submit.dataset.originalHtml || '<span class="material-symbols-rounded">fact_check</span>Prevalidar listas';
+  }
+
+  function prevalidarListasBulkLocal_(parsed, resultBox, submit) {
+    secureRpc("listarMaterialesPrecioModulo", [{}], "MATERIALES_PRECIOS")
+      .catch(function() { return { registros: [] }; })
+      .then(function(resp) {
+        var opts = MP_STATE.options || getMpEmptyOptions();
+        var valid = mpListasBulkValidarFilas_(parsed.filas, opts, (resp && resp.registros) || []);
+        var tokenPreview = null;
+        var puedeConfirmar = false;
+        if (valid.okItems.length) {
+          tokenPreview = mpGsdStorePending_("LST", { grupos: valid.grupos });
+          puedeConfirmar = true;
+        }
+        renderMpListsBulkPreview_(resultBox, {
+          hoja: parsed.hoja,
+          totalFilas: valid.totalFilas,
+          totalListas: valid.totalListas,
+          totalOk: valid.totalOk,
+          totalErrores: valid.totalErrores,
+          totalAdvertencias: valid.totalAdvertencias,
+          detalle: valid.detalle,
+          puedeConfirmar: puedeConfirmar,
+          tokenPreview: tokenPreview
+        });
+        if (valid.totalErrores && !valid.okItems.length) {
+          toast("Prevalidación con errores", "No se grabó ninguna lista. Corrige el archivo y vuelve a validar.", true);
+        }
+        restaurarBotonListasBulk_(submit);
+      })
+      .catch(function(error) {
+        if (resultBox) resultBox.innerHTML = mpError(error);
+        toast("No se pudo validar", errorMessage(error), true);
+        restaurarBotonListasBulk_(submit);
+      });
+  }
+
+  function renderMpListsBulkPreview_(resultBox, resumen) {
+    if (!resultBox) return;
+    resumen = resumen || {};
+    var detalle = Array.isArray(resumen.detalle) ? resumen.detalle : [];
+    var html = '<div class="mp-upload-summary">' +
+      '<div><small>Filas</small><strong>' + escapeHtml(resumen.totalFilas || 0) + '</strong></div>' +
+      '<div><small>Listas</small><strong>' + escapeHtml(resumen.totalListas || 0) + '</strong></div>' +
+      '<div><small>OK</small><strong>' + escapeHtml(resumen.totalOk || 0) + '</strong></div>' +
+      '<div><small>Errores</small><strong>' + escapeHtml(resumen.totalErrores || 0) + '</strong></div>' +
+      '</div>' +
+      '<p class="mp-note">Prevalidación local (' + escapeHtml(resumen.hoja || "XLSX") + '). Nada se grabó: confirma para crear las listas oficiales y sus detalles.' +
+      (resumen.totalAdvertencias ? ' Advertencias: ' + escapeHtml(resumen.totalAdvertencias) + '.' : '') + '</p>';
+    if (detalle.length) {
+      html += '<div class="table-wrap"><table class="data-table"><thead><tr>' +
+        '<th>Fila</th><th>Lista</th><th>Material</th><th>Precio</th><th>Estado</th><th>Motivo</th>' +
+        '</tr></thead><tbody>' +
+        detalle.map(function(item) {
+          return '<tr><td>' + escapeHtml(item.fila || "") + '</td><td>' + escapeHtml(item.lista || "") + '</td><td>' +
+            escapeHtml(item.material || "") + '</td><td>' + escapeHtml(item.precio || "") + '</td><td>' +
+            escapeHtml(item.estado || "") + '</td><td>' + escapeHtml(item.motivo || "") + '</td></tr>';
+        }).join("") + '</tbody></table></div>';
+    }
+    html += '<div class="mp-actions">';
+    if (resumen.puedeConfirmar && resumen.tokenPreview) {
+      html += '<button id="mpConfirmListsBulk" class="button button--primary" type="button">' +
+        '<span class="material-symbols-rounded">check_circle</span>Confirmar carga de listas</button>';
+    }
+    html += '</div>';
+    resultBox.innerHTML = html;
+    if (resumen.puedeConfirmar && resumen.tokenPreview) {
+      on("mpConfirmListsBulk", "click", function() {
+        confirmarListasBulk_(resultBox, resumen.tokenPreview);
+      });
+    }
+  }
+
+  function confirmarListasBulk_(resultBox, tokenPreview) {
+    var pending = mpGsdTakePending_(tokenPreview);
+    if (!pending || pending.kind !== "LST" || !pending.pendientes || !pending.pendientes.grupos) {
+      toast("Sesión de prevalidación vencida", "Vuelve a prevalidar el archivo antes de confirmar.", true);
+      return;
+    }
+    var grupos = pending.pendientes.grupos || [];
+    var totalDetalles = grupos.reduce(function(n, g) { return n + ((g.items || []).length); }, 0);
+    resultBox.innerHTML = '<div class="mp-inline-loader"><span class="material-symbols-rounded">hourglass_empty</span>Grabando ' + grupos.length + ' listas (' + totalDetalles + ' detalles)...</div>';
+    var button = document.getElementById("mpConfirmListsBulk");
+    if (button) button.disabled = true;
+    var listasCreadas = 0;
+    var listasActualizadas = 0;
+    var detallesCreados = 0;
+    var detallesActualizados = 0;
+    var errores = 0;
+    var detalle = [];
+    var chain = Promise.resolve();
+    grupos.forEach(function(grupo) {
+      chain = chain.then(function() {
+        return secureRpc("guardarListaOficialPrecioModulo", [grupo.cabecera], "MATERIALES_PRECIOS")
+          .then(function(resLista) {
+            var idLista = (resLista && (resLista.idListaPrecio || resLista.idLista)) || "";
+            if (resLista && resLista.creado === false) listasActualizadas += 1;
+            else listasCreadas += 1;
+            var sub = Promise.resolve();
+            (grupo.items || []).forEach(function(item) {
+              sub = sub.then(function() {
+                var det = {
+                  idListaPrecio: idLista,
+                  idMaterial: item.detalle.idMaterial,
+                  precioBase: item.detalle.precioBase,
+                  moneda: item.detalle.moneda,
+                  fee: item.detalle.fee,
+                  responsableVenta: item.detalle.responsableVenta,
+                  estado: "ACTIVO"
+                };
+                return secureRpc("guardarDetalleListaPrecioModulo", [det], "MATERIALES_PRECIOS")
+                  .then(function(resDet) {
+                    if (resDet && resDet.creado === false) detallesActualizados += 1;
+                    else detallesCreados += 1;
+                    detalle.push({ fila: item.fila, lista: grupo.etiqueta, material: item.detalle.idMaterial, precio: String(item.detalle.precioBase), estado: "OK", motivo: "Grabado en lista " + idLista });
+                  })
+                  .catch(function(error) {
+                    errores += 1;
+                    detalle.push({ fila: item.fila, lista: grupo.etiqueta, material: item.detalle.idMaterial, precio: String(item.detalle.precioBase), estado: "ERROR", motivo: errorMessage(error) });
+                  });
+              });
+            });
+            return sub;
+          })
+          .catch(function(error) {
+            errores += (grupo.items || []).length;
+            (grupo.items || []).forEach(function(item) {
+              detalle.push({ fila: item.fila, lista: grupo.etiqueta, material: item.detalle.idMaterial, precio: String(item.detalle.precioBase), estado: "ERROR", motivo: "Lista no creada: " + errorMessage(error) });
+            });
+          });
+      });
+    });
+    chain.then(function() {
+      mpGsdDropPending_(tokenPreview);
+      clearMpTableCache("prices");
+      clearMpSummaryCache();
+      renderMpListsBulkPreview_(resultBox, {
+        hoja: "confirmación",
+        totalFilas: totalDetalles,
+        totalListas: grupos.length,
+        totalOk: detallesCreados + detallesActualizados,
+        totalErrores: errores,
+        totalAdvertencias: 0,
+        detalle: detalle,
+        puedeConfirmar: false,
+        tokenPreview: null
+      });
+      var nota = resultBox.querySelector(".mp-note");
+      if (nota) nota.textContent = "Carga confirmada. Listas creadas: " + listasCreadas + " · actualizadas: " + listasActualizadas + " · detalles creados: " + detallesCreados + " · actualizados: " + detallesActualizados + " · errores: " + errores + ". Solo se grabaron las filas validadas.";
+      toast("Carga de listas confirmada", "Listas: " + listasCreadas + " creadas, " + listasActualizadas + " actualizadas · Detalles con error: " + errores);
+    });
+  }
+  /* MP-LISTAS-BULK-FIN */
 
   function openRequestDetail(idSolicitud) {
     const renderToken = { value: MP_STATE.renderToken, tab: "lists" };

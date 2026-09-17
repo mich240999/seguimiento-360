@@ -317,6 +317,170 @@
     const publicUrl = client.storage.from("evidencias").getPublicUrl(path);
     return { url: publicUrl.data.publicUrl, nombre: comprobante.nombre || comprobante.name || "comprobante", mime: mime, id: path };
   }
+  /* AGENTE C 2026-09-19: auto-creación en cadena proveedor -> oficina -> grupo -> relación -> lista base.
+   * Uso exclusivo: guardarMaterialPrecioModulo (la carga masiva de materiales lo llama por fila).
+   * Todo idempotente: busca por nombre exacto insensible a mayúsculas antes de crear.
+   * Oficinas/grupos vacíos no fallan: solo generan advertencias para completar después. */
+  var ensureProveedorChainSeq_ = 0;
+  function ensureProveedorChainId_(prefix) {
+    ensureProveedorChainSeq_ += 1;
+    var rand = Math.floor(Math.random() * 1296).toString(36).toUpperCase();
+    while (rand.length < 2) rand = "0" + rand;
+    return String(prefix || "AUTO-") + Date.now().toString(36).toUpperCase() + ensureProveedorChainSeq_.toString(36).toUpperCase() + rand;
+  }
+  function ensureProveedorChainNorm_(value) {
+    return String(value == null ? "" : value).trim().toLowerCase();
+  }
+  function ensureProveedorChainFold_(value) {
+    var text = String(value == null ? "" : value);
+    try { text = text.normalize("NFD").replace(/[\u0300-\u036f]/g, ""); } catch (foldError) {}
+    return text.trim().toLowerCase();
+  }
+  async function ensureProveedorChainFindByName_(client, table, nameColumn, name, extraFilter) {
+    var wanted = ensureProveedorChainNorm_(name);
+    if (!wanted) return null;
+    var request = client.from(table).select("*").ilike(nameColumn, String(name).trim()).limit(25);
+    if (extraFilter) request = request.eq(extraFilter.column, extraFilter.value);
+    var found = await request;
+    if (found.error) throw found.error;
+    var rows = found.data || [];
+    for (var i = 0; i < rows.length; i++) {
+      var row = rows[i] || {};
+      if (ensureProveedorChainNorm_(row[nameColumn]) !== wanted) continue;
+      if (extraFilter && String(row[extraFilter.column] || "") !== String(extraFilter.value || "")) continue;
+      return row;
+    }
+    return null;
+  }
+  /* Segunda oportunidad idempotente: ilike no pliega tildes, así que ante un
+   * nombre no encontrado se compara plegando tildes y mayúsculas en cliente.
+   * Solo se ejecuta cuando la búsqueda exacta no halló nada. */
+  async function ensureProveedorChainFindFolded_(client, table, nameColumns, name, extraFilter) {
+    var wanted = ensureProveedorChainFold_(name);
+    if (!wanted) return null;
+    var resp = await client.from(table).select("*").limit(2000);
+    if (resp.error) throw resp.error;
+    var rows = resp.data || [];
+    for (var i = 0; i < rows.length; i++) {
+      var row = rows[i] || {};
+      if (extraFilter && String(row[extraFilter.column] || "") !== String(extraFilter.value || "")) continue;
+      for (var c = 0; c < nameColumns.length; c++) {
+        if (ensureProveedorChainFold_(row[nameColumns[c]]) === wanted) return row;
+      }
+    }
+    return null;
+  }
+  async function ensureProveedorChain_(client, user, input) {
+    input = input || {};
+    var warnings = [];
+    var byUser = (user && user.id_usuario) || null;
+    var providerText = String(input.proveedor || input.nombreProveedor || input.razonSocial || "").trim();
+    var officeText = String(input.oficina || input.nombreOficina || input.oficinaTexto || "").trim();
+    var groupText = String(input.grupo || input.nombreGrupo || input.grupoTexto || "").trim();
+    var providerRow = null;
+    if (String(input.idProveedor || "").trim()) {
+      var byProvId = await client.from("mae_proveedores").select("*").eq("id_proveedor", String(input.idProveedor).trim()).maybeSingle();
+      if (byProvId.error) throw byProvId.error;
+      if (byProvId.data) providerRow = byProvId.data;
+    }
+    if (!providerRow && providerText) {
+      providerRow = await ensureProveedorChainFindByName_(client, "mae_proveedores", "razon_social", providerText, null);
+      if (!providerRow) providerRow = await ensureProveedorChainFindByName_(client, "mae_proveedores", "nombre_comercial", providerText, null);
+      if (!providerRow) providerRow = await ensureProveedorChainFindByName_(client, "mae_proveedores", "nombre", providerText, null);
+      if (!providerRow) providerRow = await ensureProveedorChainFindFolded_(client, "mae_proveedores", ["razon_social", "nombre_comercial", "nombre"], providerText, null);
+      if (!providerRow) {
+        var newProvId = ensureProveedorChainId_("PRV-AUTO-");
+        var createdProv = await client.from("mae_proveedores").insert({ id_proveedor: newProvId, razon_social: providerText, nombre_comercial: providerText, nombre: providerText, alcance_catalogo: "TOTAL", estado: "ACTIVO", id_usuario_actualizacion: byUser });
+        if (createdProv.error) throw createdProv.error;
+        var reProv = await client.from("mae_proveedores").select("*").eq("id_proveedor", newProvId).maybeSingle();
+        if (reProv.error) throw reProv.error;
+        providerRow = reProv.data;
+        if (providerRow) warnings.push("Proveedor creado: " + providerText + ".");
+      }
+    }
+    var officeRow = null;
+    if (String(input.idOficina || "").trim()) {
+      var byOfId = await client.from("mae_oficinas").select("*").eq("id_oficina", String(input.idOficina).trim()).maybeSingle();
+      if (byOfId.error) throw byOfId.error;
+      if (byOfId.data) officeRow = byOfId.data;
+    }
+    if (!officeRow && officeText) {
+      officeRow = await ensureProveedorChainFindByName_(client, "mae_oficinas", "nombre", officeText, null);
+      if (!officeRow) officeRow = await ensureProveedorChainFindFolded_(client, "mae_oficinas", ["nombre"], officeText, null);
+      if (!officeRow) {
+        var newOfId = ensureProveedorChainId_("OFI-AUTO-");
+        var createdOf = await client.from("mae_oficinas").insert({ id_oficina: newOfId, nombre: officeText, estado: "ACTIVO", id_usuario_actualizacion: byUser });
+        if (createdOf.error) throw createdOf.error;
+        var reOf = await client.from("mae_oficinas").select("*").eq("id_oficina", newOfId).maybeSingle();
+        if (reOf.error) throw reOf.error;
+        officeRow = reOf.data;
+        if (officeRow) warnings.push("Oficina creada: " + officeText + ".");
+      }
+    }
+    var groupRow = null;
+    if (String(input.idGrupo || "").trim()) {
+      var byGrId = await client.from("mae_grupos").select("*").eq("id_grupo", String(input.idGrupo).trim()).maybeSingle();
+      if (byGrId.error) throw byGrId.error;
+      if (byGrId.data) groupRow = byGrId.data;
+    }
+    if (!groupRow && groupText) {
+      if (officeRow && officeRow.id_oficina) {
+        groupRow = await ensureProveedorChainFindByName_(client, "mae_grupos", "nombre", groupText, { column: "id_oficina", value: officeRow.id_oficina });
+        if (!groupRow) groupRow = await ensureProveedorChainFindFolded_(client, "mae_grupos", ["nombre"], groupText, { column: "id_oficina", value: officeRow.id_oficina });
+        if (!groupRow) {
+          var newGrId = ensureProveedorChainId_("GRP-AUTO-");
+          var createdGr = await client.from("mae_grupos").insert({ id_grupo: newGrId, id_oficina: officeRow.id_oficina, nombre: groupText, estado: "ACTIVO", id_usuario_actualizacion: byUser });
+          if (createdGr.error) throw createdGr.error;
+          var reGr = await client.from("mae_grupos").select("*").eq("id_grupo", newGrId).maybeSingle();
+          if (reGr.error) throw reGr.error;
+          groupRow = reGr.data;
+          if (groupRow) warnings.push("Grupo creado: " + groupText + " (" + String(officeRow.nombre || officeRow.id_oficina) + ").");
+        }
+      } else {
+        warnings.push("Grupo '" + groupText + "' pendiente: indica la oficina para crearlo.");
+      }
+    }
+    if (providerRow && providerRow.id_proveedor && officeRow && officeRow.id_oficina) {
+      var groupIds = (groupRow && groupRow.id_grupo) ? [groupRow.id_grupo] : [];
+      var relFound = await client.from("rel_proveedor_oficinas").select("id_relacion,ids_grupo").eq("id_proveedor", providerRow.id_proveedor).eq("id_oficina", officeRow.id_oficina).maybeSingle();
+      if (relFound.error) throw relFound.error;
+      if (!relFound.data) {
+        var relId = "RPO-" + String(providerRow.id_proveedor) + "-" + String(officeRow.id_oficina);
+        if (relId.length > 50) relId = ensureProveedorChainId_("RPO-AUTO-");
+        var newRel = await client.from("rel_proveedor_oficinas").insert({ id_relacion: relId, id_proveedor: providerRow.id_proveedor, id_oficina: officeRow.id_oficina, ids_grupo: groupIds.join("|"), alcance_grupos: groupIds.length ? "SELECCIONADOS" : "TODOS", estado: "ACTIVO", id_usuario_actualizacion: byUser });
+        if (newRel.error) throw newRel.error;
+        warnings.push("Canal asignado: " + String(officeRow.nombre || officeRow.id_oficina) + ".");
+      } else if (groupIds.length) {
+        var currentGroups = String((relFound.data && relFound.data.ids_grupo) || "").split("|").filter(Boolean);
+        if (currentGroups.indexOf(groupIds[0]) === -1) {
+          currentGroups.push(groupIds[0]);
+          var updRel = await client.from("rel_proveedor_oficinas").update({ ids_grupo: currentGroups.join("|"), alcance_grupos: "SELECCIONADOS", id_usuario_actualizacion: byUser }).eq("id_relacion", relFound.data.id_relacion);
+          if (updRel.error) throw updRel.error;
+        }
+      }
+      var curCanales = String(providerRow.codigo_canales_venta || "").split("|").filter(Boolean);
+      if (curCanales.indexOf(String(officeRow.id_oficina)) === -1) curCanales.push(String(officeRow.id_oficina));
+      var curGrupos = String(providerRow.codigo_grupos_vendedores || "").split("|").filter(Boolean);
+      if (groupRow && groupRow.id_grupo && curGrupos.indexOf(String(groupRow.id_grupo)) === -1) curGrupos.push(String(groupRow.id_grupo));
+      var updProv = await client.from("mae_proveedores").update({ codigo_canales_venta: curCanales.join("|"), codigo_grupos_vendedores: curGrupos.join("|"), id_usuario_actualizacion: byUser }).eq("id_proveedor", providerRow.id_proveedor);
+      if (updProv.error) throw updProv.error;
+    } else if ((providerText || providerRow) && !officeRow) {
+      warnings.push("Sin oficina: se completará después.");
+    }
+    if (providerRow && providerRow.id_proveedor) {
+      var listsFound = await client.from("pre_listas_precios").select("id_lista_precio").eq("id_proveedor", providerRow.id_proveedor).limit(1);
+      if (listsFound.error) throw listsFound.error;
+      if (!(listsFound.data && listsFound.data.length)) {
+        var todayList = new Date().toISOString().slice(0, 10);
+        var listId = ensureProveedorChainId_("LP-BASE-");
+        var provName = providerRow.nombre_comercial || providerRow.razon_social || providerRow.id_proveedor;
+        var newList = await client.from("pre_listas_precios").insert({ id_lista_precio: listId, codigo_lista: listId, nombre: "Lista base " + String(provName).slice(0, 120), id_proveedor: providerRow.id_proveedor, fecha_inicio: todayList, fecha_fin: null, moneda: "PEN", estado: "ACTIVA", id_usuario_actualizacion: byUser });
+        if (newList.error) throw newList.error;
+        warnings.push("Lista base creada para " + String(provName) + ".");
+      }
+    }
+    return { idProveedor: providerRow ? providerRow.id_proveedor : "", idOficina: officeRow ? officeRow.id_oficina : "", idGrupo: groupRow ? groupRow.id_grupo : "", advertencias: warnings };
+  }
   async function executeSupabaseOperation(client, operation, args, user) {
     const query = async function(table, columns) { const response = await client.from(table).select(columns || "*"); if (response.error) throw response.error; return response.data || []; };
     const csv = function(headers, rows) { const cell = function(value) { const text = String(value == null ? "" : value); return '"' + text.replace(/"/g, '""') + '"'; }; return "\\ufeff" + [headers].concat(rows || []).map(function(row) { return row.map(cell).join(","); }).join("\\r\\n"); };
@@ -376,7 +540,7 @@
     if (operation === "guardarProveedorModulo" || operation === "guardarProveedorAdminMotor") { const x=args[0] || {}; const id=x.idProveedor || "PRV-"+Date.now(); const idsOficina=Array.isArray(x.idsOficina)?x.idsOficina:[]; const idsGrupo=Array.isArray(x.idsGrupo)?x.idsGrupo:[]; const saved=await client.from("mae_proveedores").upsert({id_proveedor:id,razon_social:x.razonSocial || x.nombreComercial || "Proveedor",nombre_comercial:x.nombreComercial || x.razonSocial || "Proveedor",nombre:x.nombreComercial || x.razonSocial || "Proveedor",codigo_sap:x.codigoSap || null,ruc:x.ruc || null,descripcion:x.descripcion || null,alcance_catalogo:x.alcanceCatalogo || "TOTAL",codigo_canales_venta:idsOficina.join("|"),codigo_grupos_vendedores:idsGrupo.join("|"),estado:x.estado || "ACTIVO",id_usuario_actualizacion:user.id_usuario}); if(saved.error) throw saved.error; const old=await client.from("rel_proveedor_oficinas").delete().eq("id_proveedor",id); if(old.error) throw old.error; const allGroups=await query("mae_grupos"); for(let i=0;i<idsOficina.length;i+=1){const groups=idsGrupo.filter(function(groupId){return allGroups.some(function(group){return group.id_grupo===groupId && group.id_oficina===idsOficina[i];});});const relation=await client.from("rel_proveedor_oficinas").insert({id_relacion:"RPO-"+id+"-"+idsOficina[i],id_proveedor:id,id_oficina:idsOficina[i],ids_grupo:groups.join("|"),alcance_grupos:groups.length?"SELECCIONADOS":"TODOS",estado:"ACTIVO",id_usuario_actualizacion:user.id_usuario});if(relation.error)throw relation.error;} return {correcto:true,idProveedor:id,nombreComercial:x.nombreComercial || x.razonSocial}; }
     if (operation === "guardarOficinaAdminMotor") { const x=args[0]||{}; if(!String(x.idOficina||"").trim()) throw new Error("El ID de oficina es obligatorio."); const saved=await client.from("mae_oficinas").upsert({id_oficina:x.idOficina,nombre:x.nombre,descripcion:x.descripcion||null,estado:x.estado||"ACTIVO",id_usuario_actualizacion:user.id_usuario});if(saved.error)throw saved.error;return {correcto:true,idOficina:x.idOficina}; }
     if (operation === "guardarGrupoAdminMotor") { const x=args[0]||{}; if(!String(x.idGrupo||"").trim() || !String(x.idOficina||"").trim()) throw new Error("El ID del grupo y la oficina son obligatorios."); const saved=await client.from("mae_grupos").upsert({id_grupo:x.idGrupo,id_oficina:x.idOficina,nombre:x.nombre,descripcion:x.descripcion||null,estado:x.estado||"ACTIVO",id_usuario_actualizacion:user.id_usuario});if(saved.error)throw saved.error;return {correcto:true,idGrupo:x.idGrupo}; }
-    if (operation === "guardarMaterialPrecioModulo") { const x=args[0] || {}; const id=x.idMaterial || "MAT-"+Date.now(); let brandId=String(x.idMarca || "").trim(); if(brandId){const brands=await query("mae_marcas");const found=brands.find(function(b){return b.id_marca===brandId || String(b.nombre).toLowerCase()===brandId.toLowerCase();});if(found)brandId=found.id_marca;else{brandId="MAR-"+Date.now();const brand=await client.from("mae_marcas").insert({id_marca:brandId,codigo_marca:brandId,nombre:String(x.idMarca).trim(),estado:"ACTIVO",id_usuario_actualizacion:user.id_usuario});if(brand.error)throw brand.error;}} const saved=await client.from("mae_materiales").upsert({id_material:id,codigo_material:x.codigoMaterial || id,codigo_sap:x.codigoHana || x.codigoSap || null,codigo_hana:x.codigoHana || x.codigoSap || null,id_producto:x.idProducto || null,id_tipo_material:x.idTipoMaterial || null,id_subtipo_material:x.idSubtipoMaterial || null,id_marca:brandId || null,nombre_material:x.nombreMaterial || x.descripcionMaterial || "Material",descripcion_material:x.descripcionMaterial || null,proveedor:x.proveedor || null,incluye_conexion:x.incluyeConexion || x.incluye_conexion || null,producto_principal:x.productoPrincipal || x.producto_principal || null,combo:x.combo || null,comentarios:x.comentarios || null,unidad_medida:x.unidadMedida || "UND",es_gasodomestico:!!x.esGasodomestico,estado:x.estado || "ACTIVO",id_usuario_actualizacion:user.id_usuario}); if(saved.error) throw saved.error; return {correcto:true,idMaterial:id,mensaje:"Material guardado correctamente."}; }
+    if (operation === "guardarMaterialPrecioModulo") { const x=args[0] || {}; const id=x.idMaterial || "MAT-"+Date.now(); var chainWarnProv364_ = []; try { var chain364_ = await ensureProveedorChain_(client, user, { proveedor: (x.proveedor || x.nombreProveedor || ""), oficina: (x.oficina || x.nombreOficina || x.oficinaTexto || ""), grupo: (x.grupo || x.nombreGrupo || x.grupoTexto || ""), idProveedor: (x.idProveedor || ""), idOficina: (x.idOficina || ""), idGrupo: (x.idGrupo || "") }); if (chain364_ && chain364_.advertencias) chainWarnProv364_ = chain364_.advertencias; } catch (chainError364_) { try { console.warn("[SGT360] Auto-creación proveedor (material):", chainError364_); } catch (_) {} chainWarnProv364_.push("No se pudo completar la cadena de proveedor: " + String((chainError364_ && chainError364_.message) || chainError364_)); } let brandId=String(x.idMarca || "").trim(); if(brandId){const brands=await query("mae_marcas");const found=brands.find(function(b){return b.id_marca===brandId || String(b.nombre).toLowerCase()===brandId.toLowerCase();});if(found)brandId=found.id_marca;else{brandId="MAR-"+Date.now();const brand=await client.from("mae_marcas").insert({id_marca:brandId,codigo_marca:brandId,nombre:String(x.idMarca).trim(),estado:"ACTIVO",id_usuario_actualizacion:user.id_usuario});if(brand.error)throw brand.error;}} const saved=await client.from("mae_materiales").upsert({id_material:id,codigo_material:x.codigoMaterial || id,codigo_sap:x.codigoHana || x.codigoSap || null,codigo_hana:x.codigoHana || x.codigoSap || null,id_producto:x.idProducto || null,id_tipo_material:x.idTipoMaterial || null,id_subtipo_material:x.idSubtipoMaterial || null,id_marca:brandId || null,nombre_material:x.nombreMaterial || x.descripcionMaterial || "Material",descripcion_material:x.descripcionMaterial || null,proveedor:x.proveedor || null,incluye_conexion:x.incluyeConexion || x.incluye_conexion || null,producto_principal:x.productoPrincipal || x.producto_principal || null,combo:x.combo || null,comentarios:x.comentarios || null,unidad_medida:x.unidadMedida || "UND",es_gasodomestico:!!x.esGasodomestico,estado:x.estado || "ACTIVO",id_usuario_actualizacion:user.id_usuario}); if(saved.error) throw saved.error; return {correcto:true,idMaterial:id,mensaje:"Material guardado correctamente." + (chainWarnProv364_.length ? " " + chainWarnProv364_.join(" ") : ""),advertencias:chainWarnProv364_}; }
     if (operation === "listarProveedoresModulo") { const rows = await query("mae_proveedores"); const records = rows.map(function(x) { return { idProveedor:x.id_proveedor,razonSocial:x.razon_social,nombreComercial:x.nombre_comercial,codigoSap:x.codigo_sap,ruc:x.ruc,descripcion:x.descripcion,idsOficina:String(x.codigo_canales_venta||"").split("|").filter(Boolean),idsGrupo:String(x.codigo_grupos_vendedores||"").split("|").filter(Boolean),alcanceCatalogo:x.alcance_catalogo,estado:x.estado }; }); return normalizeModuleResponse(operation, { proveedores: records }); }
     if (operation === "obtenerResumenMaterialesPreciosModulo") { const all=await Promise.all([query("mae_materiales"),query("pre_listas_precios"),query("pre_solicitudes_lista_precio")]);const active=function(row){return String(row.estado||"").toUpperCase()==="ACTIVO";};const pending=["CARGADO","OBSERVADO_POR_SISTEMA","PENDIENTE_REVISION","EN_REVISION","OBSERVADO_POR_REVISOR","PENDIENTE"];return {correcto:true,generadoEn:new Date().toISOString(),materiales:all[0].length,materialesActivos:all[0].filter(active).length,listasOficiales:all[1].filter(function(row){return String(row.estado||"").toUpperCase()!=="INACTIVA";}).length,listasActivas:all[1].filter(active).length,preciosActivos:0,solicitudesPendientes:all[2].filter(function(row){return pending.indexOf(String(row.estado||"").toUpperCase())!==-1;}).length,moneda:"PEN"}; }
     if (operation === "listarMaterialesPrecioModulo" || operation === "listarMaterialesSelectPreciosModulo") { const all=await Promise.all([query("mae_materiales"),query("mae_marcas"),query("mae_productos_principales"),query("mae_tipos_material"),query("mae_subtipos_material")]); const search=String((args[0]||{}).texto||"").trim().toLowerCase();const scopeRolM29S_=String((user&&user.rol)||"").toUpperCase();const scopeAdminM29S_=(scopeRolM29S_==="SUPERADMIN"||scopeRolM29S_==="ADMIN");const scopeProvM29S_=String((user&&(user.id_proveedor||user.idProveedor))||"").trim();const scopeMatOK29S_=function(x){if(scopeAdminM29S_||!scopeProvM29S_)return true;if(x.id_proveedor&&String(x.id_proveedor).trim()!==scopeProvM29S_)return false;return true;}; const records = all[0].filter(function(x){return scopeMatOK29S_(x)&&(!search || [x.codigo_material,x.codigo_sap,x.nombre_material,x.descripcion_material].join(" ").toLowerCase().indexOf(search)!==-1);}).map(function(x) { const brand=all[1].find(function(b){return b.id_marca===x.id_marca;})||{};const product=all[2].find(function(p){return p.id_producto===x.id_producto;})||{};const type=all[3].find(function(t){return t.id_tipo_material===x.id_tipo_material;})||{};const subtype=all[4].find(function(s){return s.id_subtipo_material===x.id_subtipo_material;})||{}; const name=x.nombre_material||x.descripcion_material||x.codigo_material; return { id:x.id_material,codigo:x.codigo_material,codigoSap:x.codigo_sap,nombre:name,idMaterial:x.id_material,codigoMaterial:x.codigo_material,idProducto:x.id_producto,idTipoMaterial:x.id_tipo_material,idSubtipoMaterial:x.id_subtipo_material,idMarca:x.id_marca,marca:brand.nombre||"",producto:product.nombre||"",tipo:type.nombre||"",subtipo:subtype.nombre||"",nombreMaterial:x.nombre_material,descripcionMaterial:x.descripcion_material,unidadMedida:x.unidad_medida,estado:x.estado }; }); return operation === "listarMaterialesSelectPreciosModulo" ? { registros: records } : normalizeModuleResponse(operation, { materiales: records }); }
@@ -384,6 +548,12 @@
     if (operation === "obtenerPlantillaMaterialesModulo") return file("plantilla_materiales.csv",["PROVEEDOR","MARCA","TIPO","SUBTIPO","INCLUYE_CONEXION","CODIGO_HANA","PRODUCTO_PRINCIPAL","COMBO","CODIGO_SAP","NOMBRE_MATERIAL","DESCRIPCION_MATERIAL","UNIDAD_MEDIDA","ESTADO"],[]);
     if (operation === "obtenerPlantillaPreciosIndividualesModulo" || operation === "obtenerPlantillaListaPreciosModulo") return file("plantilla_precios.csv",["CODIGO_HANA","CODIGO_MATERIAL","PROVEEDOR","RESPONSABLE_VENTA","PRECIO_BASE","FEE","MONEDA","FECHA_INICIO","FECHA_FIN","DETALLE_COMBO"],[]);
     if (operation === "listarListasOficialesPreciosModulo") { const all=await Promise.all([query("pre_lista_precio_detalle"),query("pre_listas_precios"),query("mae_materiales"),query("mae_proveedores"),query("mae_negocios")]); const rows=all[0].map(function(d){const list=all[1].find(function(x){return x.id_lista_precio===d.id_lista_precio;})||{};const material=all[2].find(function(x){return x.id_material===d.id_material;})||{};const provider=all[3].find(function(x){return x.id_proveedor===list.id_proveedor;})||{};const business=all[4].find(function(x){return x.id_negocio===list.id_negocio;})||{};return {idDetallePrecio:d.id_detalle_precio,idListaPrecio:d.id_lista_precio,proveedor:provider.nombre_comercial||provider.razon_social||"—",negocio:business.nombre||"—",idProveedor:list.id_proveedor,idNegocio:list.id_negocio,idOficina:list.id_oficina,idGrupo:list.id_grupo,codigoSap:material.codigo_sap,codigoMaterial:material.codigo_material,idMaterial:material.id_material,nombreCortoMaterial:material.nombre_material,descripcionMaterial:material.descripcion_material,precioBase:d.precio_base,fee:(String(user && user.rol || "").toUpperCase()==="PROVEEDOR" ? null : d.fee),responsableVenta:d.responsable_venta || list.responsable_venta || "",moneda:d.moneda||list.moneda,fechaInicio:list.fecha_inicio,fechaFin:list.fecha_fin,detalleCombo:d.detalle_combo,estado:d.estado};}); return {registros:rows,paginacion:{pagina:1,totalPaginas:1,total:rows.length}}; }
+    /* AGENTE B (2026-09-17): crear/listar listas oficiales (pre_listas_precios) y su
+       carga de detalles (pre_lista_precio_detalle). Usados por la carga masiva XLSX
+       de la pestaña Listas. Columnas existentes (nombre/fee/responsable_venta/
+       moneda); sin migraciones. */
+    if (operation === "guardarListaOficialPrecioModulo") { const L=args[0]||{}; const idProvL=String(L.idProveedor||"").trim(); if(!idProvL) throw new Error("Selecciona el proveedor. Todo precio debe pertenecer a un proveedor; General solo significa sin oficina ni grupo."); const provL=await client.from("mae_proveedores").select("id_proveedor,estado").eq("id_proveedor",idProvL).maybeSingle(); if(provL.error) throw provL.error; if(!provL.data) throw new Error("El proveedor seleccionado no existe o está inactivo."); const ofL=String(L.idOficina||"").trim(); let grL=String(L.idGrupo||"").trim(); if(grL && !ofL) throw new Error("Para usar grupo debes seleccionar una oficina de ventas."); if(!ofL) grL=""; if(grL){ const grRow=await client.from("mae_grupos").select("id_grupo,id_oficina,estado").eq("id_grupo",grL).maybeSingle(); if(grRow.error) throw grRow.error; if(!grRow.data) throw new Error("El grupo seleccionado no existe."); if(String(grRow.data.id_oficina||"").trim() && String(grRow.data.id_oficina).trim()!==ofL) throw new Error("El grupo no pertenece a la oficina indicada."); } const negL=String(L.idNegocio||"").trim(); if(negL){ const negRow=await client.from("mae_negocios").select("id_negocio").eq("id_negocio",negL).maybeSingle(); if(negRow.error) throw negRow.error; if(!negRow.data) throw new Error("El negocio indicado no existe."); } const nowL=new Date(); const defIniL=nowL.toISOString().slice(0,8)+"01"; const defFinL=new Date(nowL.getFullYear(),nowL.getMonth()+1,0).toISOString().slice(0,10); const iniL=String(L.fechaInicio||"").trim().slice(0,10)||defIniL; const finL=String(L.fechaFin||"").trim().slice(0,10)||defFinL; if(finL<iniL) throw new Error("La fecha fin no puede ser menor que la fecha inicio."); const codigoL=String(L.codigoLista||"").trim(); const nombreL=String(L.nombre||"").trim()||"Lista de precios"; const wantedL=String(L.idListaPrecio||"").trim(); let rowL=null; if(wantedL){ const prevL=await client.from("pre_listas_precios").select("*").eq("id_lista_precio",wantedL).maybeSingle(); if(prevL.error) throw prevL.error; rowL=prevL.data||null; } const idL=rowL?rowL.id_lista_precio:(wantedL||("LPR-"+Date.now()+"-"+Math.floor(Math.random()*1000))); const payloadL={id_lista_precio:idL,codigo_lista:codigoL||(rowL?rowL.codigo_lista:idL),nombre:nombreL,id_proveedor:idProvL,id_negocio:negL||null,id_oficina:ofL||null,id_grupo:grL||null,responsable_venta:String(L.responsableVenta||"").trim()||null,fecha_inicio:iniL,fecha_fin:finL||null,moneda:String(L.moneda||"PEN").trim()||"PEN",estado:String(L.estado||"ACTIVA").trim()||"ACTIVA",id_usuario_actualizacion:user.id_usuario}; const savedL=await client.from("pre_listas_precios").upsert(payloadL,{onConflict:"id_lista_precio"}); if(savedL.error) throw new Error("No se pudo guardar la lista: "+savedL.error.message); return {correcto:true,idListaPrecio:idL,creado:!rowL,mensaje:!rowL?"Lista oficial creada.":"Lista oficial actualizada."}; }
+    if (operation === "guardarDetalleListaPrecioModulo") { const D=args[0]||{}; const idListaD=String(D.idListaPrecio||"").trim(); if(!idListaD) throw new Error("Indica la lista de precios del detalle."); const listaD=await client.from("pre_listas_precios").select("id_lista_precio").eq("id_lista_precio",idListaD).maybeSingle(); if(listaD.error) throw listaD.error; if(!listaD.data) throw new Error("La lista de precios no existe."); const idMatD=String(D.idMaterial||"").trim(); if(!idMatD) throw new Error("Indica el material del precio."); const matD=await client.from("mae_materiales").select("id_material,estado").eq("id_material",idMatD).maybeSingle(); if(matD.error) throw matD.error; if(!matD.data) throw new Error("El material no existe."); const precioD=Number(D.precioBase); if(!Number.isFinite(precioD)||precioD<0) throw new Error("Precio base inválido."); let feeD=null; if(D.fee!==null&&D.fee!==undefined&&String(D.fee).trim()!==""){ feeD=Number(D.fee); if(!Number.isFinite(feeD)||feeD<0||feeD>100) throw new Error("El fee debe ser un porcentaje entre 0 y 100."); } let idDetD=String(D.idDetallePrecio||"").trim(); let creadoD=true; if(!idDetD){ const prevD=await client.from("pre_lista_precio_detalle").select("id_detalle_precio").eq("id_lista_precio",idListaD).eq("id_material",idMatD).maybeSingle(); if(prevD.error) throw prevD.error; if(prevD.data){ idDetD=prevD.data.id_detalle_precio; creadoD=false; } } if(!idDetD) idDetD="DPR-"+Date.now()+"-"+Math.floor(Math.random()*10000); const payloadD={id_detalle_precio:idDetD,codigo_precio:idDetD,id_lista_precio:idListaD,id_material:idMatD,precio_base:precioD,moneda:String(D.moneda||"PEN").trim()||"PEN",fee:feeD,responsable_venta:String(D.responsableVenta||"").trim()||null,tiene_combo:false,detalle_combo:null,estado:String(D.estado||"ACTIVO").trim()||"ACTIVO",id_usuario_actualizacion:user.id_usuario}; const savedD=await client.from("pre_lista_precio_detalle").upsert(payloadD,{onConflict:"id_detalle_precio"}); if(savedD.error) throw new Error("No se pudo guardar el detalle: "+savedD.error.message); return {correcto:true,idDetallePrecio:idDetD,idListaPrecio:idListaD,creado:creadoD,mensaje:creadoD?"Detalle creado.":"Detalle actualizado."}; }
     if (operation === "guardarPrecioIndividualMaterialesPreciosModulo") { const x=args[0]||{}; var mpMonthNow=new Date(); var mpMonthFirst=mpMonthNow.toISOString().slice(0,8)+"01"; var mpMonthLast=new Date(mpMonthNow.getFullYear(),mpMonthNow.getMonth()+1,0).toISOString().slice(0,10); if(!x.fechaInicio)x.fechaInicio=mpMonthFirst; if(!x.fechaFin)x.fechaFin=mpMonthLast; let listId=x.idListaPrecio||"LPR-"+Date.now(); if(!x.idListaPrecio){const list=await client.from("pre_listas_precios").insert({id_lista_precio:listId,codigo_lista:listId,nombre:"Lista "+listId,id_proveedor:x.idProveedor,id_negocio:x.idNegocio||null,id_oficina:x.idOficina||null,id_grupo:x.idGrupo||null,responsable_venta:x.responsableVenta || x.responsable_venta || null,fecha_inicio:x.fechaInicio,fecha_fin:x.fechaFin||null,moneda:x.moneda||"PEN",estado:"ACTIVA",id_usuario_actualizacion:user.id_usuario});if(list.error)throw list.error;} const detailId=x.idDetallePrecio||"DPR-"+Date.now();const detail=await client.from("pre_lista_precio_detalle").upsert({id_detalle_precio:detailId,codigo_precio:detailId,id_lista_precio:listId,id_material:x.idMaterial,precio_base:Number(x.precioBase),moneda:x.moneda||"PEN",fee:(x.fee===null||x.fee===undefined||x.fee===""?null:Number(x.fee)),responsable_venta:x.responsableVenta || x.responsable_venta || null,tiene_combo:String(x.tieneCombo||"").toUpperCase()==="SI",detalle_combo:x.detalleCombo||null,descripcion_combo:x.detalleCombo||null,estado:"ACTIVO",id_usuario_actualizacion:user.id_usuario});if(detail.error)throw detail.error;return {correcto:true,mensaje:"El precio fue registrado.",precioVista:{idDetallePrecio:detailId,idListaPrecio:listId,idProveedor:x.idProveedor,idNegocio:x.idNegocio,idOficina:x.idOficina,idGrupo:x.idGrupo,idMaterial:x.idMaterial,precioBase:x.precioBase,fee:(x.fee===undefined?"":x.fee),responsableVenta:x.responsableVenta||x.responsable_venta||"",moneda:x.moneda||"PEN",fechaInicio:x.fechaInicio,fechaFin:x.fechaFin,detalleCombo:x.detalleCombo||"",proveedor:x._labelProveedor,negocio:x._labelNegocio}}; }
     if (operation === "exportarMaterialesModulo") { const rows=await query("mae_materiales"); return file("materiales.csv",["CODIGO_MATERIAL","CODIGO_SAP","NOMBRE","DESCRIPCION","UNIDAD","ESTADO"],rows.map(function(x){return [x.codigo_material,x.codigo_sap,x.nombre_material,x.descripcion_material,x.unidad_medida,x.estado];})); }
     if (operation === "exportarPreciosOficialesModulo") { const result=await executeSupabaseOperation(client,"listarListasOficialesPreciosModulo",args,user); var mpIsProv=String(user && user.rol || "").toUpperCase()==="PROVEEDOR"; var mpHeads=mpIsProv?["PROVEEDOR","RESPONSABLE_VENTA","NEGOCIO","CODIGO_MATERIAL","MATERIAL","PRECIO","MONEDA","INICIO","FIN"]:["PROVEEDOR","RESPONSABLE_VENTA","NEGOCIO","CODIGO_MATERIAL","MATERIAL","PRECIO","FEE","MONEDA","INICIO","FIN"]; return file("precios.csv",mpHeads,result.registros.map(function(x){var base=[x.proveedor,x.responsableVenta||"",x.negocio,x.codigoMaterial,x.nombreCortoMaterial,x.precioBase]; if(!mpIsProv)base.push(x.fee==null?"":x.fee); return base.concat([x.moneda,x.fechaInicio,x.fechaFin]);})); }
