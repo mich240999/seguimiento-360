@@ -224,9 +224,19 @@
           data-tooltip-position="bottom">
           <span class="material-symbols-rounded">refresh</span>
         </button>
-        <button id="profileButton" class="profile-button" type="button" aria-label="Perfil">
-          <span id="topbarUserInitials">U</span>
-        </button>
+        <div class="profile-menu-wrap">
+          <button id="profileButton" class="profile-button" type="button" aria-label="Perfil" aria-haspopup="menu" aria-expanded="false">
+            <span id="topbarUserInitials">U</span>
+          </button>
+          <div id="profileMenu" class="profile-menu" role="menu" hidden>
+            <button id="profileChangePassword" class="profile-menu-item" type="button" role="menuitem">
+              <span class="material-symbols-rounded" aria-hidden="true">key</span>Cambiar contraseña
+            </button>
+            <button id="profileLogout" class="profile-menu-item profile-menu-item--danger" type="button" role="menuitem">
+              <span class="material-symbols-rounded" aria-hidden="true">logout</span>Cerrar sesión
+            </button>
+          </div>
+        </div>
       </div>
     </header>
 

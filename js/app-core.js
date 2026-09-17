@@ -502,6 +502,9 @@ const APP_STORAGE = Object.freeze({
       synchronizeApplicationChanges(false, true);
     });
     on("logoutButton", "click", function() { closeApplicationSession(false); });
+    on("profileButton", "click", function(event) { event.stopPropagation(); toggleProfileMenu(); });
+    on("profileChangePassword", "click", function() { closeProfileMenu(); openChangePasswordModal(); });
+    on("profileLogout", "click", function() { closeProfileMenu(); closeApplicationSession(false); });
     on("deactivateAccountButton", "click", requestSelfDeactivation);
     on("rolePreviewSelect", "change", handleRolePreviewChange);
     on("rolePreviewUserSelect", "change", handleRolePreviewUserChange);
@@ -520,6 +523,14 @@ const APP_STORAGE = Object.freeze({
         closeModal();
         closeSideSheet();
         closeSidebar();
+        closeProfileMenu();
+      }
+    });
+
+    document.addEventListener("click", function(event) {
+      const menu = document.getElementById("profileMenu");
+      if (menu && !menu.hidden && !event.target.closest(".profile-menu-wrap")) {
+        closeProfileMenu();
       }
     });
 
@@ -541,6 +552,7 @@ const APP_STORAGE = Object.freeze({
    */
   function showLogin(message, isError) {
     stopTimers();
+    closeProfileMenu();
     document.getElementById("appShell").hidden = true;
     document.getElementById("authView").hidden = false;
     setLoader(false);
@@ -1726,6 +1738,83 @@ const APP_STORAGE = Object.freeze({
    * Cierra side hoja.
    */
   function closeSideSheet() { document.getElementById("sideSheetRoot").hidden = true; }
+
+  /**
+   * Muestra u oculta el menú del avatar (cambiar contraseña / cerrar sesión).
+   */
+  function toggleProfileMenu() {
+    const menu = document.getElementById("profileMenu");
+    const button = document.getElementById("profileButton");
+    if (!menu) return;
+    menu.hidden = !menu.hidden;
+    if (button) button.setAttribute("aria-expanded", String(!menu.hidden));
+  }
+  function closeProfileMenu() {
+    const menu = document.getElementById("profileMenu");
+    const button = document.getElementById("profileButton");
+    if (menu) menu.hidden = true;
+    if (button) button.setAttribute("aria-expanded", "false");
+  }
+
+  /**
+   * Abre el modal de cambio de contraseña de la sesión actual.
+   */
+  function openChangePasswordModal() {
+    openModal({
+      eyebrow: "CUENTA",
+      title: "Cambiar contraseña",
+      body: '<label class="field"><span>Nueva contraseña</span><input id="newPasswordInput" type="password" autocomplete="new-password" minlength="6" placeholder="Mínimo 6 caracteres"></label>' +
+        '<label class="field" style="margin-top:12px"><span>Confirmar contraseña</span><input id="confirmPasswordInput" type="password" autocomplete="new-password" minlength="6" placeholder="Repite la nueva contraseña"></label>' +
+        '<p id="passwordChangeError" class="inline-message is-error" role="alert" hidden></p>',
+      footer: '<button class="button button--secondary" type="button" id="cancelPasswordChange">Cancelar</button>' +
+        '<button class="button button--primary" type="button" id="savePasswordChange"><span class="material-symbols-rounded">key</span>Guardar</button>'
+    });
+    on("cancelPasswordChange", "click", closeModal);
+    on("savePasswordChange", "click", submitPasswordChange);
+  }
+
+  /**
+   * Guarda la nueva contraseña con Supabase Auth.
+   */
+  function submitPasswordChange() {
+    const first = document.getElementById("newPasswordInput");
+    const second = document.getElementById("confirmPasswordInput");
+    const error = document.getElementById("passwordChangeError");
+    const showError = function(message) {
+      if (error) {
+        error.hidden = !message;
+        error.textContent = message || "";
+      }
+    };
+    const p1 = first ? first.value : "";
+    const p2 = second ? second.value : "";
+    if (!p1 || p1.length < 6) {
+      showError("La contraseña debe tener al menos 6 caracteres.");
+      return;
+    }
+    if (p1 !== p2) {
+      showError("Las contraseñas no coinciden.");
+      return;
+    }
+    showError("");
+    const button = document.getElementById("savePasswordChange");
+    if (button) button.disabled = true;
+    const client = window.supabaseClient && window.supabaseClient.getClient ?
+      window.supabaseClient.getClient() : null;
+    if (!client) {
+      showError("Conexión con Supabase no disponible.");
+      if (button) button.disabled = false;
+      return;
+    }
+    client.auth.updateUser({ password: p1 }).then(function(result) {
+      if (result.error) throw result.error;
+      closeModal();
+      toast("Contraseña actualizada", "Usa tu nueva contraseña en el próximo inicio de sesión.");
+    }).catch(function(err) {
+      showError(errorMessage(err, "No fue posible cambiar la contraseña."));
+      if (button) button.disabled = false;
+    });
+  }
 
   /**
    * Asigna la operación correspondiente.
