@@ -68,7 +68,7 @@ function renderSalesDashboardFrame() {
         ".sd360-workspace .sales-card{min-width:0;overflow:hidden}" +
         ".sd360-kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:18px}" +
         ".sd360-kpi small{display:block;color:#6b778c;font-weight:700;text-transform:uppercase;letter-spacing:.04em;font-size:11px}" +
-        ".sd360-kpi strong{font-size:26px;display:block;margin-top:6px}" +
+        ".sd360-kpi strong{font-size:26px;display:block;margin-top:6px;white-space:nowrap;line-height:1.2;overflow:hidden}" +
         ".sd360-kpi span{display:block;color:#6b778c;font-size:12px;margin-top:2px}" +
         ".sd360-filters{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);gap:12px;margin-bottom:0}" +
         ".sd360-filters>*{min-width:0}" +
@@ -314,6 +314,33 @@ function renderSalesDashboardKpis(rows) {
     return '<div class="mp-card sd360-kpi"><small>' + escapeHtml(card[0]) + "</small><strong>" +
       escapeHtml(card[1]) + "</strong><span>" + escapeHtml(card[2]) + "</span></div>";
   }).join("");
+
+  sd360FitKpiNumbers();
+}
+
+/**
+ * Encoge la cifra de cada KPI hasta que quepa en una línea.
+ * Se re-ejecuta al redimensionar la ventana.
+ */
+function sd360FitKpiNumbers() {
+  window.requestAnimationFrame(function() {
+    document.querySelectorAll("#sd360Kpis .sd360-kpi strong").forEach(function(element) {
+      var size = 26;
+      element.style.fontSize = size + "px";
+      while (size > 12 && element.scrollWidth > element.clientWidth + 1) {
+        size -= 1;
+        element.style.fontSize = size + "px";
+      }
+    });
+  });
+
+  if (!SD360_STATE.resizeBound) {
+    SD360_STATE.resizeBound = true;
+    window.addEventListener("resize", function() {
+      if (!document.getElementById("sd360Kpis")) return;
+      sd360FitKpiNumbers();
+    });
+  }
 }
 
 function renderSalesDashboardCharts(rows) {
