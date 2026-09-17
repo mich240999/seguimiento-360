@@ -47,11 +47,13 @@ window.__C360_LOADER_CONFIG__ = {
       .app-shell.is-sidebar-collapsed #sidebarCloseButton { display: none !important; }
     }
 
-    /* Loader: misma imagen de /img y mismo lenguaje visual del login. */
+    /* Loader: misma línea del login (degradado corporativo azul-verde). */
     .global-loader {
       background:
-        linear-gradient(135deg, rgba(7,91,120,.74), rgba(0,161,222,.48)),
-        url('../img/calidda-building.png') center center / cover no-repeat !important;
+        radial-gradient(1000px 520px at 12% 0%, rgba(0,210,255,.35), transparent 60%),
+        radial-gradient(800px 480px at 85% 12%, rgba(46,204,113,.35), transparent 60%),
+        radial-gradient(900px 520px at 88% 100%, rgba(0,120,180,.32), transparent 60%),
+        linear-gradient(135deg, #07354d, #0a7aa5 55%, #129a6c 100%) !important;
     }
     .global-loader::before {
       content: ""; position: absolute; inset: 0; z-index: 0;

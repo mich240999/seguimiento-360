@@ -151,17 +151,18 @@
     position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center;
     overflow: hidden; padding: 24px; isolation: isolate;
     background:
-      radial-gradient(circle at 14% 16%, color-mix(in srgb, var(--loader-accent) 18%, transparent), transparent 34%),
-      radial-gradient(circle at 84% 82%, rgba(7,91,120,.13), transparent 36%),
-      linear-gradient(145deg, #fbfeff 0%, #eef9fd 52%, #f7fcfe 100%);
+      radial-gradient(1000px 520px at 12% 0%, rgba(0,210,255,.35), transparent 60%),
+      radial-gradient(800px 480px at 85% 12%, rgba(46,204,113,.35), transparent 60%),
+      radial-gradient(900px 520px at 88% 100%, rgba(0,120,180,.32), transparent 60%),
+      linear-gradient(135deg, #07354d, #0a7aa5 55%, #129a6c 100%);
     opacity: 1; visibility: visible;
     transition: opacity 240ms ease, visibility 240ms ease;
   }
   .global-loader.is-leaving { opacity: 0; visibility: hidden; pointer-events: none; }
   .loader-ambient {
     position: absolute; z-index: -1; border-radius: 999px; pointer-events: none;
-    filter: blur(4px); opacity: .58;
-    background: linear-gradient(145deg, color-mix(in srgb, var(--loader-accent) 28%, white), rgba(255,255,255,.08));
+    filter: blur(4px); opacity: .5;
+    background: linear-gradient(145deg, rgba(255,255,255,.35), rgba(255,255,255,.05));
     animation: loaderFloat 9s ease-in-out infinite;
   }
   .loader-ambient--one { width: min(42vw, 520px); aspect-ratio: 1; top: -18%; left: -10%; }
@@ -170,10 +171,10 @@
     position: relative; width: min(440px, calc(100vw - 36px)); display: grid; justify-items: center;
     padding: clamp(30px, 5vw, 46px); overflow: hidden;
     color: var(--ink); text-align: center;
-    background: rgba(255,255,255,.82);
-    border: 1px solid rgba(255,255,255,.92); border-radius: 30px;
-    box-shadow: 0 34px 100px rgba(12,72,94,.17), 0 2px 0 rgba(255,255,255,.85) inset;
-    backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+    background: rgba(255,255,255,.95);
+    border: 1px solid rgba(255,255,255,.7); border-radius: 26px;
+    box-shadow: 0 30px 80px rgba(0,20,40,.35), 0 2px 0 rgba(255,255,255,.85) inset;
+    backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
   }
   .loader-panel::before {
     content: ""; position: absolute; inset: 0 0 auto; height: 4px;
