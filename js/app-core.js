@@ -419,6 +419,13 @@ const APP_STORAGE = Object.freeze({
       return;
     }
 
+    if (code === "CALENDARIO_ENTREGAS") {
+      if (typeof openDeliveryCalendarWorkspace === "function") {
+        openDeliveryCalendarWorkspace(module);
+      }
+      return;
+    }
+
     if (code === "VENTAS_CONTADO") {
       if (typeof openCashSalesWorkspace === "function") {
         openCashSalesWorkspace(module);
@@ -1203,6 +1210,10 @@ const APP_STORAGE = Object.freeze({
     }
     if (APP_STATE.module === "DASHBOARD_VENTAS" && typeof refreshSalesDashboardWorkspace === "function") {
       refreshSalesDashboardWorkspace(silent);
+      return;
+    }
+    if (APP_STATE.module === "CALENDARIO_ENTREGAS" && typeof refreshDeliveryCalendarWorkspace === "function") {
+      refreshDeliveryCalendarWorkspace(silent);
       return;
     }
     if (APP_STATE.module === "VENTAS_CONTADO" && typeof refreshCashSalesWorkspace === "function") {
