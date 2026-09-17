@@ -42,22 +42,14 @@
 
 <section id="authView" class="auth-view" aria-labelledby="authTitle">
   <div class="auth-panel">
-    <div class="auth-brand">
-      <div class="auth-brand-mark" aria-hidden="true">
+    <div class="auth-brand auth-brand--center">
+      <div class="auth-brand-mark auth-brand-mark--lg" aria-hidden="true">
         <img src="img/calidda-logo.png" alt="Cálidda" style="width:100%; height:100%; object-fit:contain;">
       </div>
       <div>
-        <p class="eyebrow">PLATAFORMA DE SEGUIMIENTO</p>
-        <h1 id="authTitle">Seguimiento 360</h1>
+        <p class="eyebrow">CÁLIDDA HOGAR · GAS NATURAL</p>
+        <h1 id="authTitle">Plataforma de Seguimiento Comercial - Calidda Hogar</h1>
       </div>
-    </div>
-
-    <div class="auth-copy">
-      <h2>Información conectada, decisiones más rápidas.</h2>
-      <p>
-        Accede con una cuenta autorizada para consultar, administrar y dar
-        seguimiento a la operación.
-      </p>
     </div>
 
     <div class="auth-actions">
@@ -83,11 +75,7 @@
         </span>
         <span>Continuar con Microsoft</span>
       </a>
-      <button id="supabaseEmailButton" class="provider-button" type="button" aria-expanded="false">
-        <span class="material-symbols-rounded" aria-hidden="true">mail</span>
-        <span>Ingresar por correo y contraseña de Supabase</span>
-      </button>
-      <form id="supabaseEmailLogin" class="supabase-auth-form" hidden novalidate>
+      <form id="supabaseEmailLogin" class="supabase-auth-form" novalidate>
         <label class="supabase-auth-label">Correo electrónico
           <input id="authEmail" class="supabase-auth-input" type="email" autocomplete="username" inputmode="email" placeholder="nombre@empresa.com" required>
         </label>

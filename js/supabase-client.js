@@ -148,10 +148,12 @@
     authActions.innerHTML = '<form id="supabaseEmailLogin" class="supabase-auth-form" novalidate><label class="supabase-auth-label">Correo electrónico<input id="authEmail" class="supabase-auth-input" type="email" autocomplete="username" inputmode="email" placeholder="nombre@empresa.com" required></label><label class="supabase-auth-label">Contraseña<input id="authPassword" class="supabase-auth-input" type="password" autocomplete="current-password" placeholder="Ingresa tu contraseña" required minlength="6"></label><button id="authEmailSubmit" class="provider-button supabase-auth-submit" type="submit"><span class="material-symbols-rounded" aria-hidden="true">login</span><span>Iniciar sesión</span></button><button id="authForgotPassword" class="supabase-auth-forgot" type="button">¿Olvidaste tu contraseña?</button></form>';
     authActions.insertAdjacentHTML("beforeend", '<button id="supabaseGoogleButton" class="provider-button supabase-auth-submit" type="button">Continuar con Google</button><button id="supabaseMicrosoftButton" class="provider-button supabase-auth-submit" type="button">Continuar con Microsoft</button>'); */
     const form = document.getElementById("supabaseEmailLogin"); const emailInput = document.getElementById("authEmail"); const passwordInput = document.getElementById("authPassword"); const submit = document.getElementById("authEmailSubmit"); const forgot = document.getElementById("authForgotPassword");
-    form.hidden = true;
-    form.classList.remove("is-open");
+    if (!form || !emailInput || !passwordInput || !submit || !forgot) return;
+    form.hidden = false;
+    form.classList.add("is-open");
     const emailButton = document.getElementById("supabaseEmailButton");
     let emailFormCloseTimer = null;
+    if (emailButton) {
     emailButton.addEventListener("click", function() {
       const willOpen = form.hidden;
       if (willOpen) {
@@ -167,6 +169,7 @@
       }
       emailButton.setAttribute("aria-expanded", String(willOpen));
     });
+    }
     form.addEventListener("submit", async function(event) {
       event.preventDefault(); const email = String(emailInput.value || "").trim().toLowerCase(); const password = String(passwordInput.value || "");
       if (!email || !emailInput.checkValidity()) return showMessage("Ingresa un correo válido.", true); if (!password) return showMessage("Ingresa tu contraseña.", true);
