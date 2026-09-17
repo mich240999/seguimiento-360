@@ -14,32 +14,39 @@ var DISP360_STATE = {
   module: null,
   rows: [],
   provider: "",
-  filters: { texto: "", estadoEntrega: "TODOS", oficina: "TODOS" }
+  filters: { texto: "", estadoEntrega: "TODOS", oficina: "TODOS" },
+  embedded: false
 };
 
 /**
- * Abre el workspace de despacho. Punto de entrada llamado desde app-core.
+ * Abre el workspace de despacho. Punto de entrada llamado desde app-core
+ * (standalone, histórico) o desde la pestaña DESPACHO de VENTAS_CONTADO
+ * con { embedded: true }, en cuyo caso pinta dentro de #salesListRegion
+ * sin cambiar la vista ni el encabezado del módulo de ventas.
  */
-function openDispatchWorkspace(module) {
+function openDispatchWorkspace(module, options) {
   DISP360_STATE.module = module || null;
   DISP360_STATE.provider = disp360CurrentProvider();
   DISP360_STATE.filters = { texto: "", estadoEntrega: "TODOS", oficina: "TODOS" };
+  DISP360_STATE.embedded = Boolean(options && options.embedded);
 
-  setActiveView("dynamicModuleView");
-  setModuleHeading(
-    (module && module.grupoMenu) || "OPERACIONES",
-    (module && module.nombre) || "Despacho de Entregas"
-  );
+  if (!DISP360_STATE.embedded) {
+    setActiveView("dynamicModuleView");
+    setModuleHeading(
+      (module && module.grupoMenu) || "OPERACIONES",
+      (module && module.nombre) || "Despacho de Entregas"
+    );
+  }
 
   renderDispatchFrame();
   loadDispatchData(false);
 }
 
 /**
- * Actualiza el despacho (botón global Actualizar).
+ * Actualiza el despacho (botón Actualizar de ventas o global).
  */
 function refreshDispatchWorkspace(silent) {
-  if (!document.getElementById("disp360Region")) return;
+  if (!document.getElementById("disp360TableBody")) return;
   loadDispatchData(Boolean(silent));
 }
 
@@ -59,22 +66,38 @@ function disp360CurrentProvider() {
 }
 
 /**
- * Indica si el usuario puede ejecutar acciones de despacho.
+ * Indica si el usuario puede ejecutar acciones de despacho: gestionar
+ * despachos en VENTAS_CONTADO (PROGRAMAR_ENTREGA o CONFIRMAR_ENTREGA),
+ * rol DESPACHADOR, o el permiso histórico del módulo standalone.
  */
 function disp360CanManage() {
   try {
     if (typeof hasActivePermission === "function") {
-      return hasActivePermission("DESPACHO", "GESTIONAR_DESPACHO");
+      if (hasActivePermission("VENTAS_CONTADO", "PROGRAMAR_ENTREGA")) return true;
+      if (hasActivePermission("VENTAS_CONTADO", "CONFIRMAR_ENTREGA")) return true;
+      if (hasActivePermission("DESPACHO", "GESTIONAR_DESPACHO")) return true;
+    } else {
+      return true;
     }
   } catch (error) {}
-  return true;
+  try {
+    if (typeof APP_STATE !== "undefined" && APP_STATE && APP_STATE.context && APP_STATE.context.usuario) {
+      var role = String(APP_STATE.context.usuario.rol || "");
+      if (role.toUpperCase() === "DESPACHADOR") return true;
+    }
+  } catch (error) {}
+  return false;
 }
 
 /**
- * Estructura base con la misma línea de diseño del sistema.
+ * Estructura base con la misma línea de diseño del sistema. En modo
+ * embebido (pestaña DESPACHO de ventas) pinta dentro de #salesListRegion;
+ * en modo standalone histórico usa #dynamicModuleView.
  */
 function renderDispatchFrame() {
-  var view = document.getElementById("dynamicModuleView");
+  var view = DISP360_STATE.embedded
+    ? (document.getElementById("salesListRegion") || document.getElementById("dynamicModuleView"))
+    : document.getElementById("dynamicModuleView");
   if (!view) return;
   view.innerHTML =
     '<section class="sales-workspace disp360-workspace">' +
@@ -144,7 +167,7 @@ function loadDispatchData(silent) {
   DISP360_STATE.provider = disp360CurrentProvider();
   if (body && !silent) body.innerHTML = '<tr><td colspan="7">Cargando despachos…</td></tr>';
 
-  secureRpc("listarDespachoModulo", [], "DESPACHO")
+  secureRpc("listarDespachoModulo", [], "VENTAS_CONTADO")
     .then(function(response) {
       var rows = (response && response.registros) || (response && response.ventas) || (response && response.datos) || [];
       DISP360_STATE.rows = (Array.isArray(rows) ? rows : []).map(disp360NormalizeRow);
@@ -315,7 +338,7 @@ function disp360TakeDelivery(idVenta) {
       detalleObservacion: row.detalleObservacion || "",
       fechaProgramadaEntrega: row.fechaProgramada || "",
       evidencias: []
-    }], "DESPACHO")
+    }], "VENTAS_CONTADO")
       .then(function(result) {
         closeModal();
         toast("Despacho en ruta", (result && result.mensaje) || "La venta ahora está EN_RUTA.");
@@ -406,7 +429,7 @@ function disp360ConfirmDelivery(idVenta) {
       detalleObservacion: note || row.detalleObservacion || "",
       fechaProgramadaEntrega: row.fechaProgramada || "",
       evidencias: evidences
-    }], "DESPACHO")
+    }], "VENTAS_CONTADO")
       .then(function(result) {
         closeModal();
         toast("Entrega confirmada", (result && result.mensaje) || "La venta ahora está ENTREGADA.");

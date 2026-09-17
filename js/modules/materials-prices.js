@@ -20,6 +20,10 @@ const MP_STATE = {
     priceTemplatePromise: null,
     priceTemplateDownload: null,
     priceTemplateRequestSeq: 0,
+    // AGENTE 2 (2026-09-19): pendientes de carga GSD validados en memoria.
+    // Clave = token local ("GSDLOCAL-..."); nada se graba hasta confirmar.
+    gsdPending: {},
+    gsdPendingSeq: 0,
     renderToken: 0
   };
 
@@ -1699,6 +1703,7 @@ const MP_STATE = {
               '<strong>Reglas de control</strong>' +
               '<ul>' +
                 '<li>Identifica el material por CODIGO_HANA (equivale al código SAP) o CODIGO_MATERIAL.</li>' +
+                '<li>Se acepta el Excel GSD de una sola hoja (PROVEEDOR, MARCA, TIPO, SUBTIPO, INCLUYE CONEXIÓN, CODIGO HANA, PRODUCTO_PRINCIPAL, COMBO, COMENTARIOS, FEE, PRECIO). N°, cuotas por plazo y columnas * original se ignoran.</li>' +
                 '<li>Todo precio debe terminar asociado a un proveedor y a un negocio. RESPONSABLE_VENTA va al lado de PROVEEDOR.</li>' +
                 '<li>FEE es el % que se lleva Cálidda y está oculto para el rol proveedor.</li>' +
                 '<li>Vigencia mensual: FECHA_INICIO día 1 y FECHA_FIN último día del mes de carga.</li>' +
@@ -1708,6 +1713,7 @@ const MP_STATE = {
                 '<li>Con oficina y grupo = Grupo; el grupo debe pertenecer a esa oficina.</li>' +
                 '<li>La misma combinación material + proveedor + negocio + alcance no puede tener vigencias superpuestas.</li>' +
                 '<li>Si existe exactamente la misma vigencia, el precio registrado se actualiza.</li>' +
+                '<li>La opción principal es siempre la plantilla XLSX (Descargar plantilla XLSX: Plantilla_Carga_Precios_GSD.xlsx). El CSV del servidor queda solo como respaldo si el XLSX local no está disponible.</li>' +
               '</ul>' +
             '</div>' +
           '</div>' +
@@ -1802,6 +1808,46 @@ const MP_STATE = {
         'Validando archivo. Todavía no se grabará ningún precio...' +
       '</div>';
 
+    const localPriceReader = new FileReader();
+
+    // AGENTE 2: primero se intenta el parseo local del Excel GSD (una sola hoja).
+    // Si no es GSD o falta SheetJS, se usa la ruta de servidor existente.
+    localPriceReader.onload = function() {
+      let parsed = null;
+      try {
+        parsed = mpGsdParseFileBuffer_(localPriceReader.result);
+      } catch (parseError) {
+        parsed = null;
+      }
+      if (parsed && parsed.filas && parsed.filas.length) {
+        prevalidarPreciosGsdLocal_(form, parsed, resultBox, submit);
+        return;
+      }
+      if (parsed) {
+        resultBox.innerHTML =
+          mpError(
+            new Error("El Excel no trae filas de datos (revisa CODIGO HANA y elimina la fila EJEMPLO).")
+          );
+
+        restaurarBotonPrevalidarPreciosPaso28O_(submit);
+        return;
+      }
+      submitBulkPriceFormServidor_(form, file, resultBox, submit);
+    };
+
+    localPriceReader.onerror = function() {
+      submitBulkPriceFormServidor_(form, file, resultBox, submit);
+    };
+
+    try {
+      localPriceReader.readAsArrayBuffer(file);
+    } catch (readError) {
+      submitBulkPriceFormServidor_(form, file, resultBox, submit);
+    }
+  }
+
+  // Ruta de servidor existente (respaldo cuando el archivo no es GSD).
+  function submitBulkPriceFormServidor_(form, file, resultBox, submit) {
     const reader = new FileReader();
 
     reader.onload = function() {
@@ -1866,6 +1912,122 @@ const MP_STATE = {
     };
 
     reader.readAsDataURL(file);
+  }
+
+  // AGENTE 2: prevalidación local GSD de precios. Cada fila válida genera su
+  // material (por CODIGO_HANA) y su precio con RESPONSABLE_VENTA, FEE y vigencia
+  // mensual (día 1 -> fin de mes). No graba nada; reutiliza el preview existente.
+  function prevalidarPreciosGsdLocal_(form, parsed, resultBox, submit) {
+    const defaults = formToObject(form);
+    const opts = MP_STATE.options || getMpEmptyOptions();
+    const idProveedorDefecto = String(defaults.idProveedor || "").trim();
+    const idNegocio = String(defaults.idNegocio || "").trim();
+    const vigencia = mpGsdMonthRange_();
+
+    const materialesP = secureRpc("listarMaterialesPrecioModulo", [{}], "MATERIALES_PRECIOS").catch(function() { return { registros: [] }; });
+    const preciosP = secureRpc("listarListasOficialesPreciosModulo", [{}], "MATERIALES_PRECIOS").catch(function() { return { registros: [] }; });
+
+    Promise.all([materialesP, preciosP])
+      .then(function(respuestas) {
+        const existentes = {};
+        ((respuestas[0] && respuestas[0].registros) || []).forEach(function(m) {
+          [m.codigoSap, m.codigoMaterial].forEach(function(code) {
+            const key = mpGsdNorm_(code);
+            if (key && !existentes[key]) existentes[key] = m;
+          });
+        });
+        const preciosVigentes = {};
+        ((respuestas[1] && respuestas[1].registros) || []).forEach(function(p) {
+          if (String(p.fechaInicio || "").slice(0, 10) !== vigencia.inicio) return;
+          if (String(p.fechaFin || "").slice(0, 10) !== vigencia.fin) return;
+          if (p.idOficina || p.idGrupo) return;
+          const key = [mpGsdNorm_(p.idMaterial), mpGsdNorm_(p.idProveedor), mpGsdNorm_(p.idNegocio)].join("|");
+          if (!preciosVigentes[key]) preciosVigentes[key] = p;
+        });
+
+        const vistos = {};
+        const vistosVigencia = {};
+        const pendientes = [];
+        const detalle = [];
+        let creados = 0;
+        let actualizados = 0;
+        let errores = 0;
+
+        (parsed.filas || []).forEach(function(g) {
+          const val = mpGsdValidarFila_(g, opts, { exigePrecio: true, exigeProveedor: true, idProveedorDefecto: idProveedorDefecto });
+          const dupKey = mpGsdNorm_(g.codigoHana);
+          const existente = existentes[dupKey] || vistos[dupKey] || null;
+          const material = mpGsdMaterialPayload_(g, val, existente);
+          vistos[dupKey] = { idMaterial: material.idMaterial, codigoMaterial: material.codigoMaterial, codigoSap: g.codigoHana };
+          const proveedorId = (val.proveedor && (val.proveedor.id || val.proveedor.idProveedor)) || idProveedorDefecto;
+          const motivos = val.errores.slice();
+          if (!idNegocio) motivos.push("Falta el negocio predeterminado.");
+          if (!proveedorId) motivos.push("Falta el proveedor (por fila o predeterminado).");
+
+          if (motivos.length) {
+            errores += 1;
+            detalle.push({ fila: g.fila, codigoMaterial: material.codigoMaterial, accion: "OMITIR", estado: "ERROR", detalle: motivos.join(" ") });
+            return;
+          }
+
+          const vigenteKey = [mpGsdNorm_(material.idMaterial), mpGsdNorm_(proveedorId), mpGsdNorm_(idNegocio)].join("|");
+          const previo = preciosVigentes[vigenteKey] || null;
+          if (previo || vistosVigencia[vigenteKey]) actualizados += 1;
+          else creados += 1;
+          vistosVigencia[vigenteKey] = true;
+
+          const precioPayload = {
+            idMaterial: material.idMaterial,
+            idProveedor: proveedorId,
+            idNegocio: idNegocio,
+            precioBase: val.precio,
+            fee: val.fee,
+            responsableVenta: g.responsableVenta || "",
+            moneda: "PEN",
+            fechaInicio: vigencia.inicio,
+            fechaFin: vigencia.fin,
+            tieneCombo: g.combo ? "SI" : "NO",
+            detalleCombo: g.combo || "",
+            idListaPrecio: (previo && previo.idListaPrecio) || undefined,
+            idDetallePrecio: (previo && previo.idDetallePrecio) || undefined
+          };
+          pendientes.push({ fila: g.fila, gsd: g, material: material, precio: precioPayload });
+          const feeTexto = val.fee == null ? "sin FEE" : ("FEE " + val.fee + "%");
+          detalle.push({
+            fila: g.fila,
+            codigoMaterial: material.codigoMaterial,
+            accion: previo ? "ACTUALIZAR" : "CREAR",
+            estado: val.advertencias.length ? "ADVERTENCIA" : "OK",
+            detalle: "S/ " + val.precio + " · " + mpGsdMaskFee_(feeTexto) +
+              (g.responsableVenta ? " · Resp: " + g.responsableVenta : "") +
+              (val.advertencias.length ? " · " + val.advertencias.join(" ") : "")
+          });
+        });
+
+        let tokenPreview = null;
+        let puedeConfirmar = false;
+        if (pendientes.length) {
+          tokenPreview = mpGsdStorePending_("PRE", { items: pendientes });
+          puedeConfirmar = true;
+        }
+        renderBulkPricePreviewPaso28O_(resultBox, {
+          totalFilas: (parsed.filas || []).length,
+          creados: creados,
+          actualizados: actualizados,
+          errores: errores,
+          mensaje: "Prevalidación local GSD (" + parsed.hoja + ", vigencia " + vigencia.inicio + " → " + vigencia.fin + "). Nada se grabó: confirma para registrar.",
+          detalleValidacion: detalle,
+          puedeConfirmar: puedeConfirmar,
+          tokenPreview: tokenPreview
+        });
+      })
+      .catch(function(error) {
+        resultBox.innerHTML = mpError(error);
+        toast("No se pudo validar", errorMessage(error), true);
+      })
+      .finally(function() {
+        restaurarBotonPrevalidarPreciosPaso28O_(submit);
+      });
   }
 
   function restaurarBotonPrevalidarPreciosPaso28O_(submit) {
@@ -2000,6 +2162,12 @@ const MP_STATE = {
     resultBox,
     tokenPreview
   ) {
+    // AGENTE 2: token local GSD -> confirmación fila por fila en el frontend.
+    const localPending = mpGsdTakePending_(tokenPreview);
+    if (localPending) {
+      confirmarPreciosGsdLocal_(resultBox, tokenPreview, localPending);
+      return;
+    }
     const button =
       document.getElementById(
         "mpConfirmBulkPricePaso28O"
@@ -2096,6 +2264,60 @@ const MP_STATE = {
       });
   }
 
+  // AGENTE 2: confirmación local GSD de precios. Por cada fila validada crea o
+  // actualiza el material y luego su precio (misma vigencia se actualiza).
+  function confirmarPreciosGsdLocal_(resultBox, tokenPreview, localPending) {
+    const items = ((localPending && localPending.pendientes && localPending.pendientes.items) || []);
+    resultBox.innerHTML = '<div class="mp-inline-loader"><span class="material-symbols-rounded">hourglass_empty</span>Grabando ' + items.length + ' precios validados...</div>';
+
+    const button = document.getElementById("mpConfirmBulkPricePaso28O");
+    if (button) button.disabled = true;
+
+    let creados = 0;
+    let actualizados = 0;
+    let errores = 0;
+    const detalle = [];
+    let chain = Promise.resolve();
+
+    items.forEach(function(item) {
+      chain = chain.then(function() {
+        return secureRpc("guardarMaterialPrecioModulo", [item.material], "MATERIALES_PRECIOS")
+          .then(function(res) {
+            var idMat = (res && res.idMaterial) || item.material.idMaterial;
+            const precio = Object.assign({}, item.precio, { idMaterial: idMat });
+            return secureRpc("guardarPrecioIndividualMaterialesPreciosModulo", [precio], "MATERIALES_PRECIOS");
+          })
+          .then(function() {
+            if (item.precio.idDetallePrecio) actualizados += 1;
+            else creados += 1;
+            detalle.push({ fila: item.fila, codigoMaterial: item.material.codigoMaterial, accion: "GRABADO", estado: "OK", detalle: "OK" });
+          })
+          .catch(function(error) {
+            errores += 1;
+            detalle.push({ fila: item.fila, codigoMaterial: item.material.codigoMaterial, accion: "OMITIR", estado: "ERROR", detalle: errorMessage(error) });
+          });
+      });
+    });
+
+    chain.then(function() {
+      mpGsdDropPending_(tokenPreview);
+      clearMpTableCache("prices");
+      clearMpTableCache("materials");
+      clearMpSummaryCache();
+      renderBulkPricePreviewPaso28O_(resultBox, {
+        totalFilas: items.length,
+        creados: creados,
+        actualizados: actualizados,
+        errores: errores,
+        mensaje: "Carga GSD confirmada. Solo se grabaron las filas validadas.",
+        detalleValidacion: detalle,
+        puedeConfirmar: false,
+        tokenPreview: null
+      });
+      toast("Carga de precios confirmada", "Creados: " + creados + " · Actualizados: " + actualizados + " · Errores: " + errores);
+    });
+  }
+
   function obtenerPlantillaPreciosDesdeServidor_() {
     if (
       MP_STATE.priceTemplateCache &&
@@ -2189,7 +2411,7 @@ const MP_STATE = {
         "download",
         String(
           detalle.nombreArchivo ||
-          "Plantilla_Carga_Masiva_Precios.xlsx"
+          "Plantilla_Carga_Precios_GSD.xlsx"
         )
       );
 
@@ -2236,7 +2458,7 @@ const MP_STATE = {
       url: URL.createObjectURL(blob),
       nombreArchivo:
         result.nombreArchivo ||
-        "Plantilla_Carga_Masiva_Precios.xlsx",
+        "Plantilla_Carga_Precios_GSD.xlsx",
       tamanoBytes: blob.size,
       preparadaEn: Date.now(),
       cacheHit: result.cacheHit === true
@@ -2258,6 +2480,26 @@ const MP_STATE = {
       ++MP_STATE.priceTemplateRequestSeq;
 
     liberarDescargaPlantillaPrecios_();
+
+    // AGENTE 2: plantilla XLSX generada en el frontend con SheetJS
+    // (CODIGO_HANA, PROVEEDOR, RESPONSABLE_VENTA, PRECIO, FEE + DICCIONARIOS).
+    // Si SheetJS no está disponible, se usa el CSV del servidor como respaldo.
+    const localPre = mpGsdPlantillaPreciosLocal_();
+    if (localPre) {
+      if (requestId !== MP_STATE.priceTemplateRequestSeq) return Promise.resolve(null);
+      const descargaLocal = {
+        url: localPre.url,
+        nombreArchivo: localPre.nombreArchivo,
+        tamanoBytes: localPre.tamanoBytes,
+        preparadaEn: localPre.preparadaEn,
+        cacheHit: false,
+        local: true
+      };
+      MP_STATE.priceTemplateDownload = descargaLocal;
+      actualizarEstadoDescargaPlantillaPrecios_("LISTA", descargaLocal);
+      return Promise.resolve(descargaLocal);
+    }
+
     actualizarEstadoDescargaPlantillaPrecios_("PREPARANDO");
 
     return obtenerPlantillaPreciosDesdeServidor_()
@@ -2334,13 +2576,15 @@ const MP_STATE = {
         '<input id="mpBulkMaterialFile" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required></label>' +
       '</div></div>' +
       '<div class="mp-upload-sidebar"><div class="mp-help-card"><strong>Cómo usar la plantilla</strong><ul>' +
-        '<li>Primero selecciona el negocio y descarga la plantilla.</li>' +
-        '<li>En RUTA_TIPIFICACION selecciona una combinación completa Producto principal → Tipo → Subtipo.</li>' +
+        '<li>Primero selecciona el negocio y descarga la plantilla XLSX (Descargar plantilla XLSX: Plantilla_Carga_Materiales_GSD.xlsx).</li>' +
+        '<li>Completa la hoja CARGA_MATERIALES con N°, PROVEEDOR, MARCA, TIPO, SUBTIPO, INCLUYE CONEXIÓN, CODIGO HANA, PRODUCTO PRINCIPAL, COMBO y COMENTARIOS.</li>' +
         '<li>La hoja DICCIONARIOS muestra únicamente rutas válidas para carga y el árbol completo como referencia.</li>' +
-        '<li>No ingreses Producto, Tipo y Subtipo por separado ni uses UUID/IDs técnicos.</li>' +
-        '<li>CODIGO_SAP puede quedar vacío o indicar EN CREACION. CODIGO_HANA equivale al código SAP.</li>' +
-        '<li>El Excel GSD aporta PROVEEDOR, MARCA, TIPO, SUBTIPO, INCLUYE_CONEXION, CODIGO_HANA, PRODUCTO_PRINCIPAL y COMBO.</li>' +
+        '<li>No uses UUID/IDs técnicos: escribe los nombres tal como aparecen en DICCIONARIOS.</li>' +
+        '<li>CODIGO HANA equivale al código SAP y es la clave de match; la fila EJEMPLO debe borrarse.</li>' +
+        '<li>El Excel GSD aporta PROVEEDOR, MARCA, TIPO, SUBTIPO, INCLUYE CONEXIÓN, CODIGO HANA, PRODUCTO PRINCIPAL y COMBO.</li>' +
+        '<li>Se acepta el Excel GSD de una sola hoja (lee por nombre de encabezado, sin importar mayúsculas/tildes). N°, cuotas por plazo y columnas * original se ignoran; PRECIO y FEE no se graban en este flujo.</li>' +
         '<li>La primera acción solo valida; nada se graba hasta confirmar.</li>' +
+        '<li>El CSV del servidor queda solo como respaldo si el XLSX local no está disponible; la opción principal es siempre la plantilla XLSX.</li>' +
       '</ul></div></div></div>' +
       '<div id="mpBulkMaterialResult" class="mp-material-bulk-result"></div>' +
       '<div class="mp-upload-actions">' +
@@ -2432,6 +2676,41 @@ const MP_STATE = {
     const resultBox = document.getElementById("mpBulkMaterialResult");
     resultBox.innerHTML = '<div class="mp-inline-loader"><span class="material-symbols-rounded">hourglass_empty</span>Prevalidando materiales...</div>';
 
+    // AGENTE 2: primero se intenta el parseo local del Excel GSD (una sola hoja,
+    // encabezado tolerante). Si no es GSD o falta SheetJS, se usa la ruta de servidor.
+    const localReader = new FileReader();
+
+    localReader.onload = function() {
+      let parsed = null;
+      try {
+        parsed = mpGsdParseFileBuffer_(localReader.result);
+      } catch (parseError) {
+        parsed = null;
+      }
+      if (parsed && parsed.filas && parsed.filas.length) {
+        prevalidarMaterialesGsdLocal_(form, data, parsed, resultBox);
+        return;
+      }
+      if (parsed) {
+        resultBox.innerHTML = mpError(new Error("El Excel no trae filas de datos (revisa CODIGO HANA y elimina la fila EJEMPLO)."));
+        return;
+      }
+      submitBulkMaterialFormServidor_(form, file, data, resultBox);
+    };
+
+    localReader.onerror = function() {
+      submitBulkMaterialFormServidor_(form, file, data, resultBox);
+    };
+
+    try {
+      localReader.readAsArrayBuffer(file);
+    } catch (readError) {
+      submitBulkMaterialFormServidor_(form, file, data, resultBox);
+    }
+  }
+
+  // Ruta de servidor existente (respaldo cuando el archivo no es GSD).
+  function submitBulkMaterialFormServidor_(form, file, data, resultBox) {
     const reader = new FileReader();
 
     reader.onload = function() {
@@ -2467,6 +2746,91 @@ const MP_STATE = {
     };
 
     reader.readAsDataURL(file);
+  }
+
+  // AGENTE 2: prevalidación local GSD. No graba nada; guarda el pendiente en
+  // memoria y reutiliza renderBulkMaterialPreview (flujo validar -> confirmar).
+  function prevalidarMaterialesGsdLocal_(form, data, parsed, resultBox) {
+    const opts = MP_STATE.options || getMpEmptyOptions();
+    const idNegocio = String(data.idNegocio || "").trim();
+
+    secureRpc("listarMaterialesPrecioModulo", [{}], "MATERIALES_PRECIOS")
+      .catch(function() { return { registros: [] }; })
+      .then(function(result) {
+        const existentes = {};
+        ((result && result.registros) || []).forEach(function(m) {
+          [m.codigoSap, m.codigoMaterial].forEach(function(code) {
+            const key = mpGsdNorm_(code);
+            if (key && !existentes[key]) existentes[key] = m;
+          });
+        });
+        const vistos = {};
+        const pendientes = [];
+        const observaciones = [];
+        let creados = 0;
+        let actualizados = 0;
+        let errores = 0;
+        let advertencias = 0;
+
+        (parsed.filas || []).forEach(function(g) {
+          const val = mpGsdValidarFila_(g, opts, { exigePrecio: false });
+          const dupKey = mpGsdNorm_(g.codigoHana);
+          const existente = existentes[dupKey] || vistos[dupKey] || null;
+          const payload = mpGsdMaterialPayload_(g, val, existente);
+          vistos[dupKey] = { idMaterial: payload.idMaterial, codigoMaterial: payload.codigoMaterial, codigoSap: g.codigoHana };
+          const ruta = [g.productoPrincipal, g.tipo, g.subtipo].filter(function(t) { return !!t; }).join(" → ");
+          let estado = "OK";
+          let accion = existente ? "ACTUALIZAR" : "CREAR";
+          if (val.errores.length) {
+            estado = "ERROR";
+            errores += 1;
+            accion = "OMITIR";
+          } else {
+            if (existente) actualizados += 1;
+            else creados += 1;
+            if (val.advertencias.length) {
+              estado = "ADVERTENCIA";
+              advertencias += 1;
+            }
+          }
+          if (estado !== "ERROR") pendientes.push({ fila: g.fila, gsd: g, payload: payload });
+          observaciones.push({
+            fila: g.fila,
+            codigoMaterial: payload.codigoMaterial,
+            codigoSap: g.codigoHana,
+            rutaTipificacion: ruta || "—",
+            accion: accion,
+            estado: estado,
+            errores: val.errores.join(" ") || undefined,
+            advertencias: val.advertencias.join(" ") || undefined
+          });
+        });
+
+        let tokenPreview = null;
+        let puedeConfirmar = false;
+        if (pendientes.length) {
+          tokenPreview = mpGsdStorePending_("MAT", { idNegocio: idNegocio, items: pendientes });
+          puedeConfirmar = true;
+        }
+        renderBulkMaterialPreview(resultBox, {
+          totalFilas: (parsed.filas || []).length,
+          creados: creados,
+          actualizados: actualizados,
+          errores: errores,
+          advertencias: advertencias,
+          mensaje: "Prevalidación local GSD (" + parsed.hoja + "). Nada se grabó: confirma para registrar.",
+          observaciones: observaciones,
+          puedeConfirmar: puedeConfirmar,
+          tokenPreview: tokenPreview
+        });
+        if (errores && !pendientes.length) {
+          toast("Prevalidación con errores", "No se grabó ningún material. Corrige el archivo y vuelve a validar.", true);
+        }
+      })
+      .catch(function(error) {
+        resultBox.innerHTML = mpError(error);
+        toast("No se pudo validar", errorMessage(error), true);
+      });
   }
 
   function obtenerPlantillaMaterialesDesdeServidor_(idNegocio) {
@@ -2551,7 +2915,7 @@ const MP_STATE = {
 
     if (estado === "LISTA") {
       link.href = String(detalle.url || "#");
-      link.setAttribute("download", String(detalle.nombreArchivo || "Plantilla_Materiales_Calidda360.xlsx"));
+      link.setAttribute("download", String(detalle.nombreArchivo || "Plantilla_Carga_Materiales_GSD.xlsx"));
       link.setAttribute("aria-disabled", "false");
       link.style.opacity = "1";
       link.style.cursor = "pointer";
@@ -2591,7 +2955,7 @@ const MP_STATE = {
     const descarga = {
       idNegocio: negocio,
       url: URL.createObjectURL(blob),
-      nombreArchivo: result.nombreArchivo || "Plantilla_Materiales_Calidda360.xlsx",
+      nombreArchivo: result.nombreArchivo || "Plantilla_Carga_Materiales_GSD.xlsx",
       tamanoBytes: blob.size,
       preparadaEn: Date.now(),
       cacheHit: result.cacheHit === true
@@ -2612,6 +2976,26 @@ const MP_STATE = {
     if (!negocio) {
       actualizarEstadoDescargaPlantillaMateriales_("SIN_NEGOCIO");
       return Promise.resolve(null);
+    }
+
+    // AGENTE 2: plantilla XLSX generada en el frontend con SheetJS (formato GSD
+    // + hoja DICCIONARIOS). Si SheetJS no está disponible, se usa el CSV del
+    // servidor como respaldo.
+    const localMat = mpGsdPlantillaMaterialLocal_();
+    if (localMat) {
+      if (requestId !== MP_STATE.materialTemplateRequestSeq) return Promise.resolve(null);
+      const descargaLocal = {
+        idNegocio: negocio,
+        url: localMat.url,
+        nombreArchivo: localMat.nombreArchivo,
+        tamanoBytes: localMat.tamanoBytes,
+        preparadaEn: localMat.preparadaEn,
+        cacheHit: false,
+        local: true
+      };
+      MP_STATE.materialTemplateDownload = descargaLocal;
+      actualizarEstadoDescargaPlantillaMateriales_("LISTA", descargaLocal);
+      return Promise.resolve(descargaLocal);
     }
 
     actualizarEstadoDescargaPlantillaMateriales_("PREPARANDO");
@@ -2739,7 +3123,9 @@ const MP_STATE = {
 
   function closeMpModal() {
     liberarDescargaPlantillaMateriales_();
+    liberarDescargaPlantillaPrecios_();
     MP_STATE.materialTemplateRequestSeq += 1;
+    MP_STATE.priceTemplateRequestSeq += 1;
     const modal = document.getElementById("mpModalBackdrop");
     if (modal) modal.remove();
   }
@@ -3068,6 +3454,12 @@ function renderBulkMaterialPreview(resultBox, result) {
   }
 
 function confirmarBulkMaterialLoad(resultBox, tokenPreview) {
+    // AGENTE 2: token local GSD -> confirmación fila por fila en el frontend.
+    const localPending = mpGsdTakePending_(tokenPreview);
+    if (localPending) {
+      confirmarMaterialesGsdLocal_(resultBox, tokenPreview, localPending);
+      return;
+    }
     resultBox.innerHTML = '<div class="mp-inline-loader"><span class="material-symbols-rounded">hourglass_empty</span>Grabando materiales y relaciones...</div>';
 
     secureRpc(
@@ -3097,6 +3489,536 @@ function confirmarBulkMaterialLoad(resultBox, tokenPreview) {
         toast("No se pudo confirmar", errorMessage(error), true);
       });
   }
+
+  // AGENTE 2: confirmación local GSD de materiales. Escribe solo las filas OK
+  // (una por una con guardarMaterialPrecioModulo) y reporta motivo por fila.
+  function confirmarMaterialesGsdLocal_(resultBox, tokenPreview, localPending) {
+    const items = ((localPending && localPending.pendientes && localPending.pendientes.items) || []);
+    resultBox.innerHTML = '<div class="mp-inline-loader"><span class="material-symbols-rounded">hourglass_empty</span>Grabando ' + items.length + ' materiales validados...</div>';
+
+    let creados = 0;
+    let actualizados = 0;
+    let errores = 0;
+    const detalle = [];
+    let chain = Promise.resolve();
+    const vistosConfirm = {};
+
+    items.forEach(function(item) {
+      chain = chain.then(function() {
+        return secureRpc("guardarMaterialPrecioModulo", [item.payload], "MATERIALES_PRECIOS")
+          .then(function() {
+            var key = String(item.payload.idMaterial || "");
+            var esNuevo = /^MAT-GSD-/.test(key) && !vistosConfirm[key];
+            vistosConfirm[key] = true;
+            if (esNuevo) creados += 1;
+            else actualizados += 1;
+            detalle.push({ fila: item.fila, codigoMaterial: item.payload.codigoMaterial, accion: "GRABADO", estado: "OK", detalle: "OK" });
+          })
+          .catch(function(error) {
+            errores += 1;
+            detalle.push({ fila: item.fila, codigoMaterial: item.payload.codigoMaterial, accion: "OMITIR", estado: "ERROR", detalle: errorMessage(error) });
+          });
+      });
+    });
+
+    chain.then(function() {
+      mpGsdDropPending_(tokenPreview);
+      clearMpTableCache("materials");
+      clearMpSummaryCache();
+      let html = '<div class="mp-upload-summary">' +
+        '<div><small>Filas</small><strong>' + escapeHtml(items.length) + '</strong></div>' +
+        '<div><small>Creados</small><strong>' + escapeHtml(creados) + '</strong></div>' +
+        '<div><small>Actualizados</small><strong>' + escapeHtml(actualizados) + '</strong></div>' +
+        '<div><small>Errores</small><strong>' + escapeHtml(errores) + '</strong></div>' +
+        '</div><p class="mp-note">Carga GSD confirmada. Solo se grabaron las filas validadas.</p>';
+      if (detalle.length) {
+        html += '<div class="table-wrap"><table class="data-table"><thead><tr>' +
+          '<th>Fila</th><th>Material</th><th>Acción</th><th>Estado</th><th>Detalle</th>' +
+          '</tr></thead><tbody>' +
+          detalle.map(function(row) {
+            return '<tr><td>' + escapeHtml(row.fila) + '</td><td>' + escapeHtml(row.codigoMaterial) +
+              '</td><td>' + escapeHtml(row.accion) + '</td><td>' + escapeHtml(row.estado) +
+              '</td><td>' + escapeHtml(row.detalle) + '</td></tr>';
+          }).join("") + '</tbody></table></div>';
+      }
+      html += '<div class="mp-actions"><button id="mpCloseBulkMaterial" class="button button--primary" type="button">Cerrar</button></div>';
+      resultBox.innerHTML = html;
+      on("mpCloseBulkMaterial", "click", function() {
+        closeMpModal();
+        renderMaterialsPricesMaterials(true);
+      });
+      toast("Carga de materiales", "Creados: " + creados + " · Actualizados: " + actualizados + " · Errores: " + errores);
+    });
+  }
+
+/* GSD-EXCEL-INI (AGENTE 2 2026-09-19): soporte del Excel real del negocio GSD.
+ * El Excel real trae UNA sola hoja con encabezado:
+ * N°, PROVEEDOR, MARCA, TIPO, SUB TIPO, INCLUYE CONEXIÓN, CODIGO HANA
+ * (=código SAP), Producto principal calculado, Combo calculado, COMENTARIOS,
+ * FEE CLIDA (%), FEE PRV, PRECIO, cuotas 0/6/9/12/18/24/36/48/60,
+ * Producto original, Combo original. Todo del negocio GSD.
+ * MAPEO columna Excel -> campo sistema (ver mpGsdMapColumns_):
+ *   PROVEEDOR -> mae_materiales.proveedor (texto) + resolución a id_proveedor
+ *   MARCA -> mae_marcas por nombre (guardarMaterialPrecioModulo la crea)
+ *   TIPO/SUB TIPO -> id_tipo_material/id_subtipo_material (por nombre; null si no hay catálogo)
+ *   INCLUYE CONEXIÓN -> mae_materiales.incluye_conexion (SI/NO)
+ *   CODIGO HANA -> mae_materiales.codigo_hana + codigo_sap (clave de match)
+ *   Producto principal calculado -> mae_materiales.producto_principal (+id_producto si hay catálogo)
+ *   Combo calculado -> mae_materiales.combo (+detalle_combo del precio)
+ *   COMENTARIOS -> mae_materiales.comentarios
+ *   FEE CLIDA (%) o primer FEE -> pre_lista_precio_detalle.fee (0-100, oculto a PROVEEDOR)
+ *   RESPONSABLE_VENTA (solo plantilla precios) -> responsable_venta (detalle y lista)
+ *   PRECIO -> pre_lista_precio_detalle.precio_base (vigencia mensual día 1 -> fin de mes)
+ * SE IGNORA (y por qué):
+ *   N°: correlativo del Excel, sin valor de negocio.
+ *   Cuotas 0/6/9/12/18/24/36/48/60: montos derivados del PRECIO base; el sistema
+ *     graba el precio base. Reserva creada en migración 20260919 (cuotas_json).
+ *   Producto original / Combo original: columnas de auditoría del formato previo;
+ *     rigen las calculadas. Filas totalmente vacías y la fila "EJEMPLO*" de las
+ *     plantillas se omiten; una fila con datos pero sin CODIGO_HANA se reporta
+ *     como error con su motivo.
+ */
+function mpGsdNorm_(value) {
+  var text = String(value == null ? "" : value);
+  try {
+    text = text.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  } catch (ignore) {}
+  return text.toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
+function mpGsdMapColumns_(headers) {
+  var map = {};
+  var feeFirst = -1;
+  var feeClida = -1;
+  var comboExact = -1;
+  var comboCalc = -1;
+  var prodExact = -1;
+  var prodCalc = -1;
+  (headers || []).forEach(function(raw, idx) {
+    var key = mpGsdNorm_(raw);
+    if (!key) return;
+    // AGENTE 2B: tolerancia a variantes de encabezado (orden libre, fila 3,
+    // "PRECIO BASE", "COD HANA", "RESPONSABLE DE VENTA"...). Todo por prefijo
+    // o sinónimos exactos; las cuotas (dígitos) y columnas *ORIGINAL se ignoran.
+    if (key.indexOf("PROVEEDOR") === 0 && map.proveedor == null) map.proveedor = idx;
+    else if (key.indexOf("MARCA") === 0 && map.marca == null) map.marca = idx;
+    else if ((key === "TIPO" || key === "TIPOMATERIAL") && map.tipo == null) map.tipo = idx;
+    else if ((key === "SUBTIPO" || key === "SUBTIPOMATERIAL") && map.subtipo == null) map.subtipo = idx;
+    else if (key.indexOf("INCLUYE") === 0 && map.incluyeConexion == null) map.incluyeConexion = idx;
+    else if ((key === "CODIGOHANA" || key === "CODHANA" || key === "HANA" || key === "CODIGOSAP" || key === "CODSAP" || key === "SAP") && map.codigoHana == null) map.codigoHana = idx;
+    else if ((key === "COMENTARIOS" || key === "COMENTARIO" || key === "OBSERVACIONES" || key === "OBSERVACION") && map.comentarios == null) map.comentarios = idx;
+    else if ((key === "RESPONSABLEVENTA" || key === "RESPVENTA" || (key.indexOf("RESPONSABLE") !== -1 && key.indexOf("VENTA") !== -1)) && map.responsableVenta == null) map.responsableVenta = idx;
+    else if (key.indexOf("PRECIO") === 0 && map.precio == null) map.precio = idx;
+    else if (key === "COMBO") comboExact = comboExact === -1 ? idx : comboExact;
+    else if (key.indexOf("COMBO") === 0 && key.indexOf("ORIGINAL") === -1) comboCalc = comboCalc === -1 ? idx : comboCalc;
+    else if (key === "PRODUCTOPRINCIPAL") prodExact = prodExact === -1 ? idx : prodExact;
+    else if (key.indexOf("PRODUCTOPRINCIPAL") === 0 && key.indexOf("ORIGINAL") === -1) prodCalc = prodCalc === -1 ? idx : prodCalc;
+    else if (key.indexOf("FEE") === 0) {
+      if (feeFirst === -1) feeFirst = idx;
+      if (key.indexOf("CLID") !== -1 && feeClida === -1) feeClida = idx;
+    }
+    // Ignorados a propósito: N/NUMERO (N°), dígitos puros (cuotas),
+    // PRODUCTOORIGINAL, COMBOORIGINAL. No se mapean.
+  });
+  map.combo = comboExact !== -1 ? comboExact : (comboCalc !== -1 ? comboCalc : null);
+  if (map.combo == null) delete map.combo;
+  map.productoPrincipal = prodExact !== -1 ? prodExact : (prodCalc !== -1 ? prodCalc : null);
+  if (map.productoPrincipal == null) delete map.productoPrincipal;
+  if (feeClida !== -1) map.fee = feeClida;
+  else if (feeFirst !== -1) map.fee = feeFirst;
+  return map;
+}
+
+function mpGsdFindHeaderRow_(aoa) {
+  var best = -1;
+  var bestScore = 0;
+  var limit = Math.min((aoa || []).length, 20);
+  for (var r = 0; r < limit; r++) {
+    var row = aoa[r] || [];
+    // AGENTE 2B: la fila de título ("REPORTE GSD...") suele traer 1 sola
+    // celda con texto; el encabezado real trae 2 o más columnas mapeadas.
+    var celdas = 0;
+    for (var c = 0; c < row.length; c++) {
+      if (String(row[c] == null ? "" : row[c]).trim() !== "") celdas++;
+    }
+    if (celdas < 2) continue;
+    var map = mpGsdMapColumns_(row);
+    var score = Object.keys(map).length;
+    if (score < 2) continue;
+    var hasKey = map.codigoHana != null || (map.proveedor != null && map.precio != null);
+    if (hasKey && score > bestScore) {
+      bestScore = score;
+      best = r;
+    }
+  }
+  return best;
+}
+
+function mpGsdCell_(row, idx) {
+  if (idx == null || !row || idx >= row.length) return "";
+  var v = row[idx];
+  if (v == null) return "";
+  return String(v).trim();
+}
+
+function mpGsdParseNumber_(value) {
+  // AGENTE 2B: las fechas nativas de Excel no son montos (antes se colaba el
+  // serial como precio). Se devuelven como no numéricas con mensaje claro.
+  if (typeof Date !== "undefined" && value instanceof Date) return null;
+  var text = String(value == null ? "" : value).trim();
+  if (!text) return null;
+  if (typeof value === "number" && isFinite(value)) return value;
+  text = text.replace(/(S\/\.?|\$|PEN|USD|%)/gi, "").trim().replace(/\s+/g, "");
+  if (!text) return null;
+  // Negativo contable entre paréntesis: (1,500) -> -1500.
+  var negativo = false;
+  if (text.length > 2 && text.charAt(0) === "(" && text.charAt(text.length - 1) === ")") {
+    negativo = true;
+    text = text.slice(1, -1);
+  }
+  if (text.charAt(0) === "-") {
+    negativo = true;
+    text = text.slice(1);
+  } else if (text.charAt(0) === "+") {
+    text = text.slice(1);
+  }
+  if (!text) return null;
+  var hasDot = text.indexOf(".") !== -1;
+  var hasComma = text.indexOf(",") !== -1;
+  if (hasDot && hasComma) {
+    // AGENTE 2B: con ambos separadores, el ÚLTIMO es el decimal.
+    // "2,500.75" (US) -> 2500.75 ; "1.234,56" (EU) -> 1234.56.
+    if (text.lastIndexOf(".") > text.lastIndexOf(",")) text = text.replace(/,/g, "");
+    else text = text.replace(/\./g, "").replace(/,/g, ".");
+  } else if (hasComma || hasDot) {
+    var sep = hasComma ? "," : ".";
+    var partes = text.split(sep);
+    // AGENTE 2B: un solo separador con grupos de miles ("1,500", "1.500",
+    // "1,500,250", "1.234.567") vale como miles; si el último grupo no tiene
+    // 3 dígitos ("12.5", "899.00") es decimal.
+    var soloMiles = partes.length > 1 && partes.every(function(p, i) {
+      if (!/^\d+$/.test(p)) return false;
+      if (i === 0) return p.length >= 1 && p.length <= 3;
+      return p.length === 3;
+    });
+    if (soloMiles) text = partes.join("");
+    else if (hasComma) text = text.replace(/,/g, ".");
+  }
+  var num = Number(text);
+  if (!isFinite(num)) return null;
+  if (negativo) num = -Math.abs(num);
+  return num;
+}
+
+function mpGsdParseFee_(value) {
+  var text = String(value == null ? "" : value).trim();
+  if (!text) return { valor: null, error: "" };
+  // AGENTE 2B: con "%" explícito ("0.5%") el número ya está en porcentaje y
+  // NO se convierte; sin "%", "0.1" es tanto por uno y vale 10.
+  var tienePorciento = text.indexOf("%") !== -1;
+  var num = mpGsdParseNumber_(text);
+  if (num == null) return { valor: null, error: "FEE no numérico (" + text + ")." };
+  // Tolerancia: "0.12" como 12 % si viene en tanto por uno con decimales pequeños.
+  if (!tienePorciento && num > 0 && num < 1 && /^\s*0[.,]/.test(text)) num = Math.round(num * 10000) / 100;
+  if (num < 0 || num > 100) return { valor: null, error: "FEE fuera de rango 0-100 (" + text + ")." };
+  return { valor: Math.round(num * 100) / 100, error: "" };
+}
+
+function mpGsdParseWorkbook_(workbook) {
+  if (!workbook || !workbook.SheetNames || !workbook.SheetNames.length) {
+    throw new Error("El Excel no contiene hojas legibles.");
+  }
+  // AGENTE 2B: acceso tolerante a SheetJS (navegador o harness Node).
+  var XLSXLib = (typeof window !== "undefined" && window && window.XLSX) ||
+    (typeof XLSX !== "undefined" ? XLSX : null);
+  if (!XLSXLib) throw new Error("Librería XLSX no disponible. Abre la aplicación para cargar el Excel GSD.");
+  var names = workbook.SheetNames;
+  // AGENTE 2B: se elige la hoja con mejor encabezado GSD; ante empate gana
+  // la que empiece con CARGA (p. ej. CARGA_PRECIOS entre varias hojas).
+  var picked = names[0];
+  var pickedScore = -2;
+  for (var i = 0; i < names.length; i++) {
+    var nombreHoja = names[i];
+    var hojaWs = workbook.Sheets[nombreHoja];
+    var hojaAoa = null;
+    try {
+      hojaAoa = XLSXLib.utils.sheet_to_json(hojaWs, { header: 1, defval: "", raw: true, blankrows: false });
+    } catch (ignoreHoja) { hojaAoa = null; }
+    var hojaHeader = hojaAoa ? mpGsdFindHeaderRow_(hojaAoa) : -1;
+    var hojaScore = hojaHeader === -1 ? -1 : Object.keys(mpGsdMapColumns_(hojaAoa[hojaHeader])).length;
+    if (hojaScore >= 0 && mpGsdNorm_(nombreHoja).indexOf("CARGA") === 0) hojaScore += 0.5;
+    if (hojaScore > pickedScore) {
+      pickedScore = hojaScore;
+      picked = nombreHoja;
+    }
+  }
+  var ws = workbook.Sheets[picked];
+  if (!ws) throw new Error("La hoja " + picked + " no se pudo leer.");
+  var aoa = XLSXLib.utils.sheet_to_json(ws, { header: 1, defval: "", raw: true, blankrows: false });
+  if (!aoa || !aoa.length) throw new Error("La hoja " + picked + " está vacía.");
+  var headerRow = mpGsdFindHeaderRow_(aoa);
+  if (headerRow === -1) {
+    throw new Error("No se encontró el encabezado GSD (se esperaba CODIGO HANA, PROVEEDOR, PRECIO...).");
+  }
+  var map = mpGsdMapColumns_(aoa[headerRow]);
+  var filas = [];
+  // AGENTE 2B: duplicados intra-archivo. Se anotan aquí (primera fila vista
+  // por CODIGO_HANA) y los reporta mpGsdValidarFila_ como error en español.
+  var vistosHana = {};
+  for (var r = headerRow + 1; r < aoa.length; r++) {
+    var row = aoa[r] || [];
+    var allEmpty = row.every(function(c) { return String(c == null ? "" : c).trim() === ""; });
+    if (allEmpty) continue;
+    var codigoHana = mpGsdCell_(row, map.codigoHana);
+    // Solo se omiten filas totalmente vacías y la fila EJEMPLO de las plantillas.
+    // Una fila con datos pero sin CODIGO_HANA se conserva para reportarla como error.
+    if (mpGsdNorm_(codigoHana).indexOf("EJEMPLO") === 0) continue;
+    var dupKey = mpGsdNorm_(codigoHana);
+    var dupDe = null;
+    if (dupKey) {
+      if (vistosHana[dupKey] !== undefined) dupDe = vistosHana[dupKey];
+      else vistosHana[dupKey] = r + 1;
+    }
+    filas.push({
+      fila: r + 1,
+      proveedor: mpGsdCell_(row, map.proveedor),
+      marca: mpGsdCell_(row, map.marca),
+      tipo: mpGsdCell_(row, map.tipo),
+      subtipo: mpGsdCell_(row, map.subtipo),
+      incluyeConexion: mpGsdCell_(row, map.incluyeConexion),
+      codigoHana: codigoHana,
+      productoPrincipal: mpGsdCell_(row, map.productoPrincipal),
+      combo: mpGsdCell_(row, map.combo),
+      comentarios: mpGsdCell_(row, map.comentarios),
+      responsableVenta: mpGsdCell_(row, map.responsableVenta),
+      duplicadoDeFila: dupDe,
+      feeRaw: map.fee != null ? row[map.fee] : "",
+      precioRaw: map.precio != null ? row[map.precio] : ""
+    });
+  }
+  return { hoja: picked, mapa: map, filas: filas };
+}
+
+function mpGsdParseFileBuffer_(buffer, nombreArchivo) {
+  // AGENTE 2B: acceso tolerante a SheetJS (window en navegador, global en Node).
+  // El .csv con contenido GSD también lo lee SheetJS; si no se puede leer se
+  // lanza un error en español (nunca un crash por window/XLSX indefinidos).
+  var XLSXLib = (typeof window !== "undefined" && window && window.XLSX) ||
+    (typeof XLSX !== "undefined" ? XLSX : null);
+  if (!XLSXLib) throw new Error("Librería XLSX no disponible. Abre la aplicación para cargar el Excel GSD.");
+  if (buffer == null) throw new Error("Archivo vacío: selecciona un .xlsx o .csv con datos GSD.");
+  var nombre = String(nombreArchivo || "");
+  var esCsv = /\.csv$/i.test(nombre);
+  var workbook = null;
+  try {
+    // cellDates: las fechas nativas llegan como Date (no como serial) para
+    // no confundirlas con montos en PRECIO/FEE.
+    if (typeof buffer === "string") workbook = XLSXLib.read(buffer, { type: "string", cellDates: true });
+    else workbook = XLSXLib.read(buffer, { type: "array", cellDates: true });
+  } catch (errorLectura) {
+    throw new Error("No se pudo leer el archivo " + (esCsv ? ".csv" : ".xlsx") + " (¿formato válido?). Detalle: " + String((errorLectura && errorLectura.message) || errorLectura));
+  }
+  return mpGsdParseWorkbook_(workbook);
+}
+
+function mpGsdResolverPorNombre_(lista, texto) {
+  var needle = mpGsdNorm_(texto);
+  if (!needle) return null;
+  var found = null;
+  (lista || []).forEach(function(item) {
+    if (found || !item) return;
+    var id = String(item.id || item.idProveedor || "");
+    var nombre = String(item.nombre || item.nombreComercial || item.razonSocial || "");
+    var codigo = String(item.codigo || "");
+    if (mpGsdNorm_(nombre) === needle || (codigo && mpGsdNorm_(codigo) === needle) || (id && mpGsdNorm_(id) === needle)) found = item;
+  });
+  if (!found) {
+    (lista || []).forEach(function(item) {
+      if (found || !item) return;
+      var nombre = String(item.nombre || item.nombreComercial || item.razonSocial || "");
+      if (nombre && mpGsdNorm_(nombre).indexOf(needle) !== -1) found = item;
+    });
+  }
+  return found;
+}
+
+function mpGsdMonthRange_() {
+  var now = new Date();
+  var first = now.toISOString().slice(0, 8) + "01";
+  var last = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);
+  return { inicio: first, fin: last };
+}
+
+function mpGsdMaterialKey_(codigoHana) {
+  return "MAT-GSD-" + mpGsdNorm_(codigoHana).slice(0, 40);
+}
+
+function mpGsdValidarFila_(g, opts, ctx) {
+  ctx = ctx || {};
+  var errores = [];
+  var advertencias = [];
+  if (!g.codigoHana) errores.push("Falta CODIGO_HANA (=código SAP).");
+  // AGENTE 2B: duplicado intra-archivo (lo anota mpGsdParseWorkbook_ en
+  // g.duplicadoDeFila). Solo la primera aparición se procesa.
+  if (g.duplicadoDeFila) errores.push("CODIGO_HANA duplicado en el archivo (ya está en la fila " + g.duplicadoDeFila + "). Deja una sola fila por código.");
+  var fee = mpGsdParseFee_(g.feeRaw);
+  if (fee.error) errores.push(fee.error);
+  var precio = null;
+  if (ctx.exigePrecio) {
+    precio = mpGsdParseNumber_(g.precioRaw);
+    // AGENTE 2B: el mensaje incluye lo recibido ("cero", vacío, negativo...)
+    // para ubicar el dato malo sin abrir el Excel.
+    var precioCrudo = String(g.precioRaw == null ? "" : g.precioRaw).trim().slice(0, 40);
+    if (precio == null) errores.push("PRECIO ausente o no numérico" + (precioCrudo ? " (recibido: \"" + precioCrudo + "\")" : " (celda vacía)") + ".");
+    else if (!(precio > 0)) errores.push("PRECIO debe ser mayor a 0 (recibido: " + precio + ").");
+  }
+  var incluye = mpGsdNorm_(g.incluyeConexion);
+  if (g.incluyeConexion && ["SI", "NO"].indexOf(incluye) === -1) {
+    advertencias.push("INCLUYE CONEXIÓN distinto de SI/NO: se guarda como texto.");
+  }
+  var marca = g.marca ? mpGsdResolverPorNombre_(opts.marcas, g.marca) : null;
+  if (g.marca && !marca) advertencias.push("MARCA sin catálogo: se creará (" + g.marca + ").");
+  var tipo = g.tipo ? mpGsdResolverPorNombre_(opts.tipos, g.tipo) : null;
+  if (g.tipo && !tipo) advertencias.push("TIPO sin catálogo: se guarda sin tipificación.");
+  var subtipo = null;
+  if (g.subtipo) {
+    var candidatos = (opts.subtipos || []).filter(function(s) {
+      return !tipo || String(s.idTipoMaterial || s.idProducto || "") === "" || String(s.idTipoMaterial || "") === String(tipo.id || "");
+    });
+    subtipo = mpGsdResolverPorNombre_(candidatos.length ? candidatos : opts.subtipos, g.subtipo);
+    if (!subtipo) advertencias.push("SUBTIPO sin catálogo: se guarda sin tipificación.");
+  }
+  var producto = g.productoPrincipal ? mpGsdResolverPorNombre_(opts.productos, g.productoPrincipal) : null;
+  if (g.productoPrincipal && !producto) advertencias.push("PRODUCTO PRINCIPAL sin catálogo: se guarda como texto.");
+  var proveedor = g.proveedor ? mpGsdResolverPorNombre_(opts.proveedores, g.proveedor) : null;
+  if (ctx.exigeProveedor && !proveedor && !ctx.idProveedorDefecto) {
+    errores.push("PROVEEDOR no reconocido y sin predeterminado (" + (g.proveedor || "vacío") + ").");
+  } else if (g.proveedor && !proveedor) {
+    advertencias.push("PROVEEDOR sin catálogo: se usa el predeterminado y se guarda el texto.");
+  }
+  return { errores: errores, advertencias: advertencias, fee: fee.valor, precio: precio, marca: marca, tipo: tipo, subtipo: subtipo, producto: producto, proveedor: proveedor };
+}
+
+function mpGsdMaterialPayload_(g, val, existente) {
+  var nombre = g.combo || ((g.productoPrincipal ? g.productoPrincipal + " " : "") + (g.marca ? g.marca : "")).trim() || g.codigoHana;
+  var descripcion = [g.productoPrincipal, g.combo, g.comentarios].filter(function(t) { return !!t; }).join(" | ") || nombre;
+  var incluye = mpGsdNorm_(g.incluyeConexion);
+  return {
+    idMaterial: (existente && existente.idMaterial) || mpGsdMaterialKey_(g.codigoHana),
+    codigoMaterial: (existente && existente.codigoMaterial) || g.codigoHana,
+    codigoHana: g.codigoHana,
+    codigoSap: g.codigoHana,
+    idProducto: (val.producto && (val.producto.id || val.producto.idProducto)) || null,
+    idTipoMaterial: (val.tipo && val.tipo.id) || null,
+    idSubtipoMaterial: (val.subtipo && (val.subtipo.id || val.subtipo.idSubtipo)) || null,
+    idMarca: g.marca || "",
+    nombreMaterial: nombre,
+    descripcionMaterial: descripcion,
+    proveedor: g.proveedor || "",
+    incluyeConexion: incluye === "SI" ? "SI" : (incluye === "NO" ? "NO" : (g.incluyeConexion || "")),
+    productoPrincipal: g.productoPrincipal || "",
+    combo: g.combo || "",
+    comentarios: g.comentarios || "",
+    unidadMedida: "UND",
+    esGasodomestico: false,
+    estado: "ACTIVO"
+  };
+}
+
+function mpGsdStorePending_(kind, pendientes) {
+  MP_STATE.gsdPendingSeq = Number(MP_STATE.gsdPendingSeq || 0) + 1;
+  var token = "GSDLOCAL-" + kind + "-" + Date.now() + "-" + MP_STATE.gsdPendingSeq;
+  MP_STATE.gsdPending = MP_STATE.gsdPending || {};
+  MP_STATE.gsdPending[token] = { kind: kind, pendientes: pendientes, creadoEn: Date.now() };
+  return token;
+}
+
+function mpGsdTakePending_(token) {
+  var store = MP_STATE.gsdPending || {};
+  return store[String(token || "")] || null;
+}
+
+function mpGsdDropPending_(token) {
+  try { delete MP_STATE.gsdPending[String(token || "")]; } catch (ignore) {}
+}
+
+function mpGsdMaskFee_(texto) {
+  if (!isMpProviderUser_()) return texto;
+  return "(oculto para proveedor)";
+}
+
+function mpGsdDictRows_(opts) {
+  var rows = [["CATEGORIA", "CODIGO", "NOMBRE", "REFERENCIA"]];
+  (opts.negocios || []).forEach(function(x) { rows.push(["NEGOCIO", x.id || "", x.nombre || "", "GSD"]); });
+  (opts.productos || []).forEach(function(x) { rows.push(["PRODUCTO_PRINCIPAL", x.id || "", x.nombre || "", x.idNegocio || ""]); });
+  (opts.tipos || []).forEach(function(x) { rows.push(["TIPO", x.id || "", x.nombre || "", ""]); });
+  (opts.subtipos || []).forEach(function(x) { rows.push(["SUBTIPO", x.id || "", x.nombre || "", x.idTipoMaterial || x.idProducto || ""]); });
+  (opts.marcas || []).forEach(function(x) { rows.push(["MARCA", x.id || "", x.nombre || "", ""]); });
+  (opts.proveedores || []).forEach(function(x) { rows.push(["PROVEEDOR", x.id || x.idProveedor || "", x.nombre || "", ""]); });
+  rows.push(["NOTA", "", "FEE oculto al rol PROVEEDOR. Vigencia mensual día 1 → fin de mes.", ""]);
+  rows.push(["NOTA", "", "Se ignoran N°, cuotas por plazo y columnas * original.", ""]);
+  return rows;
+}
+
+function mpGsdBuildMaterialWorkbook_(opts) {
+  // AGENTE 2C: encabezados exactos del formato GSD (10 columnas) + anchos razonables.
+  var headers = ["N°", "PROVEEDOR", "MARCA", "TIPO", "SUBTIPO", "INCLUYE CONEXIÓN", "CODIGO HANA", "PRODUCTO PRINCIPAL", "COMBO", "COMENTARIOS"];
+  var anchos = [6, 22, 18, 18, 18, 18, 18, 28, 32, 36];
+  var ejemplo = ["", "EJEMPLO Proveedor", "EJEMPLO Marca", "EJEMPLO Tipo", "EJEMPLO Subtipo", "SI", "EJEMPLO-BORRAR-ESTA-FILA", "EJEMPLO Producto", "EJEMPLO Combo", "Fila de ejemplo: bórrala"];
+  var wb = window.XLSX.utils.book_new();
+  var ws = window.XLSX.utils.aoa_to_sheet([headers, ejemplo]);
+  ws["!cols"] = anchos.map(function(wch) { return { wch: wch }; });
+  window.XLSX.utils.book_append_sheet(wb, ws, "CARGA_MATERIALES");
+  var wsDict = window.XLSX.utils.aoa_to_sheet(mpGsdDictRows_(opts || {}));
+  wsDict["!cols"] = [{ wch: 20 }, { wch: 28 }, { wch: 40 }, { wch: 30 }];
+  window.XLSX.utils.book_append_sheet(wb, wsDict, "DICCIONARIOS");
+  return wb;
+}
+
+function mpGsdBuildPricesWorkbook_(opts) {
+  // AGENTE 2C: 7 columnas exactas; RESPONSABLE_VENTA al lado de PROVEEDOR; vigencia mensual como ejemplo.
+  var headers = ["CODIGO_HANA", "PROVEEDOR", "RESPONSABLE_VENTA", "PRECIO", "FEE", "FECHA_INICIO", "FECHA_FIN"];
+  var anchos = [18, 22, 22, 14, 10, 14, 14];
+  var vigencia = mpGsdMonthRange_();
+  var ejemplo = ["EJEMPLO-BORRAR-ESTA-FILA", "EJEMPLO Proveedor", "EJEMPLO Responsable", 100, 10, vigencia.inicio, vigencia.fin];
+  var wb = window.XLSX.utils.book_new();
+  var ws = window.XLSX.utils.aoa_to_sheet([headers, ejemplo]);
+  ws["!cols"] = anchos.map(function(wch) { return { wch: wch }; });
+  window.XLSX.utils.book_append_sheet(wb, ws, "CARGA_PRECIOS");
+  var wsDict = window.XLSX.utils.aoa_to_sheet(mpGsdDictRows_(opts || {}));
+  wsDict["!cols"] = [{ wch: 20 }, { wch: 28 }, { wch: 40 }, { wch: 30 }];
+  window.XLSX.utils.book_append_sheet(wb, wsDict, "DICCIONARIOS");
+  return wb;
+}
+
+function mpGsdWorkbookFile_(workbook, nombreArchivo) {
+  var bytes = window.XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+  var blob = new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  if (!blob.size) throw new Error("La plantilla XLSX generada está vacía.");
+  return { blob: blob, url: URL.createObjectURL(blob), nombreArchivo: nombreArchivo, tamanoBytes: blob.size, preparadaEn: Date.now(), local: true };
+}
+function mpGsdPlantillaMaterialLocal_() {
+  try {
+    if (!window.XLSX) return null;
+    var opts = MP_STATE.options || getMpEmptyOptions();
+    if (!opts || !opts.negocios || !opts.negocios.length) return null;
+    return mpGsdWorkbookFile_(mpGsdBuildMaterialWorkbook_(opts), "Plantilla_Carga_Materiales_GSD.xlsx");
+  } catch (ignore) {
+    return null;
+  }
+}
+
+function mpGsdPlantillaPreciosLocal_() {
+  try {
+    if (!window.XLSX) return null;
+    var opts = MP_STATE.options || getMpEmptyOptions();
+    if (!opts || !opts.proveedores) return null;
+    return mpGsdWorkbookFile_(mpGsdBuildPricesWorkbook_(opts), "Plantilla_Carga_Precios_GSD.xlsx");
+  } catch (ignore) {
+    return null;
+  }
+}
+/* GSD-EXCEL-FIN */
 
 function base64ToBlobMateriales_(base64, mimeType) {
     const texto = String(base64 || "").replace(/\s/g, "");

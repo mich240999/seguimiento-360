@@ -359,6 +359,10 @@ const SALES_STATE = {
 
 
   function refreshCashSalesWorkspace(silent) {
+    if (String(SALES_STATE.activeView || "").toUpperCase() === "DESPACHO" && typeof refreshDispatchWorkspace === "function") {
+      refreshDispatchWorkspace(silent);
+      return;
+    }
     loadCashSalesContext(Boolean(silent));
   }
 
@@ -371,6 +375,10 @@ const SALES_STATE = {
       '<div class="sales-card"><div id="salesListRegion">' + loadingHtml(5) + '</div></div>' +
       '</section>';
     on("salesRefreshButton", "click", function() {
+      if (String(SALES_STATE.activeView || "").toUpperCase() === "DESPACHO" && typeof refreshDispatchWorkspace === "function") {
+        refreshDispatchWorkspace(false);
+        return;
+      }
       invalidarCacheBandejasVentasPaso29G_();
       loadCashSalesContext(false);
     });
@@ -573,6 +581,27 @@ const SALES_STATE = {
   }
 
 
+  /**
+   * La pestaña DESPACHO vive dentro de Ventas y se muestra cuando el
+   * usuario puede gestionar despachos: permiso VENTAS_CONTADO
+   * PROGRAMAR_ENTREGA o CONFIRMAR_ENTREGA, o rol DESPACHADOR.
+   */
+  function salesCanViewDispatchTab29D_() {
+    try {
+      if (typeof hasActivePermission === "function") {
+        if (hasActivePermission("VENTAS_CONTADO", "PROGRAMAR_ENTREGA")) return true;
+        if (hasActivePermission("VENTAS_CONTADO", "CONFIRMAR_ENTREGA")) return true;
+      }
+    } catch (error) {}
+    try {
+      if (typeof APP_STATE !== "undefined" && APP_STATE && APP_STATE.context && APP_STATE.context.usuario) {
+        const role = String(APP_STATE.context.usuario.rol || "");
+        if (role.toUpperCase() === "DESPACHADOR") return true;
+      }
+    } catch (error) {}
+    return false;
+  }
+
   function salesCanOpenView29M_(view, permisos) {
     const p = permisos ||
       (
@@ -591,6 +620,10 @@ const SALES_STATE = {
 
     if (v === "ENTREGAS") {
       return p.puedeGestionarEntrega === true;
+    }
+
+    if (v === "DESPACHO") {
+      return salesCanViewDispatchTab29D_();
     }
 
     return p.puedeListar === true;
@@ -635,6 +668,14 @@ const SALES_STATE = {
       tabs.push({
         id:"ENTREGAS",
         label:"Gestión de entregas",
+        icon:"local_shipping"
+      });
+    }
+
+    if (salesCanViewDispatchTab29D_()) {
+      tabs.push({
+        id:"DESPACHO",
+        label:"Despacho",
         icon:"local_shipping"
       });
     }
@@ -1268,8 +1309,15 @@ const SALES_STATE = {
   }
 
   function cambiarBandejaVentasPaso29G_(vista) {
-    guardarFiltrosBandejaActualPaso29G_();
+    if (String(SALES_STATE.activeView || "").toUpperCase() !== "DESPACHO") {
+      guardarFiltrosBandejaActualPaso29G_();
+    }
     SALES_STATE.activeView = vista || "REGISTRADAS";
+    if (String(SALES_STATE.activeView).toUpperCase() === "DESPACHO") {
+      renderSalesTaskTabs();
+      renderSalesDispatchFrame29D_();
+      return;
+    }
     SALES_STATE.filters = filtrosBaseBandejaVentasPaso29G_(
       SALES_STATE.activeView
     );
@@ -1278,9 +1326,26 @@ const SALES_STATE = {
     cargarBandejaSiCambioPaso29G_();
   }
 
+  /**
+   * Pestaña DESPACHO: reutiliza la bandeja de dispatch.js pintándola
+   * dentro de #salesListRegion (modo embebido, sin cambiar de módulo).
+   * No toca el flujo de REGISTRADAS/ABONOS/ENTREGAS.
+   */
+  function renderSalesDispatchFrame29D_() {
+    if (typeof openDispatchWorkspace === "function") {
+      openDispatchWorkspace(SALES_STATE.module, { embedded: true });
+      return;
+    }
+    const region = document.getElementById("salesListRegion");
+    if (region) {
+      region.innerHTML = '<div class="empty-state"><span class="material-symbols-rounded">local_shipping</span><strong>Despacho no disponible</strong><p>No se pudo cargar la bandeja de despacho.</p></div>';
+    }
+  }
+
   function salesViewTitle() {
     if (SALES_STATE.activeView === "ABONOS") return ["Validación de abonos", "Revisa los comprobantes pendientes u observados. Aprobar lleva la venta a Por entregar."];
     if (SALES_STATE.activeView === "ENTREGAS") return ["Gestión de entregas", "Gestiona únicamente ventas con abono aprobado y registra evidencias u observaciones de entrega."];
+    if (String(SALES_STATE.activeView || "").toUpperCase() === "DESPACHO") return ["Despacho de entregas", "Toma despachos programados y confirma entregas con evidencia. Solo ventas PROGRAMADA y EN_RUTA de tu proveedor."];
     return ["Ventas registradas", "Consulta y modifica ventas. Las tareas de abono y entrega se atienden en sus bandejas específicas."];
   }
 

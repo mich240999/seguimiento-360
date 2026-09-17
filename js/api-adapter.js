@@ -190,7 +190,6 @@
             { idModulo: "MOD-DASH-VTA", codigo: "DASHBOARD_VENTAS", nombre: "Dashboard de Ventas", icono: "fas fa-chart-line", orden: 5 },
             { idModulo: "MOD-SALES", codigo: "VENTAS_CONTADO", nombre: "Ventas y Seguimiento 360", icono: "fas fa-truck-ramp-box", orden: 10 },
             { idModulo: "MOD-CAL-ENT", codigo: "CALENDARIO_ENTREGAS", nombre: "Calendario de Entregas", icono: "fas fa-calendar-days", orden: 15 },
-            { idModulo: "MOD-DESP", codigo: "DESPACHO", nombre: "Despacho de Entregas", icono: "fas fa-truck-fast", orden: 18 },
             { idModulo: "MOD-MP", codigo: "MATERIALES_PRECIOS", nombre: "Materiales y Precios", icono: "fas fa-tags", orden: 20 },
             { idModulo: "MOD-PROV", codigo: "PROVEEDORES", nombre: "Proveedores y Sedes", icono: "fas fa-handshake", orden: 30 },
             { idModulo: "MOD-ADM-USR", codigo: "ADMIN_USUARIOS", nombre: "Usuarios y Seguridad", icono: "fas fa-users-gear", orden: 40 },
