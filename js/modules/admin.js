@@ -800,14 +800,52 @@ const ADMIN_STATE = {
 
     const providerLists = ADMIN_STATE.providerLists || [];
     if (providerLists.length) {
+      const groups = {};
+      const order = [];
+      providerLists.forEach(function(row) {
+        const key = String(row.idListaPrecio || row.idLista || [row.idProveedor, row.fechaInicio, row.fechaFin].join("|"));
+        if (!groups[key]) {
+          groups[key] = {
+            nombre: row.nombre || row.codigoLista || key,
+            proveedor: row.proveedor || "—",
+            vigencia: ((row.fechaInicio || "") + " / " + (row.fechaFin || "")).replace(/^\s*\/\s*$/, "—"),
+            estado: row.estado || "",
+            items: []
+          };
+          order.push(key);
+        }
+        groups[key].items.push(row);
+      });
       region.innerHTML += '<h4 class="section-subtitle">Catálogos de proveedores (listas de precios)</h4>' +
-        tableHtml([
-          { key: "nombre", label: "Lista", render: function(row) { return escapeHtml(row.nombre || row.codigoLista || row.idListaPrecio || "—"); } },
-          { key: "proveedor", label: "Proveedor" },
-          { key: "alcance", label: "Alcance", render: function(row) { return escapeHtml(row.idGrupo ? "Grupo" : (row.idOficina ? "Oficina" : "General")); } },
-          { key: "vigencia", label: "Vigencia", render: function(row) { return escapeHtml(((row.fechaInicio || "") + " / " + (row.fechaFin || "")).replace(/^\s*\/\s*$/, "—")); } },
-          { key: "estado", label: "Estado", render: statusChip }
-        ], providerLists);
+        '<div class="admin-accordion">' + order.map(function(key) {
+          const group = groups[key];
+          return '<section class="accordion-item" data-catalog-group="' + escapeHtml(key) + '">' +
+            '<button class="accordion-trigger" type="button" aria-expanded="false" data-catalog-group-trigger>' +
+            '<span class="accordion-icon material-symbols-rounded">folder_shared</span>' +
+            '<span class="accordion-label"><strong>' + escapeHtml(group.nombre) + '</strong>' +
+            '<small>' + escapeHtml(group.proveedor) + ' · ' + escapeHtml(group.vigencia) + '</small></span>' +
+            '<span class="accordion-count">' + group.items.length + '</span>' +
+            '<span class="material-symbols-rounded accordion-chevron">expand_more</span></button>' +
+            '<div class="accordion-panel" hidden><div class="mp-table-wrap"><table class="mp-table"><thead><tr>' +
+            '<th>Material</th><th>Precio</th><th>Responsable</th><th>Fee %</th>' +
+            '</tr></thead><tbody>' + group.items.map(function(item) {
+              return '<tr><td><strong>' + escapeHtml(item.nombreCortoMaterial || item.descripcionMaterial || item.codigoMaterial || "—") + '</strong>' +
+                '<br><small>' + escapeHtml(item.codigoSap || item.codigoMaterial || "") + '</small></td>' +
+                '<td><strong>' + escapeHtml("S/ " + Number(item.precioBase || 0).toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })) + '</strong></td>' +
+                '<td>' + escapeHtml(item.responsableVenta || "—") + '</td>' +
+                '<td>' + escapeHtml((item.fee === null || item.fee === undefined || String(item.fee) === "") ? "—" : String(item.fee) + " %") + '</td></tr>';
+            }).join("") + '</tbody></table></div></div></section>';
+        }).join("") + '</div>';
+      region.querySelectorAll("[data-catalog-group-trigger]").forEach(function(trigger) {
+        if (trigger.dataset.catalogGroupBound === "true") return;
+        trigger.dataset.catalogGroupBound = "true";
+        trigger.addEventListener("click", function() {
+          const expanded = trigger.getAttribute("aria-expanded") === "true";
+          const panel = trigger.closest(".accordion-item").querySelector(".accordion-panel");
+          trigger.setAttribute("aria-expanded", String(!expanded));
+          if (panel) panel.hidden = expanded;
+        });
+      });
     }
   }
 
