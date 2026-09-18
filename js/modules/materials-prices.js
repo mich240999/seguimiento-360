@@ -87,6 +87,18 @@ const MP_STATE = {
     return Boolean(user.idProveedor) || String(user.rol || "").toUpperCase() === "PROVEEDOR";
   }
 
+  /* Barra de estado para cargas masivas (global: también la usa Proveedores). */
+  function mpBulkProgressHtml_(done, total, label) {
+    var pct = total > 0 ? Math.round((done / total) * 100) : 0;
+    return '<div class="mp-progress"><div class="mp-progress-top"><strong>' + escapeHtml(label || "Cargando...") +
+      "</strong><span>" + done + " de " + total + " (" + pct + "%)</span></div>" +
+      '<div class="mp-progress-track"><div class="mp-progress-fill" style="width:' + pct + '%"></div></div></div>';
+  }
+  function mpBulkProgressUpdate_(resultBox, done, total, label) {
+    if (!resultBox) return;
+    resultBox.innerHTML = mpBulkProgressHtml_(done, total, label);
+  }
+
   function mpCanSeeTab(tab) {
     const rules = {
       summary: ["VER_RESUMEN", "VER_MATERIALES", "VER_PRECIOS", "VER_LISTAS_OFICIALES", "VER_MIS_LISTAS_PRECIO", "VER_SOLICITUDES_PRECIO"],
@@ -1602,7 +1614,12 @@ const MP_STATE = {
     }
     var grupos = pending.pendientes.grupos || [];
     var totalDetalles = grupos.reduce(function(n, g) { return n + ((g.items || []).length); }, 0);
-    resultBox.innerHTML = '<div class="mp-inline-loader"><span class="material-symbols-rounded">hourglass_empty</span>Grabando ' + grupos.length + ' listas (' + totalDetalles + ' detalles)...</div>';
+    var doneBulkLst = 0;
+    var stepBulkLst = function() {
+      doneBulkLst += 1;
+      mpBulkProgressUpdate_(resultBox, doneBulkLst, totalDetalles, "Grabando listas...");
+    };
+    mpBulkProgressUpdate_(resultBox, 0, totalDetalles, "Grabando listas...");
     var button = document.getElementById("mpConfirmListsBulk");
     if (button) button.disabled = true;
     var listasCreadas = 0;
@@ -1636,10 +1653,12 @@ const MP_STATE = {
                     if (resDet && resDet.creado === false) detallesActualizados += 1;
                     else detallesCreados += 1;
                     detalle.push({ fila: item.fila, lista: grupo.etiqueta, material: item.detalle.idMaterial, precio: String(item.detalle.precioBase), estado: "OK", motivo: "Grabado en lista " + idLista });
+                    stepBulkLst();
                   })
                   .catch(function(error) {
                     errores += 1;
                     detalle.push({ fila: item.fila, lista: grupo.etiqueta, material: item.detalle.idMaterial, precio: String(item.detalle.precioBase), estado: "ERROR", motivo: errorMessage(error) });
+                    stepBulkLst();
                   });
               });
             });
@@ -1649,6 +1668,7 @@ const MP_STATE = {
             errores += (grupo.items || []).length;
             (grupo.items || []).forEach(function(item) {
               detalle.push({ fila: item.fila, lista: grupo.etiqueta, material: item.detalle.idMaterial, precio: String(item.detalle.precioBase), estado: "ERROR", motivo: "Lista no creada: " + errorMessage(error) });
+              stepBulkLst();
             });
           });
       });
@@ -2917,7 +2937,12 @@ const MP_STATE = {
   // actualiza el material y luego su precio (misma vigencia se actualiza).
   function confirmarPreciosGsdLocal_(resultBox, tokenPreview, localPending) {
     const items = ((localPending && localPending.pendientes && localPending.pendientes.items) || []);
-    resultBox.innerHTML = '<div class="mp-inline-loader"><span class="material-symbols-rounded">hourglass_empty</span>Grabando ' + items.length + ' precios validados...</div>';
+    var doneBulkPre = 0;
+    var stepBulkPre = function() {
+      doneBulkPre += 1;
+      mpBulkProgressUpdate_(resultBox, doneBulkPre, items.length, "Grabando precios...");
+    };
+    mpBulkProgressUpdate_(resultBox, 0, items.length, "Grabando precios...");
 
     const button = document.getElementById("mpConfirmBulkPricePaso28O");
     if (button) button.disabled = true;
@@ -2940,10 +2965,12 @@ const MP_STATE = {
             if (item.precio.idDetallePrecio) actualizados += 1;
             else creados += 1;
             detalle.push({ fila: item.fila, codigoMaterial: item.material.codigoMaterial, accion: "GRABADO", estado: "OK", detalle: "OK" });
+            stepBulkPre();
           })
           .catch(function(error) {
             errores += 1;
             detalle.push({ fila: item.fila, codigoMaterial: item.material.codigoMaterial, accion: "OMITIR", estado: "ERROR", detalle: errorMessage(error) });
+            stepBulkPre();
           });
       });
     });
@@ -4143,7 +4170,12 @@ function confirmarBulkMaterialLoad(resultBox, tokenPreview) {
   // (una por una con guardarMaterialPrecioModulo) y reporta motivo por fila.
   function confirmarMaterialesGsdLocal_(resultBox, tokenPreview, localPending) {
     const items = ((localPending && localPending.pendientes && localPending.pendientes.items) || []);
-    resultBox.innerHTML = '<div class="mp-inline-loader"><span class="material-symbols-rounded">hourglass_empty</span>Grabando ' + items.length + ' materiales validados...</div>';
+    var doneBulkMat = 0;
+    var stepBulkMat = function() {
+      doneBulkMat += 1;
+      mpBulkProgressUpdate_(resultBox, doneBulkMat, items.length, "Grabando materiales...");
+    };
+    mpBulkProgressUpdate_(resultBox, 0, items.length, "Grabando materiales...");
 
     let creados = 0;
     let actualizados = 0;
@@ -4162,10 +4194,12 @@ function confirmarBulkMaterialLoad(resultBox, tokenPreview) {
             if (esNuevo) creados += 1;
             else actualizados += 1;
             detalle.push({ fila: item.fila, codigoMaterial: item.payload.codigoMaterial, accion: "GRABADO", estado: "OK", detalle: "OK" });
+            stepBulkMat();
           })
           .catch(function(error) {
             errores += 1;
             detalle.push({ fila: item.fila, codigoMaterial: item.payload.codigoMaterial, accion: "OMITIR", estado: "ERROR", detalle: errorMessage(error) });
+            stepBulkMat();
           });
       });
     });

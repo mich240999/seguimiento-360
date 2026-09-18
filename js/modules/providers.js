@@ -1310,14 +1310,27 @@ const PROVIDERS_STATE = {
       const results = [];
       const byProvider = {};
       let chain = Promise.resolve();
+      var doneProv = 0;
+      var showProvProgress = function(done, total, label) {
+        if (!body) return;
+        if (typeof mpBulkProgressUpdate_ === "function") mpBulkProgressUpdate_(body, done, total, label);
+        else body.innerHTML = '<div class="providers-office-loading"><span class="spinner" aria-hidden="true"></span><div><strong>' + done + " de " + total + " — " + label + '</strong></div></div>';
+      };
+      showProvProgress(0, actionable.length, "Revisando filas...");
       actionable.forEach(function(row) {
         chain = chain.then(function() {
-          return applyProvidersChannelRow_(row, catalog, byProvider).then(function(result) { results.push(result); });
+          return applyProvidersChannelRow_(row, catalog, byProvider).then(function(result) {
+            results.push(result);
+            doneProv += 1;
+            showProvProgress(doneProv, actionable.length, "Revisando filas...");
+          });
         });
       });
       return chain.then(function() {
         let saveChain = Promise.resolve();
-        Object.keys(byProvider).forEach(function(id) {
+        const providerIds = Object.keys(byProvider);
+        var doneSave = 0;
+        providerIds.forEach(function(id) {
           saveChain = saveChain.then(function() {
             const entry = byProvider[id];
             return secureRpc("guardarProveedorModulo", [entry.payload], "PROVEEDORES").then(function() {
@@ -1329,12 +1342,16 @@ const PROVIDERS_STATE = {
                   }
                 }
               });
+              doneSave += 1;
+              showProvProgress(doneSave, providerIds.length, "Guardando proveedores...");
             }).catch(function(error) {
               entry.rows.forEach(function(linea) {
                 for (let i = 0; i < results.length; i++) {
                   if (results[i].linea === linea) { results[i].estado = "ERROR"; results[i].detalle = errorMessage(error); }
                 }
               });
+              doneSave += 1;
+              showProvProgress(doneSave, providerIds.length, "Guardando proveedores...");
             });
           });
         });
