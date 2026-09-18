@@ -784,8 +784,18 @@ const ADMIN_STATE = {
   function renderAdminCatalogs() {
     const region = document.getElementById("adminCatalogsContent");
     if (!region) return;
+    /* AGENTE B: las filas SYSTEM-* (MP_NEGOCIOS/MP_PRODUCTOS_PRINCIPALES/
+       MP_TIPOS_MATERIAL/MP_SUBTIPOS_MATERIAL/MP_MARCAS) son fallback del motor
+       cuando faltan en app_catalogos (listarCatalogosAdminMotor en
+       supabase-client.js). Decision: NO borrar ni filtrar (el arbol de
+       materiales y las ventas dependen de esos valores); se marcan con badge
+       "Sistema" para distinguirlas de los catalogos reales en BD. */
     region.innerHTML = tableHtml([
-      { key: "nombre", label: "Catálogo" },
+      { key: "nombre", label: "Catálogo", render: function(row) {
+        var systemicB = String(row.idCatalogo || "").indexOf("SYSTEM-") === 0;
+        return '<strong>' + escapeHtml(row.nombre) + '</strong>' +
+          (systemicB ? ' <span class="chip">Sistema</span>' : '');
+      } },
       { key: "codigo", label: "Código" },
       { key: "descripcion", label: "Descripción" },
       { key: "estado", label: "Estado", render: statusChip },
@@ -803,17 +813,13 @@ const ADMIN_STATE = {
       const groups = {};
       const order = [];
       providerLists.forEach(function(row) {
-        const key = String(row.idListaPrecio || row.idLista || [row.idProveedor, row.fechaInicio, row.fechaFin].join("|"));
+        const key = String(row.idProveedor || row.proveedor || "SIN_PROVEEDOR");
         if (!groups[key]) {
-          groups[key] = {
-            nombre: row.nombre || row.codigoLista || key,
-            proveedor: row.proveedor || "—",
-            vigencia: ((row.fechaInicio || "") + " / " + (row.fechaFin || "")).replace(/^\s*\/\s*$/, "—"),
-            estado: row.estado || "",
-            items: []
-          };
+          groups[key] = { proveedor: row.proveedor || key, items: [], esCatalogo: false };
           order.push(key);
         }
+        // AGENTE A (2026-09-22): marca si el proveedor tiene lista catálogo.
+        if (row.es_catalogo === true || row.esCatalogo === true) groups[key].esCatalogo = true;
         groups[key].items.push(row);
       });
       region.innerHTML += '<h4 class="section-subtitle">Catálogos de proveedores (listas de precios)</h4>' +
@@ -822,15 +828,18 @@ const ADMIN_STATE = {
           return '<section class="accordion-item" data-catalog-group="' + escapeHtml(key) + '">' +
             '<button class="accordion-trigger" type="button" aria-expanded="false" data-catalog-group-trigger>' +
             '<span class="accordion-icon material-symbols-rounded">folder_shared</span>' +
-            '<span class="accordion-label"><strong>' + escapeHtml(group.nombre) + '</strong>' +
-            '<small>' + escapeHtml(group.proveedor) + ' · ' + escapeHtml(group.vigencia) + '</small></span>' +
+            '<span class="accordion-label"><strong>Catálogo ' + escapeHtml(group.proveedor) + '</strong>' +
+            (group.esCatalogo ? ' <span class="status-chip status-chip--success">CATÁLOGO</span>' : '') +
+            '<small>' + group.items.length + (group.items.length === 1 ? " material" : " materiales") + '</small></span>' +
             '<span class="accordion-count">' + group.items.length + '</span>' +
             '<span class="material-symbols-rounded accordion-chevron">expand_more</span></button>' +
             '<div class="accordion-panel" hidden><div class="mp-table-wrap"><table class="mp-table"><thead><tr>' +
-            '<th>Material</th><th>Precio</th><th>Responsable</th><th>Fee %</th>' +
+            '<th>Material</th><th>Lista</th><th>Precio</th><th>Responsable</th><th>Fee %</th>' +
             '</tr></thead><tbody>' + group.items.map(function(item) {
               return '<tr><td><strong>' + escapeHtml(item.nombreCortoMaterial || item.descripcionMaterial || item.codigoMaterial || "—") + '</strong>' +
                 '<br><small>' + escapeHtml(item.codigoSap || item.codigoMaterial || "") + '</small></td>' +
+                '<td>' + escapeHtml(item.nombre || item.codigoLista || "—") +
+                '<br><small>' + escapeHtml(((item.fechaInicio || "") + " / " + (item.fechaFin || "")).replace(/^\s*\/\s*$/, "")) + '</small></td>' +
                 '<td><strong>' + escapeHtml("S/ " + Number(item.precioBase || 0).toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })) + '</strong></td>' +
                 '<td>' + escapeHtml(item.responsableVenta || "—") + '</td>' +
                 '<td>' + escapeHtml((item.fee === null || item.fee === undefined || String(item.fee) === "") ? "—" : String(item.fee) + " %") + '</td></tr>';

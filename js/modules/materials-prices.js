@@ -512,13 +512,37 @@ const MP_STATE = {
       rows.map(function(row) {
         const payload = escapeHtml(JSON.stringify(row || {}));
         const editButton = canEditMaterial ? '<button class="button button--ghost button--compact" type="button" data-mp-material-edit="' + payload + '">Modificar</button>' : '';
-        return '<tr><td>' + escapeHtml(row.codigoMaterial) + '</td><td>' + escapeHtml(row.codigoSap || "—") + '</td><td>' + escapeHtml(row.producto || "—") + '</td><td>' + escapeHtml((row.tipo || "—") + " / " + (row.subtipo || "—")) + '</td><td><strong>' + escapeHtml(row.descripcionMaterial) + '</strong></td><td>' + escapeHtml(row.marca || "—") + '</td><td><span class="mp-status ' + escapeHtml(row.estado) + '">' + escapeHtml(row.estado) + '</span></td><td><div class="mp-actions mp-actions--inline">' + editButton + '</div></td></tr>';
+        const deleteButton = canEditMaterial ? '<button class="button button--ghost button--compact" type="button" data-mp-material-delete="' + escapeHtml(row.idMaterial || "") + '">Eliminar</button>' : '';
+        return '<tr><td>' + escapeHtml(row.codigoMaterial) + '</td><td>' + escapeHtml(row.codigoSap || "—") + '</td><td>' + escapeHtml(row.producto || "—") + '</td><td>' + escapeHtml((row.tipo || "—") + " / " + (row.subtipo || "—")) + '</td><td><strong>' + escapeHtml(row.descripcionMaterial) + '</strong></td><td>' + escapeHtml(row.marca || "—") + '</td><td><span class="mp-status ' + escapeHtml(row.estado) + '">' + escapeHtml(row.estado) + '</span></td><td><div class="mp-actions mp-actions--inline">' + editButton + deleteButton + '</div></td></tr>';
       }).join("") + '</tbody></table></div>' + mpPaginationHtml(result, "materials");
     bindMpPagination("materials", function() { loadMaterialsTable(false); });
     document.querySelectorAll("[data-mp-material-edit]").forEach(function(button) {
       button.addEventListener("click", function() {
         try { openMaterialModal(JSON.parse(button.getAttribute("data-mp-material-edit") || "{}")); }
         catch (error) { toast("No se pudo abrir", "Los datos del material no están disponibles.", true); }
+      });
+    });
+    /* AGENTE B: eliminar material con confirmacion; el RPC bloquea si el
+       material esta en uso en precios o ventas. Invalida caches como el flujo
+       de Modificar (clearMpTableCache/clearMpSummaryCache). */
+    document.querySelectorAll("[data-mp-material-delete]").forEach(function(button) {
+      button.addEventListener("click", function() {
+        var idMaterial = String(button.getAttribute("data-mp-material-delete") || "");
+        var found = (rows || []).filter(function(item) { return String(item.idMaterial || "") === idMaterial; })[0] || {};
+        var label = found.descripcionMaterial || found.codigoSap || found.codigoMaterial || idMaterial;
+        if (!window.confirm("¿Eliminar el material " + label + "? Si está en uso en precios o ventas, se bloqueará con un aviso.")) return;
+        button.disabled = true;
+        secureRpc("eliminarMaterialPrecioModulo", [idMaterial], "MATERIALES_PRECIOS")
+          .then(function(result) {
+            toast("Material eliminado", (result && result.mensaje) || "El material fue eliminado.");
+            clearMpTableCache("materials");
+            clearMpSummaryCache();
+            loadMaterialsTable(true, false);
+          })
+          .catch(function(error) {
+            toast("No se pudo eliminar", errorMessage(error), true);
+            button.disabled = false;
+          });
       });
     });
     if (showToast && !fromCache) toast("Materiales", "Listado actualizado.");
@@ -908,6 +932,9 @@ const MP_STATE = {
     if (!content) return;
     if (!rows.length) { content.innerHTML = mpEmpty("No hay precios de materiales para mostrar."); return; }
     var hideFeeForProvider = isMpProviderUser_();
+    /* AGENTE B: Modificar existe (openIndividualPriceModal); Eliminar usa el
+       nuevo RPC eliminarDetalleListaPrecioModulo con confirmacion. */
+    var canDeletePrice = mpPermission("EDITAR_LISTA_OFICIAL") || mpPermission("GESTIONAR_PRECIOS");
     content.innerHTML = '<div class="mp-table-wrap"><table class="mp-table mp-price-table"><thead><tr><th>Proveedor</th><th>Responsable venta</th><th>Negocio</th><th>Alcance</th><th>Código SAP Material</th><th>Nombre corto del material</th><th>Combo</th><th>Precio</th>' + (hideFeeForProvider ? '' : '<th>Fee %</th>') + '<th>Fecha</th><th>Acciones</th></tr></thead><tbody>' + rows.map(function(row) {
       const combo = getMpComboDetail(row);
       const rawPrice = resolveMpPriceValue(row);
@@ -916,13 +943,33 @@ const MP_STATE = {
       const dateStart = row.fechaInicio || row.FECHA_INICIO || "";
       const dateEnd = row.fechaFin || row.FECHA_FIN || "";
       const dateCell = '<div class="mp-vigencia-cell"><div><strong>I:</strong> ' + escapeHtml(dateStart || "—") + '</div><div><strong>F:</strong> ' + escapeHtml(dateEnd || "—") + '</div></div>';
-      return '<tr><td>' + escapeHtml(row.proveedor || "Proveedor no definido") + '</td><td>' + escapeHtml(row.responsableVenta || row.RESPONSABLE_VENTA || "—") + '</td><td>' + escapeHtml(row.negocio || "—") + '</td><td>' + escapeHtml(mpScopeLabel(row)) + '</td><td><strong>' + escapeHtml(row.codigoSap || row.CODIGO_SAP || "—") + '</strong><br><small>' + escapeHtml(row.codigoMaterial || row.CODIGO_MATERIAL || "") + '</small></td><td class="mp-material-name">' + escapeHtml(row.nombreCortoMaterial || row.descripcionMaterial || row.NOMBRE_MATERIAL || "—") + '</td><td>' + (combo ? '<small>' + escapeHtml(combo) + '</small>' : '<span class="sales-muted">—</span>') + '</td><td class="mp-money-cell"><strong>' + escapeHtml(priceText) + '</strong></td>' + (hideFeeForProvider ? '' : '<td>' + escapeHtml(feeText) + '</td>') + '<td>' + dateCell + '</td><td><div class="mp-actions"><button class="button button--ghost button--compact" type="button" data-mp-edit-price="' + escapeHtml(row.idDetallePrecio || row.idPrecio || row.ID_DETALLE_PRECIO || "") + '">Modificar</button></div></td></tr>';
+      return '<tr><td>' + escapeHtml(row.proveedor || "Proveedor no definido") + '</td><td>' + escapeHtml(row.responsableVenta || row.RESPONSABLE_VENTA || "—") + '</td><td>' + escapeHtml(row.negocio || "—") + '</td><td>' + escapeHtml(mpScopeLabel(row)) + '</td><td><strong>' + escapeHtml(row.codigoSap || row.CODIGO_SAP || "—") + '</strong><br><small>' + escapeHtml(row.codigoMaterial || row.CODIGO_MATERIAL || "") + '</small></td><td class="mp-material-name">' + escapeHtml(row.nombreCortoMaterial || row.descripcionMaterial || row.NOMBRE_MATERIAL || "—") + '</td><td>' + (combo ? '<small>' + escapeHtml(combo) + '</small>' : '<span class="sales-muted">—</span>') + '</td><td class="mp-money-cell"><strong>' + escapeHtml(priceText) + '</strong></td>' + (hideFeeForProvider ? '' : '<td>' + escapeHtml(feeText) + '</td>') + '<td>' + dateCell + '</td><td><div class="mp-actions"><button class="button button--ghost button--compact" type="button" data-mp-edit-price="' + escapeHtml(row.idDetallePrecio || row.idPrecio || row.ID_DETALLE_PRECIO || "") + '">Modificar</button>' + (canDeletePrice ? '<button class="button button--ghost button--compact" type="button" data-mp-delete-price="' + escapeHtml(row.idDetallePrecio || row.idPrecio || row.ID_DETALLE_PRECIO || "") + '">Eliminar</button>' : '') + '</div></td></tr>';
     }).join("") + '</tbody></table></div>' + mpPaginationHtml(result, "prices");
     bindMpPagination("prices", function() { loadOfficialPricesTable(false); });
     document.querySelectorAll("[data-mp-edit-price]").forEach(function(button) {
       button.addEventListener("click", function() {
         const row = (MP_STATE.officialPriceRows || []).find(function(item) { return String(item.idDetallePrecio || item.idPrecio || "") === String(button.dataset.mpEditPrice || ""); });
         openIndividualPriceModal(row || null);
+      });
+    });
+    document.querySelectorAll("[data-mp-delete-price]").forEach(function(button) {
+      button.addEventListener("click", function() {
+        var idDetalle = String(button.getAttribute("data-mp-delete-price") || "");
+        var found = (MP_STATE.officialPriceRows || []).filter(function(item) { return String(item.idDetallePrecio || item.idPrecio || "") === idDetalle; })[0] || {};
+        var label = [found.proveedor || "", found.nombreCortoMaterial || found.codigoMaterial || "", found.responsableVenta ? "Resp: " + found.responsableVenta : ""].filter(function(part) { return !!part; }).join(" · ") || idDetalle;
+        if (!window.confirm("¿Eliminar el precio " + label + "? Esta acción no se puede deshacer.")) return;
+        button.disabled = true;
+        secureRpc("eliminarDetalleListaPrecioModulo", [idDetalle], "MATERIALES_PRECIOS")
+          .then(function(result) {
+            toast("Precio eliminado", (result && result.mensaje) || "El precio fue eliminado.");
+            clearMpTableCache("prices");
+            clearMpSummaryCache();
+            loadOfficialPricesTable(true, false, true);
+          })
+          .catch(function(error) {
+            toast("No se pudo eliminar", errorMessage(error), true);
+            button.disabled = false;
+          });
       });
     });
     if (showToast && !fromCache) toast("Precios", "Listado actualizado.");
@@ -937,12 +984,13 @@ const MP_STATE = {
     const canPending = mpPermission("DESCARGAR_CONSOLIDADO_PENDIENTES");
     const canTemplate = canUpload;
     region.innerHTML = '<section class="mp-panel"><div class="mp-section-head"><div class="mp-section-title"><h3>' + (canReview ? 'Listas cargadas por proveedor' : 'Mis listas') + '</h3><p>Carga listas desde este apartado. La lista queda pendiente de revisión y no afecta precios oficiales hasta ser aprobada/publicada. Alcance: sin oficina ni grupo = <strong>General</strong> (aplica a todos); con oficina = <strong>Oficina</strong>; con oficina y grupo = <strong>Grupo</strong>. La carga masiva XLSX crea listas oficiales directamente: cada fila es un material dentro de una lista y las filas con mismo proveedor, oficina, grupo, negocio, nombre, moneda y vigencia forman una lista.</p></div><div class="mp-section-actions">' +
-      (canTemplate ? '<button id="mpTemplateButton" class="button button--ghost" type="button"><span class="material-symbols-rounded">download</span>Plantilla CSV</button>' : '') +
+      (canTemplate ? '<button id="mpTemplateButton" class="button button--ghost" type="button"><span class="material-symbols-rounded">download</span>Plantilla CSV (respaldo)</button>' : '') +
       (canUpload ? '<button id="mpUploadListButton" class="button button--primary" type="button"><span class="material-symbols-rounded">upload_file</span>Cargar lista</button>' : '') +
       (canUpload ? '<button id="mpListsBulkButton" class="button button--secondary" type="button"><span class="material-symbols-rounded">upload_file</span>Carga masiva XLSX</button>' : '') +
-      (canTemplate ? '<button id="mpListsTemplateXlsxButton" class="button button--ghost" type="button"><span class="material-symbols-rounded">download</span>Descargar plantilla XLSX</button>' : '') +
+      (canTemplate ? '<button id="mpListsTemplateXlsxButton" class="button button--ghost" type="button"><span class="material-symbols-rounded">download</span>Plantilla XLSX (Listas GSD)</button>' : '') +
       (canPending ? '<button id="mpDownloadPending" class="button button--secondary" type="button"><span class="material-symbols-rounded">download</span>Consolidado pendientes</button>' : '') +
-      '</div></div></section><div id="mpRequestsContent">' + loadingHtml(6) + '</div>';
+      '</div></div></section><div id="mpRequestsContent">' + loadingHtml(6) + '</div>' +
+      '<section class="mp-panel"><div class="mp-section-head"><div class="mp-section-title"><h3>Listas oficiales</h3><p>Cabeceras creadas por carga masiva o precio individual. Modificar un precio se hace por detalle desde la pestaña Precios; aquí puedes eliminar la lista completa (cabecera + detalles en cascada) con confirmación.</p></div></div><div id="mpOfficialListsSection">' + loadingHtml(3) + '</div></section>';
     on("mpTemplateButton", "click", downloadMaterialsPricesTemplate);
     on("mpUploadListButton", "click", openUploadListModal);
     on("mpListsBulkButton", "click", openMpListsBulkModal);
@@ -953,6 +1001,64 @@ const MP_STATE = {
         .catch(function(error) { toast("No se pudo descargar", errorMessage(error), true); });
     });
     loadRequestsTable(showToast, renderToken);
+    loadMpOfficialListsSection_();
+  }
+
+  /* AGENTE B: listas oficiales agrupadas por cabecera con Eliminar en cascada
+     (nuevo RPC eliminarListaOficialPrecioModulo). El Modificar de una lista se
+     hace por detalle desde la pestaña Precios (openIndividualPriceModal). */
+  function loadMpOfficialListsSection_() {
+    var box = document.getElementById("mpOfficialListsSection");
+    if (!box) return;
+    box.innerHTML = loadingHtml(3);
+    secureRpc("listarListasOficialesPreciosModulo", [{}], "MATERIALES_PRECIOS")
+      .then(function(result) { renderMpOfficialListsSection_(box, (result && result.registros) || []); })
+      .catch(function(error) {
+        var target = document.getElementById("mpOfficialListsSection");
+        if (target) target.innerHTML = mpError(error);
+      });
+  }
+
+  function renderMpOfficialListsSection_(box, rows) {
+    if (!box) return;
+    var canDelete = mpPermission("EDITAR_LISTA_OFICIAL") || mpPermission("GESTIONAR_PRECIOS");
+    var groups = {};
+    var order = [];
+    (rows || []).forEach(function(item) {
+      var key = String(item.idListaPrecio || "SIN_LISTA");
+      if (!groups[key]) {
+        groups[key] = { idListaPrecio: key, proveedor: item.proveedor || "—", negocio: item.negocio || "—", vigencia: String(item.fechaInicio || "") + " / " + String(item.fechaFin || ""), items: [] };
+        order.push(key);
+      }
+      groups[key].items.push(item);
+    });
+    if (!order.length) { box.innerHTML = mpEmpty("No hay listas oficiales para mostrar."); return; }
+    box.innerHTML = '<div class="mp-table-wrap"><table class="mp-table"><thead><tr><th>Lista</th><th>Proveedor</th><th>Negocio</th><th>Vigencia</th><th>Detalles</th>' + (canDelete ? '<th>Acciones</th>' : '') + '</tr></thead><tbody>' +
+      order.map(function(key) {
+        var group = groups[key];
+        return '<tr><td><strong>' + escapeHtml(key) + '</strong></td><td>' + escapeHtml(group.proveedor) + '</td><td>' + escapeHtml(group.negocio) + '</td><td>' + escapeHtml(group.vigencia) + '</td><td>' + group.items.length + '</td>' +
+          (canDelete ? '<td><div class="mp-actions"><button class="button button--ghost button--compact" type="button" data-mp-delete-list="' + escapeHtml(key) + '">Eliminar</button></div></td>' : '') + '</tr>';
+      }).join("") + '</tbody></table></div>';
+    box.querySelectorAll("[data-mp-delete-list]").forEach(function(button) {
+      button.addEventListener("click", function() {
+        var idLista = String(button.getAttribute("data-mp-delete-list") || "");
+        var group = groups[idLista] || { items: [] };
+        if (!window.confirm("¿Eliminar la lista " + idLista + " con sus " + group.items.length + " detalle(s)? Se borran cabecera y detalles y no se puede deshacer.")) return;
+        button.disabled = true;
+        secureRpc("eliminarListaOficialPrecioModulo", [idLista], "MATERIALES_PRECIOS")
+          .then(function(result) {
+            toast("Lista eliminada", (result && result.mensaje) || "La lista oficial fue eliminada.");
+            clearMpTableCache("prices");
+            clearMpSummaryCache();
+            loadMpOfficialListsSection_();
+            loadOfficialPricesTable(true, false, true);
+          })
+          .catch(function(error) {
+            toast("No se pudo eliminar", errorMessage(error), true);
+            button.disabled = false;
+          });
+      });
+    });
   }
 
   function loadRequestsTable(showToast, renderToken) {
@@ -1415,7 +1521,7 @@ const MP_STATE = {
       var url = URL.createObjectURL(blob);
       var link = document.createElement("a");
       link.href = url;
-      link.download = "Plantilla_Carga_Listas_Precios.xlsx";
+      link.download = "Plantilla_Carga_Listas_GSD.xlsx";
       link.target = "_blank";
       link.rel = "noopener";
       document.body.appendChild(link);
@@ -1424,7 +1530,7 @@ const MP_STATE = {
         try { link.remove(); } catch (ignoreRemove) {}
         try { URL.revokeObjectURL(url); } catch (ignoreRevoke) {}
       }, 30000);
-      toast("Plantilla descargada", "Se inició la descarga de Plantilla_Carga_Listas_Precios.xlsx (hojas CARGA_LISTAS y DICCIONARIOS).");
+      toast("Plantilla descargada", "Se inició la descarga de Plantilla_Carga_Listas_GSD.xlsx (hojas CARGA_LISTAS y DICCIONARIOS).");
     } catch (error) {
       toast("No se pudo generar la plantilla", errorMessage(error), true);
     }
@@ -1441,7 +1547,7 @@ const MP_STATE = {
     if (!body) return;
     body.innerHTML = '<form id="mpListsBulkForm" class="mp-modern-form">' +
       '<section class="mp-upload-hero"><div><h4>Carga masiva de listas oficiales</h4>' +
-      '<p>Descarga la plantilla XLSX, completa la hoja CARGA_LISTAS y valida antes de grabar. Las filas con mismo proveedor, oficina, grupo, negocio, nombre, moneda y vigencia forman UNA lista oficial.</p></div>' +
+      '<p>Descarga la plantilla XLSX oficial (Plantilla_Carga_Listas_GSD.xlsx), completa la hoja CARGA_LISTAS y valida antes de grabar. Las filas con mismo proveedor, oficina, grupo, negocio, nombre, moneda y vigencia forman UNA lista oficial.</p></div>' +
       '<div class="mp-upload-badges"><span class="mp-badge"><span class="material-symbols-rounded">fact_check</span>Prevalidación</span>' +
       '<span class="mp-badge"><span class="material-symbols-rounded">table_rows</span>XLSX</span></div></section>' +
       '<div class="mp-upload-layout"><div class="mp-modal-section"><h4>Archivo de carga</h4>' +
@@ -1449,7 +1555,10 @@ const MP_STATE = {
       '<div class="mp-form-grid">' +
       '<label class="mp-file-field mp-form-span-2">Archivo XLSX<input id="mpListsBulkFile" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required></label>' +
       '</div></div>' +
-      '<div class="mp-upload-sidebar"><div class="mp-help-card"><strong>Para qué sirve cada columna</strong><ul>' +
+      '<div class="mp-upload-sidebar"><div class="mp-help-card"><strong>Cómo usar la plantilla</strong><ul>' +
+      '<li>Descarga la plantilla XLSX oficial: Plantilla_Carga_Listas_GSD.xlsx (hojas CARGA_LISTAS y DICCIONARIOS).</li>' +
+      '<li>Completa la hoja CARGA_LISTAS y usa DICCIONARIOS como referencia; escribe nombres, no IDs técnicos.</li>' +
+      '<li>Borra la fila EJEMPLO antes de validar.</li>' +
       '<li><strong>PROVEEDOR</strong> (obligatorio): nombre, código o id del proveedor dueño de la lista.</li>' +
       '<li><strong>OFICINA</strong> (opcional): vacía = <strong>General</strong>, la lista aplica a toda la red.</li>' +
       '<li><strong>GRUPO</strong> (opcional): requiere OFICINA; con ambas = alcance <strong>Grupo</strong>.</li>' +
@@ -1460,10 +1569,11 @@ const MP_STATE = {
       '<li><strong>CODIGO_HANA</strong> (obligatorio): código SAP; debe existir en Materiales.</li>' +
       '<li><strong>PRECIO</strong> (obligatorio): mayor o igual a 0.</li>' +
       '<li><strong>RESPONSABLE_VENTA / FEE</strong> (opcionales): FEE 0-100.</li>' +
+      '<li>La primera acción solo valida; nada se graba hasta confirmar.</li>' +
       '</ul></div></div></div>' +
       '<div id="mpListsBulkResult" class="mp-material-bulk-result"></div>' +
       '<div class="mp-upload-actions">' +
-      '<button id="mpListsBulkTemplateLink" class="button button--ghost" type="button"><span class="material-symbols-rounded">download</span>Descargar plantilla XLSX</button>' +
+      '<button id="mpListsBulkTemplateLink" class="button button--ghost" type="button"><span class="material-symbols-rounded">download</span>Descargar plantilla XLSX (Plantilla_Carga_Listas_GSD.xlsx)</button>' +
       '<button id="mpListsBulkSubmit" class="button button--primary" type="submit"><span class="material-symbols-rounded">fact_check</span>Prevalidar listas</button>' +
       '</div></form>';
     on("mpListsBulkTemplateLink", "click", function() { descargarPlantillaListasBulkXlsx_(); });
@@ -2331,7 +2441,7 @@ const MP_STATE = {
         '<section class="mp-upload-hero">' +
           '<div>' +
             '<h4>Carga masiva de precios</h4>' +
-            '<p>Descarga la plantilla XLSX, completa CARGA_PRECIOS y utiliza DICCIONARIOS como referencia de códigos válidos.</p>' +
+            '<p>Descarga la plantilla XLSX oficial (Plantilla_Carga_Precios_GSD.xlsx), completa CARGA_PRECIOS y utiliza DICCIONARIOS como referencia de códigos válidos.</p>' +
           '</div>' +
           '<div class="mp-upload-badges">' +
             '<span class="mp-badge"><span class="material-symbols-rounded">speed</span>Precio directo</span>' +
@@ -2369,8 +2479,11 @@ const MP_STATE = {
 
           '<div class="mp-upload-sidebar">' +
             '<div class="mp-help-card">' +
-              '<strong>Reglas de control</strong>' +
+              '<strong>Cómo usar la plantilla</strong>' +
               '<ul>' +
+                '<li>Descarga la plantilla XLSX oficial: Plantilla_Carga_Precios_GSD.xlsx (hojas CARGA_PRECIOS y DICCIONARIOS).</li>' +
+                '<li>Completa la hoja CARGA_PRECIOS y usa DICCIONARIOS como referencia; escribe nombres, no IDs técnicos.</li>' +
+                '<li>Borra la fila EJEMPLO antes de validar.</li>' +
                 '<li>Identifica el material por CODIGO_HANA (equivale al código SAP) o CODIGO_MATERIAL.</li>' +
                 '<li>Se acepta el Excel GSD de una sola hoja (PROVEEDOR, MARCA, TIPO, SUBTIPO, INCLUYE CONEXIÓN, CODIGO HANA, PRODUCTO_PRINCIPAL, COMBO, COMENTARIOS, FEE, PRECIO). N°, cuotas por plazo y columnas * original se ignoran.</li>' +
                 '<li>Todo precio debe terminar asociado a un proveedor y a un negocio. RESPONSABLE_VENTA va al lado de PROVEEDOR.</li>' +
@@ -2382,6 +2495,7 @@ const MP_STATE = {
                 '<li>Con oficina y grupo = Grupo; el grupo debe pertenecer a esa oficina.</li>' +
                 '<li>La misma combinación material + proveedor + negocio + alcance no puede tener vigencias superpuestas.</li>' +
                 '<li>Si existe exactamente la misma vigencia, el precio registrado se actualiza.</li>' +
+                '<li>La primera acción solo valida; nada se graba hasta confirmar.</li>' +
                 '<li>La opción principal es siempre la plantilla XLSX (Descargar plantilla XLSX: Plantilla_Carga_Precios_GSD.xlsx). El CSV del servidor queda solo como respaldo si el XLSX local no está disponible.</li>' +
               '</ul>' +
             '</div>' +
@@ -2950,8 +3064,57 @@ const MP_STATE = {
     let creados = 0;
     let actualizados = 0;
     let errores = 0;
+    // AGENTE A (2026-09-22): espejo en el catálogo del proveedor. Contadores
+    // propios para no alterar el reporte mensual (creados/actualizados/errores).
+    let catalogOk = 0;
+    let catalogErr = 0;
     const detalle = [];
     let chain = Promise.resolve();
+    // Caché proveedor -> idListaPrecio del catálogo (o promesa en vuelo).
+    var catalogoCache_ = {};
+
+    // Resuelve el catálogo del proveedor por es_catalogo==true; si no existe
+    // lo crea vía guardarListaOficialPrecioModulo ("Catálogo <prov>").
+    var resolverCatalogoProv_ = function(idProveedor, nombreProv) {
+      if (catalogoCache_[idProveedor]) return Promise.resolve(catalogoCache_[idProveedor]);
+      if (catalogoCache_[idProveedor + "__p"]) return catalogoCache_[idProveedor + "__p"];
+      var promesa = secureRpc("listarListasOficialesPreciosModulo", [{}], "MATERIALES_PRECIOS")
+        .then(function(resp) {
+          var filas = (resp && resp.registros) || [];
+          var hallada = null;
+          var porNombre = null;
+          filas.forEach(function(r) {
+            if (String(r.idProveedor || "") !== String(idProveedor)) return;
+            if (r.es_catalogo === true || r.esCatalogo === true) { if (!hallada) hallada = r; return; }
+            var nm = String(r.nombre || r.codigoLista || "");
+            if (!porNombre && /^(cat[aá]logo|lista base) /i.test(nm)) porNombre = r;
+          });
+          var elegida = hallada || porNombre;
+          if (elegida && elegida.idListaPrecio) {
+            catalogoCache_[idProveedor] = elegida.idListaPrecio;
+            return elegida.idListaPrecio;
+          }
+          var nombreCat = "Catálogo " + String(nombreProv || idProveedor).slice(0, 120);
+          return secureRpc("guardarListaOficialPrecioModulo", [{ idProveedor: idProveedor, nombre: nombreCat, es_catalogo: true, esCatalogo: true }], "MATERIALES_PRECIOS")
+            .then(function(creada) {
+              var idCat = creada && creada.idListaPrecio;
+              if (idCat) catalogoCache_[idProveedor] = idCat;
+              return idCat || null;
+            });
+        })
+        .catch(function(err) {
+          if (catalogoCache_[idProveedor + "__p"]) delete catalogoCache_[idProveedor + "__p"];
+          throw err;
+        });
+      catalogoCache_[idProveedor + "__p"] = promesa;
+      promesa.then(function(id) {
+        if (catalogoCache_[idProveedor + "__p"]) delete catalogoCache_[idProveedor + "__p"];
+        if (id) catalogoCache_[idProveedor] = id;
+      }, function() {
+        if (catalogoCache_[idProveedor + "__p"]) delete catalogoCache_[idProveedor + "__p"];
+      });
+      return promesa;
+    };
 
     items.forEach(function(item) {
       chain = chain.then(function() {
@@ -2959,13 +3122,36 @@ const MP_STATE = {
           .then(function(res) {
             var idMat = (res && res.idMaterial) || item.material.idMaterial;
             const precio = Object.assign({}, item.precio, { idMaterial: idMat });
-            return secureRpc("guardarPrecioIndividualMaterialesPreciosModulo", [precio], "MATERIALES_PRECIOS");
-          })
-          .then(function() {
-            if (item.precio.idDetallePrecio) actualizados += 1;
-            else creados += 1;
-            detalle.push({ fila: item.fila, codigoMaterial: item.material.codigoMaterial, accion: "GRABADO", estado: "OK", detalle: "OK" });
-            stepBulkPre();
+            return secureRpc("guardarPrecioIndividualMaterialesPreciosModulo", [precio], "MATERIALES_PRECIOS")
+              .then(function() {
+                if (item.precio.idDetallePrecio) actualizados += 1;
+                else creados += 1;
+                detalle.push({ fila: item.fila, codigoMaterial: item.material.codigoMaterial, accion: "GRABADO", estado: "OK", detalle: "OK" });
+                stepBulkPre();
+                // Espejo en catálogo: MISMO material+precio+fee+responsable.
+                // Sin idDetallePrecio: el RPC de detalle reutiliza la misma
+                // lista+material (no duplica). Fallos no tocan contadores mensuales.
+                var idProvCat = String((item.precio && item.precio.idProveedor) || "");
+                var nombreProvCat = (item.material && item.material.proveedor) || idProvCat;
+                if (!idProvCat || !idMat) return null;
+                return resolverCatalogoProv_(idProvCat, nombreProvCat)
+                  .then(function(idCat) {
+                    if (!idCat) return null;
+                    return secureRpc("guardarDetalleListaPrecioModulo", [{
+                      idListaPrecio: idCat,
+                      idMaterial: idMat,
+                      precioBase: item.precio.precioBase,
+                      fee: (item.precio.fee === undefined ? "" : item.precio.fee),
+                      responsableVenta: item.precio.responsableVenta || "",
+                      moneda: item.precio.moneda || "PEN"
+                    }], "MATERIALES_PRECIOS");
+                  })
+                  .then(function() { catalogOk += 1; })
+                  .catch(function(catError) {
+                    catalogErr += 1;
+                    detalle.push({ fila: item.fila, codigoMaterial: item.material.codigoMaterial, accion: "CATALOGO", estado: "ERROR", detalle: errorMessage(catError) });
+                  });
+              });
           })
           .catch(function(error) {
             errores += 1;
@@ -2980,17 +3166,19 @@ const MP_STATE = {
       clearMpTableCache("prices");
       clearMpTableCache("materials");
       clearMpSummaryCache();
+      var mensajeCat = "";
+      if (catalogOk || catalogErr) mensajeCat = " Catálogo: " + catalogOk + " sincronizado(s)" + (catalogErr ? ", " + catalogErr + " con error (ver detalle)." : ".");
       renderBulkPricePreviewPaso28O_(resultBox, {
         totalFilas: items.length,
         creados: creados,
         actualizados: actualizados,
         errores: errores,
-        mensaje: "Carga GSD confirmada. Solo se grabaron las filas validadas.",
+        mensaje: "Carga GSD confirmada. Solo se grabaron las filas validadas." + mensajeCat,
         detalleValidacion: detalle,
         puedeConfirmar: false,
         tokenPreview: null
       });
-      toast("Carga de precios confirmada", "Creados: " + creados + " · Actualizados: " + actualizados + " · Errores: " + errores);
+      toast("Carga de precios confirmada", "Creados: " + creados + " · Actualizados: " + actualizados + " · Errores: " + errores + (catalogErr ? " · Catálogo con error: " + catalogErr : ""));
     });
   }
 
@@ -3097,7 +3285,7 @@ const MP_STATE = {
 
       link.innerHTML =
         '<span class="material-symbols-rounded">download_done</span>' +
-        'Descargar plantilla XLSX';
+        'Descargar plantilla XLSX (Precios GSD)';
 
       return;
     }
@@ -3241,7 +3429,7 @@ const MP_STATE = {
 
     body.innerHTML = '<form id="mpBulkMaterialForm" class="mp-modern-form">' +
       '<section class="mp-upload-hero"><div><h4>Carga masiva de materiales</h4>' +
-      '<p>Descarga la plantilla XLSX con diccionarios vigentes, completa la hoja CARGA_MATERIALES y valida antes de grabar.</p></div>' +
+      '<p>Descarga la plantilla XLSX oficial (Plantilla_Carga_Materiales_GSD.xlsx) con diccionarios vigentes, completa la hoja CARGA_MATERIALES y valida antes de grabar.</p></div>' +
       '<div class="mp-upload-badges"><span class="mp-badge"><span class="material-symbols-rounded">inventory_2</span>Materiales</span>' +
       '<span class="mp-badge"><span class="material-symbols-rounded">fact_check</span>Prevalidación</span></div></section>' +
       '<div class="mp-upload-layout"><div class="mp-modal-section"><h4>Datos de carga</h4>' +
@@ -3596,7 +3784,7 @@ const MP_STATE = {
       link.style.opacity = "1";
       link.style.cursor = "pointer";
       link.innerHTML =
-        '<span class="material-symbols-rounded">download_done</span>Descargar plantilla XLSX';
+        '<span class="material-symbols-rounded">download_done</span>Descargar plantilla XLSX (Materiales GSD)';
       return;
     }
 

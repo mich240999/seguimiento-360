@@ -287,6 +287,7 @@ const PROVIDERS_STATE = {
       );
       document.getElementById("sideSheetBody").innerHTML =
         providerDetailHtml(provider);
+      loadProviderSalesResponsibles_(provider.idProveedor || id);
     }).catch(function(error) {
       document.getElementById("sideSheetBody").innerHTML =
         '<p>' + escapeHtml(errorMessage(error)) + '</p>';
@@ -339,7 +340,164 @@ const PROVIDERS_STATE = {
       '</div></div><div class="providers-detail-section"><h3>Grupos derivados (' +
       escapeHtml(provider.cantidadGrupos || 0) +
       ')</h3><div class="providers-chip-list">' +
-      groups + '</div></div>';
+      groups + '</div></div>' +
+      '<div class="providers-detail-section sales-card" id="providerResponsiblesSection"><h3>Responsables de venta</h3>' +
+      '<p class="providers-field-hint">Nacen en los precios del proveedor (columna responsable_venta). Agregar crea un precio con ese responsable; quitar solo limpia el filtro visual, no borra datos.</p>' +
+      '<div id="providerResponsiblesContent"><p class="providers-field-hint">Cargando responsables…</p></div></div>';
+  }
+
+  /* AGENTE B: Responsables de venta del proveedor (texto libre por precio).
+     Solo lectura + alta rapida de precio; "quitar" es filtro visual. */
+  function providerSalesResponsiblesState_() {
+    if (!PROVIDERS_STATE.salesResponsibles) PROVIDERS_STATE.salesResponsibles = {};
+    return PROVIDERS_STATE.salesResponsibles;
+  }
+
+  function loadProviderSalesResponsibles_(idProveedor) {
+    var box = document.getElementById("providerResponsiblesContent");
+    if (!box || !idProveedor) return;
+    var state = providerSalesResponsiblesState_();
+    state[idProveedor] = state[idProveedor] || { filter: "", rows: [] };
+    var currentFilter = state[idProveedor].filter || "";
+    box.innerHTML = '<p class="providers-field-hint">Cargando responsables…</p>';
+    secureRpc("listarListasOficialesPreciosModulo", [{}], "PROVEEDORES")
+      .then(function(result) {
+        var rows = (result && result.registros) || [];
+        var mine = rows.filter(function(item) { return String(item.idProveedor || "") === String(idProveedor); });
+        state[idProveedor] = { filter: currentFilter, rows: mine };
+        renderProviderSalesResponsibles_(idProveedor);
+      })
+      .catch(function(error) {
+        var target = document.getElementById("providerResponsiblesContent");
+        if (target) target.innerHTML = '<p class="providers-field-hint">' + escapeHtml(errorMessage(error)) + '</p>';
+      });
+  }
+
+  function renderProviderSalesResponsibles_(idProveedor) {
+    var box = document.getElementById("providerResponsiblesContent");
+    if (!box) return;
+    var state = providerSalesResponsiblesState_()[idProveedor] || { filter: "", rows: [] };
+    var rows = state.rows || [];
+    var filter = String(state.filter || "");
+    var map = {};
+    rows.forEach(function(item) {
+      var name = String(item.responsableVenta || "").trim();
+      if (!name) return;
+      if (!map[name]) map[name] = { nombre: name, total: 0 };
+      map[name].total += 1;
+    });
+    var names = Object.keys(map).sort(function(a, b) { return a.localeCompare(b, "es"); });
+    var chips = names.length ? names.map(function(name) {
+      return '<button class="providers-chip' + (filter === name ? " is-soft" : "") + '" type="button" data-provider-resp-filter="' + escapeHtml(name) + '">' +
+        '<span class="material-symbols-rounded">person</span>' + escapeHtml(name) + ' (' + map[name].total + ')</button>';
+    }).join("") : '<span class="providers-field-hint">Sin responsables registrados en los precios de este proveedor.</span>';
+    var visible = filter ? rows.filter(function(item) { return String(item.responsableVenta || "").trim() === filter; }) : rows;
+    var body = visible.map(function(item) {
+      return '<tr><td><strong>' + escapeHtml(item.responsableVenta || "—") + '</strong></td>' +
+        '<td>' + escapeHtml(item.nombreCortoMaterial || item.descripcionMaterial || item.codigoMaterial || "—") +
+        '<br><small>' + escapeHtml(item.codigoSap || item.codigoMaterial || "") + '</small></td>' +
+        '<td><strong>' + escapeHtml("S/ " + Number(item.precioBase || 0).toFixed(2)) + '</strong></td>' +
+        '<td>' + escapeHtml(String(item.fechaInicio || "") + " / " + String(item.fechaFin || "")) + '</td></tr>';
+    }).join("") || '<tr><td colspan="4">Sin precios para mostrar.</td></tr>';
+    box.innerHTML = '<div class="providers-chip-list">' + chips + '</div>' +
+      (filter ? '<p><button class="button button--ghost button--compact" type="button" data-provider-resp-clear>Quitar filtro: ' + escapeHtml(filter) + '</button></p>' : "") +
+      '<div class="sales-card"><h3>Agregar responsable (alta rápida de precio)</h3>' +
+      '<p class="providers-field-hint">El responsable nace en el precio: se graba con guardarPrecioIndividualMaterialesPreciosModulo.</p>' +
+      '<div class="form-grid">' +
+      '<label class="field"><span>Responsable</span><input id="providerRespName" maxlength="120" placeholder="Nombre del responsable"></label>' +
+      '<label class="field"><span>Material</span><select id="providerRespMaterial"><option value="">Cargando materiales…</option></select></label>' +
+      '<label class="field"><span>Precio base S/</span><input id="providerRespPrice" type="number" min="0" step="0.01" placeholder="0.00"></label>' +
+      '<label class="field"><span>Inicio vigencia</span><input id="providerRespStart" type="date"></label>' +
+      '<label class="field"><span>Fin vigencia</span><input id="providerRespEnd" type="date"></label>' +
+      '</div><div class="toolbar toolbar--end"><button class="button button--primary button--compact" type="button" data-provider-resp-add>Agregar responsable</button></div></div>' +
+      '<div class="mp-table-wrap"><table class="mp-table"><thead><tr><th>Responsable</th><th>Material</th><th>Precio</th><th>Vigencia</th></tr></thead><tbody>' + body + '</tbody></table></div>';
+    bindProviderSalesResponsibles_(idProveedor);
+    loadProviderRespMaterialOptions_();
+  }
+
+  function bindProviderSalesResponsibles_(idProveedor) {
+    var box = document.getElementById("providerResponsiblesContent");
+    if (!box) return;
+    box.querySelectorAll("[data-provider-resp-filter]").forEach(function(button) {
+      button.addEventListener("click", function() {
+        var state = providerSalesResponsiblesState_()[idProveedor];
+        if (state) state.filter = button.getAttribute("data-provider-resp-filter") || "";
+        renderProviderSalesResponsibles_(idProveedor);
+      });
+    });
+    var clear = box.querySelector("[data-provider-resp-clear]");
+    if (clear) clear.addEventListener("click", function() {
+      var state = providerSalesResponsiblesState_()[idProveedor];
+      if (state) state.filter = "";
+      renderProviderSalesResponsibles_(idProveedor);
+      toast("Filtro retirado", "La lista vuelve a mostrar todos los responsables. No se borró ningún dato.");
+    });
+    var add = box.querySelector("[data-provider-resp-add]");
+    if (add) add.addEventListener("click", function() { saveProviderSalesResponsible_(idProveedor, add); });
+  }
+
+  function loadProviderRespMaterialOptions_() {
+    var select = document.getElementById("providerRespMaterial");
+    if (!select) return;
+    secureRpc("listarMaterialesSelectPreciosModulo", [{ texto: "", limite: 200 }], "PROVEEDORES")
+      .then(function(result) {
+        var target = document.getElementById("providerRespMaterial");
+        if (!target) return;
+        var rows = (result && result.registros) || [];
+        target.innerHTML = '<option value="">Selecciona el material</option>' + rows.map(function(item) {
+          var label = [item.codigoSap || item.codigoMaterial || "", item.nombreMaterial || item.descripcionMaterial || ""].filter(function(part) { return !!part; }).join(" — ");
+          return '<option value="' + escapeHtml(item.idMaterial || item.id || "") + '">' + escapeHtml(label || "Material") + '</option>';
+        }).join("");
+      })
+      .catch(function() {
+        var target = document.getElementById("providerRespMaterial");
+        if (target) target.innerHTML = '<option value="">No se pudo cargar materiales</option>';
+      });
+  }
+
+  function saveProviderSalesResponsible_(idProveedor, button) {
+    var nameEl = document.getElementById("providerRespName");
+    var matEl = document.getElementById("providerRespMaterial");
+    var priceEl = document.getElementById("providerRespPrice");
+    var startEl = document.getElementById("providerRespStart");
+    var endEl = document.getElementById("providerRespEnd");
+    var nombre = String(nameEl && nameEl.value || "").trim();
+    var idMaterial = String(matEl && matEl.value || "").trim();
+    var precio = Number(priceEl && priceEl.value);
+    if (!nombre) { toast("Falta el responsable", "Escribe el nombre del responsable de venta.", true); return; }
+    if (!idMaterial) { toast("Falta el material", "Selecciona el material para el alta rápida.", true); return; }
+    if (!isFinite(precio) || precio < 0) { toast("Precio inválido", "Indica un precio base mayor o igual a 0.", true); return; }
+    var state = providerSalesResponsiblesState_()[idProveedor] || { rows: [] };
+    var duplicado = (state.rows || []).some(function(item) {
+      if (String(item.idMaterial || "") !== idMaterial) return false;
+      if (String(item.responsableVenta || "").trim().toLowerCase() !== nombre.toLowerCase()) return false;
+      var hoy = new Date().toISOString().slice(0, 10);
+      var fin = String(item.fechaFin || "").slice(0, 10);
+      return !fin || fin >= hoy;
+    });
+    if (duplicado) { toast("Responsable ya registrado", "Ese material ya tiene ese responsable en una lista vigente.", true); return; }
+    var idNegocio = null;
+    (state.rows || []).some(function(item) {
+      if (item.idNegocio) { idNegocio = item.idNegocio; return true; }
+      return false;
+    });
+    if (button) button.disabled = true;
+    secureRpc("guardarPrecioIndividualMaterialesPreciosModulo", [{
+      idProveedor: idProveedor, idNegocio: idNegocio, idMaterial: idMaterial,
+      precioBase: precio, moneda: "PEN", responsableVenta: nombre,
+      fechaInicio: String(startEl && startEl.value || "").slice(0, 10),
+      fechaFin: String(endEl && endEl.value || "").slice(0, 10)
+    }], "PROVEEDORES")
+      .then(function(result) {
+        toast("Responsable agregado", (result && result.mensaje) || "El precio con ese responsable fue registrado.");
+        try { if (typeof clearMpTableCache === "function") clearMpTableCache("prices"); } catch (errClearB1) {}
+        try { if (typeof clearMpSummaryCache === "function") clearMpSummaryCache(); } catch (errClearB2) {}
+        loadProviderSalesResponsibles_(idProveedor);
+      })
+      .catch(function(error) {
+        toast("No se pudo agregar", errorMessage(error), true);
+        if (button) button.disabled = false;
+      });
   }
 
   function loadProviderModuleEditor(id) {
