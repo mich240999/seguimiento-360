@@ -1310,6 +1310,15 @@
 <style>
   .sales-detail-shell{gap:14px}.sales-detail-shell .sales-items-table{background:#fff;border:1px solid #e5edf6;border-radius:16px;overflow:hidden}.sales-detail-shell .sales-items-table tr:last-child td{border-bottom:0}
   .sales-filter-bar{align-items:end;flex-wrap:wrap}.sales-filter-bar .input-field{min-width:150px}.sales-filter-bar .search-field{min-width:min(420px,100%);flex:1}
+  @media(max-width:1080px){
+    .sales-filter-bar{display:grid;grid-template-columns:1fr 1fr;align-items:end}
+    .sales-filter-bar .search-field{grid-column:1 / -1;min-width:0}
+    .sales-filter-bar .input-field{min-width:0}
+    .sales-filter-bar #salesApplyFilters{grid-column:1 / -1}
+  }
+  @media(max-width:560px){
+    .sales-filter-bar{grid-template-columns:1fr}
+  }
   .sales-items-table td small{display:block;margin-top:3px;line-height:1.35}
 </style>
 
