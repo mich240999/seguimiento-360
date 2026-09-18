@@ -2028,6 +2028,12 @@ const ADMIN_STATE = {
         '</small></div>';
     }
 
+    if (code.indexOf("MP_") !== 0) {
+      relationshipFields +=
+        '<label class="field"><span>Proveedor (vacío = todos)</span>' +
+        '<select name="idProveedor" id="catalogValueProvider"><option value="">Todos los proveedores</option></select></label>';
+    }
+
     openModal({
       eyebrow: isMpCatalogTreeAdmin(code) ?
         "ÁRBOL DE TIPIFICACIÓN" :
@@ -2048,6 +2054,21 @@ const ADMIN_STATE = {
     });
 
     bindModalCloseButtons();
+
+    var providerSelect = document.getElementById("catalogValueProvider");
+    if (providerSelect) {
+      secureRpc("listarProveedoresModulo", [], adminRpcModuleCode()).then(function(res) {
+        var rows = (res && (res.registros || res.proveedores)) || [];
+        var current = String(value.idProveedor || "").trim();
+        providerSelect.innerHTML = '<option value="">Todos los proveedores</option>' + rows.map(function(p) {
+          var id = String(p.idProveedor || "");
+          var name = p.nombreComercial || p.razonSocial || id;
+          return '<option value="' + escapeHtml(id) + '"' + (id === current ? " selected" : "") + ">" +
+            escapeHtml(name) + "</option>";
+        }).join("");
+        if (current) providerSelect.value = current;
+      }).catch(function() {});
+    }
 
     if (code === "MP_SUBTIPOS_MATERIAL") {
       const form = document.getElementById("catalogValueForm");
