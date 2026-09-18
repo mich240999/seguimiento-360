@@ -768,6 +768,12 @@ const ADMIN_STATE = {
         ADMIN_STATE.catalogs = rows || [];
         updateAdminCount("catalogs", ADMIN_STATE.catalogs.length);
         renderAdminCatalogs();
+        return secureRpc("listarListasOficialesPreciosModulo", [], adminRpcModuleCode())
+          .then(function(lists) {
+            ADMIN_STATE.providerLists = (lists && lists.registros) || [];
+            renderAdminCatalogs();
+          })
+          .catch(function() {});
       })
       .catch(function(error) { renderAdminPermissionError("adminCatalogsContent", error); });
   }
@@ -791,6 +797,18 @@ const ADMIN_STATE = {
     region.querySelectorAll("[data-catalog-values]").forEach(function(button) {
       button.addEventListener("click", function() { openCatalogValues(button.dataset.catalogValues); });
     });
+
+    const providerLists = ADMIN_STATE.providerLists || [];
+    if (providerLists.length) {
+      region.innerHTML += '<h4 class="section-subtitle">Catálogos de proveedores (listas de precios)</h4>' +
+        tableHtml([
+          { key: "nombre", label: "Lista", render: function(row) { return escapeHtml(row.nombre || row.codigoLista || row.idListaPrecio || "—"); } },
+          { key: "proveedor", label: "Proveedor" },
+          { key: "alcance", label: "Alcance", render: function(row) { return escapeHtml(row.idGrupo ? "Grupo" : (row.idOficina ? "Oficina" : "General")); } },
+          { key: "vigencia", label: "Vigencia", render: function(row) { return escapeHtml(((row.fechaInicio || "") + " / " + (row.fechaFin || "")).replace(/^\s*\/\s*$/, "—")); } },
+          { key: "estado", label: "Estado", render: statusChip }
+        ], providerLists);
+    }
   }
 
   /**

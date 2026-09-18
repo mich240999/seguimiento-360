@@ -25,6 +25,7 @@ VALUES
     ('EMPRESA_TITULAR', 'Cálidda - Gas Natural de Lima y Callao', 'Razón social del titular del sistema', 'TEXTO', TRUE, 'ACTIVO'),
     ('MONEDA_DEFECTO', 'PEN', 'Moneda predeterminada para precios y ventas (PEN/USD)', 'TEXTO', TRUE, 'ACTIVO'),
     ('EXPIRACION_SESION_MINUTOS', '480', 'Tiempo de expiración de sesión por inactividad (8 horas)', 'NUMERO', TRUE, 'ACTIVO'),
+    ('BONO_VENDEDOR_MONTO', '0', 'Monto del bono que se lleva el vendedor por cada venta (PEN)', 'NUMERO', TRUE, 'ACTIVO'),
     ('PERMITIR_REGISTRO_MULTIPLE_ITEMS', 'TRUE', 'Permite agregar múltiples gasodomésticos por solicitud', 'BOOLEANO', TRUE, 'ACTIVO'),
     ('ALERTA_ENTREGA_DIAS_LIMITE', '3', 'Días máximos para entrega antes de pasar a estado crítico', 'NUMERO', TRUE, 'ACTIVO')
 ON CONFLICT (clave) DO NOTHING;

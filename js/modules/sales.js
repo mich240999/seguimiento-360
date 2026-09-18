@@ -1780,6 +1780,24 @@ const SALES_STATE = {
       (fecha?'<br>Fecha: '+escapeHtml(fecha):'') + '</div>';
   }
 
+  function salesTraceability29(v){
+    v=v||{};
+    const row=function(label,value){
+      return '<div><small>'+escapeHtml(label)+'</small><strong>'+escapeHtml(value||'—')+'</strong></div>';
+    };
+    const bono=(v.bonoVendedor===null||v.bonoVendedor===undefined||v.bonoVendedor==="")?"S/ 0.00":"S/ "+Number(v.bonoVendedor||0).toLocaleString("es-PE",{minimumFractionDigits:2,maximumFractionDigits:2});
+    return '<section class="sales29-modal-section"><div class="sales-form-section-head"><span class="material-symbols-rounded">badge</span><div><h4>Trazabilidad y bono</h4><p>Quién intervino en cada etapa y el bono del vendedor.</p></div></div>' +
+      '<div class="sales-form-grid">' +
+      row("Venta efectuada por", v.nombreUsuario || "") +
+      row("Abono aprobado por", v.abonoAprobadoPor || "") +
+      row("Programación efectuada por", v.programadoPor || "") +
+      row("Entrega realizada por", v.entregadoPor || "") +
+      row("Bono del vendedor", bono) +
+      "</div>" +
+      (v.observacionEntrega?'<p><strong>Observación de entrega:</strong> '+escapeHtml(v.observacionEntrega)+'</p>':'') +
+      "</section>";
+  }
+
   function renderSalesTable29(rows) {
     const region = document.getElementById("salesTableRegion");
     if (!region) return;
@@ -4877,6 +4895,7 @@ const SALES_STATE = {
         salesRecordTypeNotice29T(v) +
         salesCancellationNotice29(v) +
         salesSummaryCards29(v) +
+        salesTraceability29(v) +
         '<section class="sales29-modal-section sales29-sale-products-section">' +
           '<div class="sales-form-section-head">' +
             '<span class="material-symbols-rounded">inventory_2</span>' +

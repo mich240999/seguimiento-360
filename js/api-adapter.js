@@ -404,6 +404,8 @@
         const v = s.ventas.find(x => x.idVenta === idVenta);
         if (v) {
           v.estadoAbono = "ABONO_CONFIRMADO";
+          v.abonoAprobadoId = (s.usuarios[0] && s.usuarios[0].idUsuario) || "";
+          v.abonoAprobadoNombre = (s.usuarios[0] && s.usuarios[0].nombre) || "";
           saveStore();
           return { correcto: true, mensaje: "Abono confirmado." };
         }
@@ -420,6 +422,15 @@
         {
           v.estadoEntrega = entregaPayload.estadoEntrega || v.estadoEntrega;
           if (String(entregaPayload.estadoEntrega || "").toUpperCase() === "ENTREGADA") v.estadoGeneral = "ENTREGADA";
+          const demoUser = s.usuarios[0] || {};
+          if (String(entregaPayload.estadoEntrega || "").toUpperCase() === "PROGRAMADA") {
+            v.programadoId = demoUser.idUsuario || "";
+            v.programadoNombre = demoUser.nombre || "";
+          }
+          if (String(entregaPayload.estadoEntrega || "").toUpperCase() === "ENTREGADA") {
+            v.entregadoId = demoUser.idUsuario || "";
+            v.entregadoNombre = demoUser.nombre || "";
+          }
           v.gestionEntrega = Object.assign(v.gestionEntrega || {}, entregaPayload);
           v.gestionesEntrega = v.gestionesEntrega || [];
           const posicion = v.gestionesEntrega.findIndex(function(g) {
@@ -638,6 +649,7 @@
         if (gestionError) throw gestionError;
         const actualizacionVentaGestion = { estado_entrega: estadoGestion };
         if (estadoGestion === "ENTREGADA") actualizacionVentaGestion.estado_general = "ENTREGADA";
+        // Nota: la trazabilidad (programado/entregado por) la registra la ruta principal del bridge.
         const { error: ventaGestionError } = await client.from("vta_ventas_contado").update(actualizacionVentaGestion).eq("id_venta", idVentaGestion);
         if (ventaGestionError) throw ventaGestionError;
         return { correcto: true, mensaje: "Gestión de entrega actualizada." };
@@ -657,6 +669,23 @@
         const { error: estadoProvError } = await client.from("mae_proveedores").update({ estado: estadoProvSb }).eq("id_proveedor", idProvSb);
         if (estadoProvError) throw estadoProvError;
         return { correcto: true, idProveedor: idProvSb, estado: estadoProvSb, mensaje: "Estado actualizado." };
+      }
+      case "exportarVentasContadoModulo": {
+        const cellExp = function(v) { var t = String(v === null || v === undefined ? "" : v); return '"' + t.replace(/"/g, '""') + '"'; };
+        const headExp = ["CODIGO", "FECHA", "CLIENTE", "DOCUMENTO", "PROVEEDOR", "OFICINA", "MONTO", "ABONO", "ENTREGA", "VENTA_EFECTUADA_POR", "ABONO_APROBADO_POR", "PROGRAMADO_POR", "ENTREGA_REALIZADA_POR", "OBSERVACION", "BONO_VENDEDOR"];
+        const provNameExp = function(id) {
+          var found = (s.proveedores || []).filter(function(p) { return String(p.idProveedor || "") === String(id || ""); })[0] || {};
+          return found.nombreComercial || found.razonSocial || String(id || "");
+        };
+        const userNameExp = function(id) {
+          var found = (s.usuarios || []).filter(function(u) { return String(u.idUsuario || "") === String(id || ""); })[0] || {};
+          return found.nombre || found.correo || String(id || "");
+        };
+        const cliExp = function(v) { return [v.nombresCliente, v.apellidosCliente].filter(Boolean).join(" ") || v.nombreCliente || ""; };
+        const linesExp = [headExp.map(cellExp).join(",")].concat((s.ventas || []).map(function(v) {
+          return [v.codigoVenta || "", String(v.fechaRegistro || "").split("T")[0], cliExp(v), v.numeroDocumentoCliente || "", provNameExp(v.idProveedor), v.nombreOficina || "", Number(v.montoTotalVenta || 0), String(v.estadoAbono || "").replace(/_/g, " "), String(v.estadoEntrega || "").replace(/_/g, " "), userNameExp(v.idUsuario) || cliExp(v), v.abonoAprobadoNombre || "", v.programadoNombre || "", v.entregadoNombre || "", v.observacionEntrega || "", 0].map(cellExp).join(",");
+        }));
+        return { nombre: "ventas_360.csv", nombreArchivo: "ventas_360.csv", contenido: "﻿" + linesExp.join("\r\n"), mimeType: "text/csv;charset=utf-8", cantidad: (s.ventas || []).length };
       }
       default:
         return undefined; // Despacho a local fallback
@@ -719,6 +748,13 @@
       estadoGeneral: r.estado_general,
       motivoAnulacion: r.motivo_anulacion || "",
       fechaAnulacion: r.fecha_anulacion || "",
+      abonoAprobadoId: r.abono_aprobado_id || "",
+      abonoAprobadoPor: r.abono_aprobado_nombre || "",
+      programadoId: r.programado_id || "",
+      programadoPor: r.programado_nombre || "",
+      entregadoId: r.entregado_id || "",
+      entregadoPor: r.entregado_nombre || "",
+      observacionEntrega: (r.vta_gestion_entrega && r.vta_gestion_entrega[0] && r.vta_gestion_entrega[0].detalle_observacion) || "",
       idArchivoComprobante: r.url_comprobante || "",
       urlComprobante: r.url_comprobante || "",
       nombreArchivoComprobante: r.nombre_comprobante || "Comprobante de pago",
