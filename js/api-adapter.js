@@ -261,6 +261,16 @@
       case "listarProveedoresModulo":
         return { correcto: true, proveedores: s.proveedores };
 
+      case "cambiarEstadoProveedorModulo": {
+        const idProv = String(args[0] || "").trim();
+        const estadoProv = String(args[1] || "").toUpperCase() === "ACTIVO" ? "ACTIVO" : "INACTIVO";
+        const prov = s.proveedores.find(function(p) { return p.idProveedor === idProv; });
+        if (!prov) return { correcto: false, mensaje: "Proveedor no encontrado." };
+        prov.estado = estadoProv;
+        saveStore();
+        return { correcto: true, idProveedor: idProv, estado: estadoProv, mensaje: "Estado actualizado." };
+      }
+
       case "guardarProveedorModulo":
       case "guardarProveedorAdminMotor": {
         const pData = args[0] || {};
@@ -639,6 +649,14 @@
           return ["PROGRAMADA", "EN_RUTA"].indexOf(String(v.estadoEntrega || v.estado || "").toUpperCase()) !== -1;
         });
         return { correcto: true, registros: soloDespacho, ventas: soloDespacho };
+      }
+      case "cambiarEstadoProveedorModulo": {
+        const idProvSb = String(args[0] || "").trim();
+        const estadoProvSb = String(args[1] || "").toUpperCase() === "ACTIVO" ? "ACTIVO" : "INACTIVO";
+        if (!idProvSb) throw new Error("Indica el proveedor.");
+        const { error: estadoProvError } = await client.from("mae_proveedores").update({ estado: estadoProvSb }).eq("id_proveedor", idProvSb);
+        if (estadoProvError) throw estadoProvError;
+        return { correcto: true, idProveedor: idProvSb, estado: estadoProvSb, mensaje: "Estado actualizado." };
       }
       default:
         return undefined; // Despacho a local fallback
