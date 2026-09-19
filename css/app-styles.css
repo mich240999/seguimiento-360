@@ -1666,6 +1666,7 @@
   }
   body .auth-view.auth-split .auth-brand-art {
     position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none;
+    object-fit: cover; border: 0;
   }
   body .auth-view.auth-split .auth-brand-overlay,
   body .auth-view.auth-split .auth-brand-headline,
