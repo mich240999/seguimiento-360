@@ -20,7 +20,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap-grid.min.css">
   
   <!-- ESTILOS LOCALES DEL SISTEMA -->
-  <link rel="stylesheet" href="css/app-styles.css?v=20260923">
+  <link rel="stylesheet" href="css/app-styles.css?v=20260919">
   <link rel="stylesheet" href="css/prov-styles.css?v=20260923">
   
   <!-- LIBRERÍAS EXTERNAS JS -->
@@ -41,83 +41,62 @@
 -->
 
 <section id="authView" class="auth-view auth-split" aria-labelledby="authTitle">
-  <svg class="auth-mosaic" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-    <defs>
-      <linearGradient id="facetNavy" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#155a86"/><stop offset="100%" stop-color="#07354d"/>
-      </linearGradient>
-      <linearGradient id="facetSteel" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#3b9fc4"/><stop offset="100%" stop-color="#0e6e97"/>
-      </linearGradient>
-      <linearGradient id="facetCyan" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#5cc6e8"/><stop offset="100%" stop-color="#00a1de"/>
-      </linearGradient>
-      <linearGradient id="facetTeal" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#4cc3a1"/><stop offset="100%" stop-color="#129a6c"/>
-      </linearGradient>
-      <linearGradient id="facetGreen" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#7de3a8"/><stop offset="100%" stop-color="#2ecc71"/>
-      </linearGradient>
-      <linearGradient id="facetPale" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#ffffff"/><stop offset="100%" stop-color="#cfe7ef"/>
-      </linearGradient>
-      <linearGradient id="facetSlate" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#5b7d90"/><stop offset="100%" stop-color="#274b5c"/>
-      </linearGradient>
-      <pattern id="tileMosaic" width="240" height="208" patternUnits="userSpaceOnUse">
-        <polygon points="0,0 120,0 60,104" fill="url(#facetNavy)"/>
-        <polygon points="120,0 240,0 180,104" fill="url(#facetPale)"/>
-        <polygon points="60,104 180,104 120,208" fill="url(#facetSteel)"/>
-        <polygon points="180,104 300,104 240,208" fill="url(#facetSlate)"/>
-        <polygon points="0,104 60,208 0,208" fill="url(#facetTeal)"/>
-        <polygon points="240,104 240,208 180,104" fill="url(#facetGreen)"/>
-        <polygon points="60,104 120,0 120,104" fill="url(#facetCyan)" opacity="0.85"/>
-        <polygon points="180,104 240,0 240,104" fill="url(#facetNavy)" opacity="0.85"/>
-      </pattern>
-    </defs>
-    <rect x="0" y="0" width="1440" height="900" fill="url(#tileMosaic)"/>
-    <g stroke="#06283d" stroke-opacity="0.35" stroke-width="2">
-      <line x1="0" y1="0" x2="0" y2="900"/>
-    </g>
-  </svg>
   <aside class="auth-brand-panel" aria-hidden="true">
-    <svg class="auth-brand-art" viewBox="0 0 600 800" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-      <g fill="#ffffff" opacity="0.08">
-        <g transform="translate(300,400) scale(11)"><ellipse cx="0" cy="-7" rx="3" ry="7"/><ellipse cx="0" cy="7" rx="3" ry="7"/><ellipse cx="-7" cy="0" rx="7" ry="3"/><ellipse cx="7" cy="0" rx="7" ry="3"/></g>
+    <svg class="auth-brand-art" viewBox="0 0 800 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <defs>
+        <linearGradient id="brandGrad1" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#07354d"/>
+          <stop offset="50%" stop-color="#0088bc"/>
+          <stop offset="100%" stop-color="#129a6c"/>
+        </linearGradient>
+      </defs>
+      <rect width="800" height="1000" fill="url(#brandGrad1)"/>
+      <g opacity="0.08" fill="#fff">
+        <circle cx="200" cy="250" r="180"/>
+        <circle cx="600" cy="700" r="220"/>
+        <circle cx="100" cy="800" r="120"/>
       </g>
-      <g fill="none" stroke="#ffffff" stroke-opacity="0.20">
-        <path d="M-60,250 C180,230 340,360 660,320" stroke-width="3"/>
-        <path d="M-60,540 C200,520 360,640 660,580" stroke-width="3"/>
+      <g fill="none" stroke="#fff" stroke-opacity="0.12" stroke-width="2">
+        <path d="M0,300 Q400,200 800,400"/>
+        <path d="M0,600 Q400,500 800,700"/>
+        <path d="M0,900 Q400,800 800,950"/>
       </g>
-      <g fill="#ffffff">
-        <circle cx="150" cy="140" r="12" opacity="0.25"/><circle cx="150" cy="140" r="3.5" opacity="0.9"/>
-        <circle cx="470" cy="620" r="14" opacity="0.25"/><circle cx="470" cy="620" r="4" opacity="0.9"/>
-        <circle cx="520" cy="200" r="3.5" opacity="0.8"/>
-        <circle cx="110" cy="580" r="3" opacity="0.7"/>
+      <g fill="#fff" opacity="0.15">
+        <polygon points="400,100 420,160 480,160 430,195 450,255 400,220 350,255 370,195 320,160 380,160"/>
+      </g>
+      <g fill="#fff" opacity="0.1">
+        <polygon points="150,500 170,540 210,540 180,565 190,605 150,580 110,605 120,565 90,540 130,540"/>
+        <polygon points="600,300 615,330 645,330 620,350 630,380 600,365 570,380 580,350 555,330 585,330"/>
       </g>
     </svg>
+    <div class="auth-brand-overlay">
+      <h2 class="auth-brand-headline">Seguimiento<br>360</h2>
+      <p class="auth-brand-sub">Plataforma de seguimiento comercial para Cálidda Gas Natural</p>
+    </div>
   </aside>
 
   <div class="auth-panel auth-form-panel">
     <div class="auth-form-logo" aria-hidden="true">
       <img src="img/calidda-logo.png" alt="Cálidda">
     </div>
-    <h1 id="authTitle">Plataforma de Seguimiento Comercial - Calidda Hogar</h1>
+    <h1 id="authTitle">Iniciar sesión</h1>
     <p class="auth-form-sub">Ingresa con tu cuenta autorizada</p>
 
     <div class="auth-actions">
       <form id="supabaseEmailLogin" class="supabase-auth-form" novalidate>
-        <label class="supabase-auth-label login-boxed">
+        <label class="login-field">
+          <span class="material-symbols-rounded">mail</span>
           <input id="authEmail" class="supabase-auth-input" type="email" autocomplete="username" inputmode="email" placeholder="Email" required>
         </label>
-        <label class="supabase-auth-label login-boxed">
-          <input id="authPassword" class="supabase-auth-input" type="password" autocomplete="current-password" placeholder="Password" required minlength="6">
+        <label class="login-field">
+          <span class="material-symbols-rounded">lock</span>
+          <input id="authPassword" class="supabase-auth-input" type="password" autocomplete="current-password" placeholder="Contraseña" required minlength="6">
         </label>
         <div class="login-remember-row">
           <label class="login-remember"><input id="authRemember" type="checkbox" checked> Recuérdame</label>
           <button id="authForgotPassword" class="supabase-auth-forgot" type="button">¿Olvidaste tu contraseña?</button>
         </div>
-        <button id="authEmailSubmit" class="provider-button supabase-auth-submit login-submit" type="submit">
+        <button id="authEmailSubmit" class="login-submit" type="submit">
           <span>Ingresar</span>
         </button>
       </form>
