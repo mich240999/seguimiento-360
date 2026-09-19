@@ -1650,7 +1650,7 @@
 
   /* ============ LOGIN DIVIDIDO (marca + formulario) ============ */
   body .auth-view.auth-split {
-    display: grid; grid-template-columns: minmax(420px, 46%) minmax(0, 1fr);
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     align-items: stretch; align-content: stretch;
     min-height: 100vh; min-height: 100dvh; padding: 0; overflow: hidden;
     background:
