@@ -1545,3 +1545,95 @@
     body .auth-view { height: auto; min-height: 100vh; overflow: visible; }
     body .auth-view .auth-panel { max-height: none; border-radius: 22px; }
   }
+
+  /* ============ MODO OSCURO ============ */
+  body.dark-mode {
+    color-scheme: dark;
+    --primary-50: #0e2a36;
+    --primary-100: #123646;
+    --primary-200: #155063;
+    --primary-300: #1c7a99;
+    --surface: #101e27;
+    --background: #0a141b;
+    --surface-soft: #14242f;
+    --ink: #e9f4f8;
+    --muted: #8fb0bd;
+    --border: #1f3644;
+    --shadow-sm: 0 8px 24px rgba(0, 0, 0, .35);
+    --shadow-md: 0 24px 70px rgba(0, 0, 0, .45);
+  }
+  body.dark-mode .topbar,
+  body.dark-mode .hero-card,
+  body.dark-mode .modal-card,
+  body.dark-mode .side-sheet,
+  body.dark-mode .dropdown-menu,
+  body.dark-mode .profile-menu,
+  body.dark-mode .toast {
+    background: var(--surface);
+    border-color: var(--border);
+    color: var(--ink);
+  }
+  body.dark-mode .data-table td { background: var(--surface); }
+  body.dark-mode .data-table tbody tr:hover td { background: var(--surface-soft); }
+  body.dark-mode .select-field select,
+  body.dark-mode .field input,
+  body.dark-mode .field select,
+  body.dark-mode .field textarea,
+  body.dark-mode label.input-field > input,
+  body.dark-mode label.input-field > select,
+  body.dark-mode label.input-field > textarea,
+  body.dark-mode .supabase-auth-input {
+    background: var(--surface-soft);
+    border-color: var(--border);
+    color: var(--ink);
+  }
+  body.dark-mode .search-field { background: var(--surface-soft); }
+  body.dark-mode .search-field input { color: var(--ink); }
+  body.dark-mode .provider-button { background: var(--surface); border-color: var(--border); color: var(--ink); }
+  body.dark-mode .provider-logo { background: var(--surface-soft); border-color: var(--border); }
+  body.dark-mode .supabase-auth-form { background: var(--surface); border-color: var(--border); }
+  body.dark-mode .auth-panel { background: rgba(16,30,39,.95); border-color: var(--border); }
+  body.dark-mode .auth-panel h1, body.dark-mode .auth-panel h2 { color: var(--ink); }
+  /* Componentes MP / ventas con fondos claros fijos */
+  body.dark-mode .mp-card,
+  body.dark-mode .mp-panel,
+  body.dark-mode .mp-table,
+  body.dark-mode .mp-modal,
+  body.dark-mode .mp-modal-section,
+  body.dark-mode .mp-note,
+  body.dark-mode .mp-observation,
+  body.dark-mode .mp-upload-summary div,
+  body.dark-mode .mp-scope-card,
+  body.dark-mode .mp-help-card,
+  body.dark-mode .mp-file-field input[type="file"],
+  body.dark-mode .mp-upload-hero,
+  body.dark-mode .mp-combo-help,
+  body.dark-mode .sales-card,
+  body.dark-mode .detail-row,
+  body.dark-mode .empty-state {
+    background: var(--surface);
+    border-color: var(--border);
+    color: var(--ink);
+  }
+  body.dark-mode .mp-table th { background: var(--surface-soft); color: var(--muted); }
+  body.dark-mode .mp-table td,
+  body.dark-mode .mp-table th { border-color: var(--border); }
+  body.dark-mode .mp-form-grid input,
+  body.dark-mode .mp-form-grid select,
+  body.dark-mode .mp-form-grid textarea,
+  body.dark-mode .mp-filter-control select,
+  body.dark-mode .mp-price-filter-bar select,
+  body.dark-mode .mp-section-search input,
+  body.dark-mode .permission-row select {
+    background: var(--surface-soft);
+    border-color: var(--border);
+    color: var(--ink);
+  }
+  body.dark-mode .mp-badge { background: var(--surface-soft); border-color: var(--border); color: var(--ink); }
+  body.dark-mode .mp-card small, body.dark-mode .mp-card span,
+  body.dark-mode .mp-modal-section p, body.dark-mode .mp-upload-hero p,
+  body.dark-mode .mp-scope-card, body.dark-mode .mp-help-card { color: var(--muted); }
+  body.dark-mode .button--secondary { background: var(--surface-soft); border-color: var(--border); color: var(--ink); }
+  body.dark-mode .button--ghost { color: var(--ink); }
+  body.dark-mode .loader-panel { background: rgba(16,30,39,.92); border-color: var(--border); color: var(--ink); }
+  body.dark-mode .loader-copy p, body.dark-mode .loader-status-row { color: var(--muted); }

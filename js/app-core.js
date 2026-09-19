@@ -2,6 +2,7 @@ const APP_STORAGE = Object.freeze({
     TOKEN: "SGT360_AUTH_TOKEN_V1",
     SESSION: "SGT360_AUTH_SESSION_V1",
     SIDEBAR_COLLAPSED: "SGT360_UI_SIDEBAR_COLLAPSED_V1",
+    THEME: "SGT360_UI_THEME_V1",
     MODULE_CACHE_PREFIX: "SGT360_MODULE_CACHE_V1"
   });
 
@@ -42,6 +43,7 @@ const APP_STORAGE = Object.freeze({
   applyInitialLoaderBranding();
 
   document.addEventListener("DOMContentLoaded", function() {
+    initTheme();
     bindGlobalInterface();
     restoreSidebarPreference();
     bootApplication();
@@ -174,6 +176,10 @@ const APP_STORAGE = Object.freeze({
     text("sidebarUserName", user.nombre || user.correo || "Usuario");
     text("sidebarUserRole", user.nombreRol || user.rol || "USUARIO");
     text("sidebarUserAvatar", initials(user.nombre || user.correo));
+    const supabaseBadge = document.getElementById("badgeSupabaseStatus");
+    if (supabaseBadge) {
+      supabaseBadge.hidden = String(user.rol || "").toUpperCase() !== "SUPERADMIN";
+    }
     text("topbarUserInitials", initials(user.nombre || user.correo));
     text("dashboardGreeting", "Hola, " + firstName(user.nombre || "usuario") + ". Tu centro de seguimiento está listo.");
 
@@ -509,6 +515,7 @@ const APP_STORAGE = Object.freeze({
       synchronizeApplicationChanges(false, true);
     });
     on("logoutButton", "click", function() { closeApplicationSession(false); });
+    on("themeToggleButton", "click", toggleTheme);
     on("profileButton", "click", function(event) { event.stopPropagation(); toggleProfileMenu(); });
     on("profileChangePassword", "click", function() { closeProfileMenu(); openChangePasswordModal(); });
     on("profileLogout", "click", function() { closeProfileMenu(); closeApplicationSession(false); });
@@ -1605,6 +1612,45 @@ const APP_STORAGE = Object.freeze({
       collapsed = window.localStorage.getItem(APP_STORAGE.SIDEBAR_COLLAPSED) === "1";
     } catch (error) {}
     applySidebarCollapsed(collapsed, false);
+  }
+
+  /**
+   * Aplica el tema guardado (claro u oscuro) ni bien carga la página.
+   */
+  function initTheme() {
+    let dark = false;
+    try {
+      dark = window.localStorage.getItem(APP_STORAGE.THEME) === "dark";
+    } catch (error) {}
+    applyTheme(dark, false);
+  }
+
+  /**
+   * Alterna entre modo claro y oscuro desde el botón sol/luna.
+   */
+  function toggleTheme() {
+    applyTheme(!document.body.classList.contains("dark-mode"), true);
+  }
+
+  /**
+   * Aplica el modo oscuro, actualiza el ícono y conserva la preferencia.
+   */
+  function applyTheme(dark, persist) {
+    document.body.classList.toggle("dark-mode", Boolean(dark));
+    const icon = document.getElementById("themeToggleIcon");
+    if (icon) icon.textContent = dark ? "light_mode" : "dark_mode";
+    const button = document.getElementById("themeToggleButton");
+    if (button) {
+      const label = dark ? "Cambiar a modo claro" : "Cambiar a modo oscuro";
+      button.title = label;
+      button.dataset.tooltip = label;
+      button.setAttribute("aria-label", label);
+    }
+    if (persist) {
+      try {
+        window.localStorage.setItem(APP_STORAGE.THEME, dark ? "dark" : "light");
+      } catch (error) {}
+    }
   }
 
   /**
