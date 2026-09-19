@@ -1651,7 +1651,7 @@
   /* ============ LOGIN SPLIT — ESTILO REFERENCIA ============ */
   body:has(#authView:not([hidden])) { overflow: hidden; height: 100vh; height: 100dvh; }
   body .auth-view.auth-split {
-    display: grid; grid-template-columns: 42% 58%;
+    display: grid; grid-template-columns: 50% 50%;
     height: 100vh; height: 100dvh; max-height: 100vh; max-height: 100dvh;
     min-height: 100vh; min-height: 100dvh; padding: 0; margin: 0; overflow: hidden;
     background: #fff;
@@ -1662,7 +1662,7 @@
     position: relative; overflow: hidden; display: block;
     height: 100vh; height: 100dvh; max-height: 100vh; max-height: 100dvh;
     min-height: 100vh; min-height: 100dvh; padding: 0; margin: 0; color: #fff;
-    background: #07354d;
+    background: linear-gradient(155deg, #041e2c 0%, #07354d 30%, #0a6ea8 58%, #00a1de 82%, #2ec4b6 100%);
   }
   body .auth-view.auth-split .auth-brand-art {
     position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none;
@@ -1694,9 +1694,14 @@
     margin: 8px 0 0; color: var(--muted); font-size: 14px;
   }
 
-  /* ── Formulario ── */
+  /* ── Formulario (centrado en la mitad derecha) ── */
+  body .auth-view.auth-split .auth-form-logo,
+  body .auth-view.auth-split #authTitle,
+  body .auth-view.auth-split .auth-form-sub {
+    width: 100%; max-width: 420px; margin-left: auto; margin-right: auto; text-align: center;
+  }
   body .auth-view.auth-split .auth-actions {
-    width: min(380px, 100%); margin-top: 32px;
+    width: min(380px, 100%); margin-top: 32px; margin-left: auto; margin-right: auto;
   }
   body .auth-view.auth-split .supabase-auth-form {
     display: grid; gap: 18px; background: transparent; border: 0; box-shadow: none; padding: 0;
@@ -1755,10 +1760,12 @@
     opacity: .6; cursor: wait; transform: none;
   }
   body .auth-view.auth-split .auth-footnote {
-    margin-top: 18px; color: #94a3b8; font-size: 12px; text-align: center;
+    margin-top: 18px; margin-left: auto; margin-right: auto; max-width: 420px;
+    color: #94a3b8; font-size: 12px; text-align: center;
   }
   body .auth-view.auth-split .inline-message {
-    width: min(380px, 100%); box-sizing: border-box; text-align: left; margin-top: 14px;
+    width: min(380px, 100%); box-sizing: border-box; text-align: left;
+    margin-top: 14px; margin-left: auto; margin-right: auto;
   }
 
   /* ── Dark mode ── */
