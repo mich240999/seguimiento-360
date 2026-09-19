@@ -151,6 +151,14 @@
     if (!form || !emailInput || !passwordInput || !submit || !forgot) return;
     form.hidden = false;
     form.classList.add("is-open");
+    try {
+      var rememberedEmail = window.localStorage.getItem("S360_REMEMBER_EMAIL") || "";
+      var rememberBox = document.getElementById("authRemember");
+      if (rememberedEmail) {
+        emailInput.value = rememberedEmail;
+        if (rememberBox) rememberBox.checked = true;
+      }
+    } catch (_) {}
     const emailButton = document.getElementById("supabaseEmailButton");
     let emailFormCloseTimer = null;
     if (emailButton) {
@@ -174,7 +182,7 @@
       event.preventDefault(); const email = String(emailInput.value || "").trim().toLowerCase(); const password = String(passwordInput.value || "");
       if (!email || !emailInput.checkValidity()) return showMessage("Ingresa un correo válido.", true); if (!password) return showMessage("Ingresa tu contraseña.", true);
       submit.disabled = true; showMessage("Validando acceso…", false);
-      try { const { data, error } = await getClient().auth.signInWithPassword({ email, password }); if (error) throw error; if (!data || !data.session) throw new Error("No se recibió una sesión válida de Supabase."); const auth = await getAuthorizedUser(); const replace=await chooseActiveSession(auth); if(!replace){showMessage("Se mantiene la sesión ya activa. No se inició una nueva sesión en este equipo.",false);submit.disabled=false;return;} window.localStorage.setItem(LEGACY_TOKEN_KEY, data.session.access_token); window.localStorage.setItem(LEGACY_SESSION_KEY, JSON.stringify({ user: auth.authUser })); showMessage("Acceso autorizado. Cargando Seguimiento 360…", false); window.location.reload(); }
+      try { const { data, error } = await getClient().auth.signInWithPassword({ email, password }); if (error) throw error; if (!data || !data.session) throw new Error("No se recibió una sesión válida de Supabase."); try { var rememberNow = document.getElementById("authRemember"); if (rememberNow && rememberNow.checked) window.localStorage.setItem("S360_REMEMBER_EMAIL", email); else window.localStorage.removeItem("S360_REMEMBER_EMAIL"); } catch (_) {} const auth = await getAuthorizedUser(); const replace=await chooseActiveSession(auth); if(!replace){showMessage("Se mantiene la sesión ya activa. No se inició una nueva sesión en este equipo.",false);submit.disabled=false;return;} window.localStorage.setItem(LEGACY_TOKEN_KEY, data.session.access_token); window.localStorage.setItem(LEGACY_SESSION_KEY, JSON.stringify({ user: auth.authUser })); showMessage("Acceso autorizado. Cargando Seguimiento 360…", false); window.location.reload(); }
       catch (error) { try { await getClient().auth.signOut(); } catch (_) {} showMessage(normalizeAuthError(error), true); submit.disabled = false; passwordInput.focus(); }
     });
     forgot.addEventListener("click", async function() {
