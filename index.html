@@ -20,8 +20,8 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap-grid.min.css">
   
   <!-- ESTILOS LOCALES DEL SISTEMA -->
-  <link rel="stylesheet" href="css/app-styles.css?v=20260919f">
-  <link rel="stylesheet" href="css/prov-styles.css?v=20260923">
+  <link rel="stylesheet" href="css/app-styles.css?v=20260919h">
+  <link rel="stylesheet" href="css/prov-styles.css?v=20260919h">
   
   <!-- LIBRERÍAS EXTERNAS JS -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -903,10 +903,11 @@
   .sales-badge--pending { background: #fff7ed; color: #c2410c; }
   .sales-badge--warning { background: #fef3c7; color: #92400e; }
 
-  .sales-row-actions{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:wrap;min-width:180px}
+  .sales-row-actions{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:nowrap;min-width:180px}
   .sales-row-actions .button{white-space:nowrap}
-  .sales29-actions-stack{display:flex;flex-direction:column;align-items:flex-end;gap:8px;min-width:220px}
-  .sales29-actions-row{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+  .sales29-actions-stack{display:flex;flex-direction:row;align-items:center;justify-content:flex-end;gap:8px;min-width:0}
+  .sales29-actions-row{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:nowrap}
+  td > .mp-actions{flex-wrap:nowrap}
   .sales29-actions-row--secondary .button{min-width:136px;justify-content:center}
 
   .sales-validation-box{display:grid;gap:10px;border:1px solid #e5edf6;border-radius:16px;background:#f8fbff;padding:12px;margin-top:12px}
@@ -2017,7 +2018,7 @@
   <script src="js/modules/admin.js?v=20260919g"></script>
   <script src="js/modules/providers.js?v=20260919g"></script>
   <script src="js/modules/materials-prices.js?v=20260919g"></script>
-  <script src="js/modules/sales.js?v=20260919g"></script>
+  <script src="js/modules/sales.js?v=20260919h"></script>
   <script src="js/modules/sales-dashboard.js?v=20260919g"></script>
   <script src="js/modules/delivery-calendar.js?v=20260919g"></script>
   <script src="js/modules/dispatch.js?v=20260919g"></script>

@@ -1910,21 +1910,10 @@ const SALES_STATE = {
       principal = principal || [];
       secundario = secundario || [];
 
-      let html =
-        '<div class="sales-row-actions sales29-actions-stack">' +
-          '<div class="sales29-actions-row sales29-actions-row--main">' +
-            principal.join("") +
-          '</div>';
-
-      if (secundario.length) {
-        html +=
-          '<div class="sales29-actions-row sales29-actions-row--secondary">' +
-            secundario.join("") +
-          '</div>';
-      }
-
-      html += '</div>';
-      return html;
+      return '<div class="sales-row-actions sales29-actions-stack">' +
+        '<div class="sales29-actions-row sales29-actions-row--main">' +
+          principal.concat(secundario).join("") +
+        '</div></div>';
     };
 
     if (SALES_STATE.activeView === "ABONOS") {

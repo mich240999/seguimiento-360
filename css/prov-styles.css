@@ -14,7 +14,7 @@
   .providers-name-cell { display: grid; gap: 3px; }
   .providers-name-cell strong { color: var(--ink); }
   .providers-name-cell small { color: var(--muted); }
-  .providers-row-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+  .providers-row-actions { display: flex; flex-wrap: nowrap; align-items: center; justify-content: flex-end; gap: 6px; }
   .providers-row-actions .icon-button { width: 34px; height: 34px; }
   .providers-pagination { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 14px; }
   .providers-pagination-actions { display: flex; gap: 8px; }
