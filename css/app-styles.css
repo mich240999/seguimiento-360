@@ -1563,7 +1563,6 @@
     --shadow-md: 0 24px 70px rgba(0, 0, 0, .45);
   }
   body.dark-mode .topbar,
-  body.dark-mode .hero-card,
   body.dark-mode .modal-card,
   body.dark-mode .side-sheet,
   body.dark-mode .dropdown-menu,
@@ -1573,6 +1572,17 @@
     border-color: var(--border);
     color: var(--ink);
   }
+  body.dark-mode .app-main,
+  body.dark-mode .app-content {
+    background: transparent;
+  }
+  body.dark-mode .hero-card {
+    background: linear-gradient(125deg, #0a3d52, #0a7aa5) !important;
+    background-color: #0a3d52 !important;
+    border: 1px solid rgba(255,255,255,.14) !important;
+    color: #fff;
+  }
+  body.dark-mode .hero-card h2 { color: #fff; }
   body.dark-mode .data-table td { background: var(--surface); }
   body.dark-mode .data-table tbody tr:hover td { background: var(--surface-soft); }
   body.dark-mode .select-field select,
