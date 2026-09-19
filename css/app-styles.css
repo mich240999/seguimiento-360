@@ -1651,11 +1651,17 @@
   /* ============ LOGIN DIVIDIDO (marca + formulario) ============ */
   body .auth-view.auth-split {
     display: grid; grid-template-columns: minmax(420px, 46%) minmax(0, 1fr);
+    align-items: stretch; align-content: stretch;
     min-height: 100vh; min-height: 100dvh; padding: 0; overflow: hidden;
-    background: var(--background);
+    background:
+      radial-gradient(1000px 520px at 12% 0%, rgba(0,210,255,.35), transparent 60%),
+      radial-gradient(800px 480px at 85% 12%, rgba(46,204,113,.35), transparent 60%),
+      radial-gradient(900px 520px at 88% 100%, rgba(0,120,180,.32), transparent 60%),
+      linear-gradient(135deg, #07354d, #0a7aa5 55%, #129a6c 100%);
   }
   body .auth-view.auth-split .auth-brand-panel {
     position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end;
+    height: 100%; min-height: 100vh; min-height: 100dvh;
     padding: clamp(32px, 5vw, 72px); color: #fff;
     background: linear-gradient(150deg, #06283d 0%, #0a7aa5 55%, #129a6c 100%);
   }
