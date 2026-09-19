@@ -1757,3 +1757,31 @@
     body .auth-view.auth-split #authTitle { font-size: 20px; margin-top: 10px; }
     body .auth-view.auth-split .auth-actions { margin-top: 16px; }
   }
+
+  /* ============ LOGIN SPLIT ESTILO REFERENCIA (arte sólido + form limpio) ============ */
+  body .auth-view.auth-split { background: #f4f6f8; }
+  body .auth-view.auth-split .auth-mosaic { display: none; }
+  body .auth-view.auth-split .auth-brand-panel {
+    display: flex; height: 100%; min-height: 100vh; min-height: 100dvh; padding: 0;
+    background: linear-gradient(160deg, #0b6fc4 0%, #0a90d8 55%, #0aa9c6 100%);
+  }
+  body .auth-view.auth-split .auth-brand-art { position: absolute; inset: 0; width: 100%; height: 100%; }
+  body .auth-view.auth-split .auth-form-panel {
+    justify-content: center; width: 100%; max-width: none; margin: 0; padding: 32px 24px;
+    background: transparent; border: 0; border-radius: 0; box-shadow: none;
+    backdrop-filter: none; -webkit-backdrop-filter: none;
+  }
+  body .auth-view.auth-split .auth-form-logo img { width: min(170px, 55%); }
+  body .auth-view.auth-split #authTitle { font-size: clamp(21px, 2.2vw, 25px); max-width: 420px; }
+  body .auth-view.auth-split .auth-actions { width: min(400px, 100%); }
+  body .auth-view.auth-split .supabase-auth-form { gap: 14px; }
+  body .auth-view.auth-split .login-remember-row { margin: 2px 0 4px; }
+  body .auth-view.auth-split .login-submit { align-self: flex-end; min-width: 170px; border-radius: 999px; min-height: 46px; }
+  body.dark-mode .auth-view.auth-split { background: #0a141b; }
+  @media (max-width: 900px) {
+    body .auth-view.auth-split .auth-brand-panel { min-height: 200px; height: 200px; padding: 0; }
+    body .auth-view.auth-split .auth-form-panel { padding: 24px 20px 36px; }
+  }
+  @media (max-width: 560px) {
+    body .auth-view.auth-split .auth-brand-panel { min-height: 150px; height: 150px; }
+  }
