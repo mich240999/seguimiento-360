@@ -42,36 +42,42 @@
 
 <section id="authView" class="auth-view auth-split" aria-labelledby="authTitle">
   <aside class="auth-brand-panel">
-    <svg class="auth-brand-art" viewBox="0 0 600 800" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-      <g fill="none" stroke="#ffffff" stroke-opacity="0.22">
-        <path d="M-60,80 C160,170 320,150 660,20" stroke-width="2.5"/>
-        <path d="M-60,160 C160,250 320,230 660,100" stroke-width="2.5"/>
-        <path d="M-60,240 C160,330 320,310 660,180" stroke-width="2.5"/>
-        <path d="M-60,320 C160,410 320,390 660,260" stroke-width="2.5"/>
-        <path d="M-60,400 C160,490 320,470 660,340" stroke-width="2"/>
-        <path d="M-60,480 C160,570 320,550 660,420" stroke-width="2"/>
-        <path d="M-60,560 C160,650 320,630 660,500" stroke-width="2"/>
-        <path d="M-60,640 C160,730 320,710 660,580" stroke-width="2"/>
-        <path d="M-60,720 C160,810 320,790 660,660" stroke-width="2"/>
-        <path d="M80,820 C170,540 360,460 560,-40" stroke-width="2.5"/>
-        <path d="M200,820 C290,540 480,460 670,-40" stroke-width="2"/>
-        <path d="M320,820 C410,540 600,460 780,-40" stroke-width="2"/>
+    <svg class="auth-brand-art auth-gusts" viewBox="0 0 600 800" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <defs>
+        <filter id="gustBlur" x="-40%" y="-40%" width="180%" height="180%">
+          <feGaussianBlur stdDeviation="22"/>
+        </filter>
+        <radialGradient id="gustGlow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#ffffff" stop-opacity="0.55"/>
+          <stop offset="45%" stop-color="#aee8f7" stop-opacity="0.22"/>
+          <stop offset="100%" stop-color="#aee8f7" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <circle cx="400" cy="380" r="190" fill="url(#gustGlow)"/>
+      <g class="gust gust--a" fill="none" stroke-linecap="round">
+        <path d="M-80,300 C140,280 220,360 380,380 C480,392 540,380 680,340" stroke="#00d2ff" stroke-width="64" opacity="0.28" filter="url(#gustBlur)"/>
+        <path d="M-80,300 C140,280 220,360 380,380 C480,392 540,380 680,340" stroke="#ffffff" stroke-width="4" opacity="0.55"/>
       </g>
-      <g fill="#ffffff" fill-opacity="0.16">
-        <circle cx="540" cy="120" r="140"/>
-        <circle cx="60" cy="680" r="170"/>
+      <g class="gust gust--b" fill="none" stroke-linecap="round">
+        <path d="M-80,520 C120,540 260,440 400,400 C500,376 560,392 680,440" stroke="#2ecc71" stroke-width="72" opacity="0.30" filter="url(#gustBlur)"/>
+        <path d="M-80,520 C120,540 260,440 400,400 C500,376 560,392 680,440" stroke="#ffffff" stroke-width="4" opacity="0.50"/>
       </g>
-      <g fill="#2ecc71" fill-opacity="0.28">
-        <circle cx="470" cy="640" r="190"/>
-        <circle cx="120" cy="160" r="110"/>
+      <g class="gust gust--c" fill="none" stroke-linecap="round">
+        <path d="M-80,120 C180,140 300,260 420,360 C500,424 560,470 680,560" stroke="#7dd3fc" stroke-width="44" opacity="0.26" filter="url(#gustBlur)"/>
+        <path d="M-80,640 C180,620 300,520 420,420 C500,356 570,320 680,280" stroke="#a7f3d0" stroke-width="40" opacity="0.26" filter="url(#gustBlur)"/>
       </g>
-      <g fill="#00d2ff" fill-opacity="0.20">
-        <circle cx="300" cy="400" r="220"/>
+      <g fill="#ffffff">
+        <circle cx="150" cy="290" r="5" opacity="0.7"/>
+        <circle cx="250" cy="330" r="3.5" opacity="0.6"/>
+        <circle cx="330" cy="372" r="4.5" opacity="0.7"/>
+        <circle cx="180" cy="528" r="4" opacity="0.6"/>
+        <circle cx="300" cy="462" r="5" opacity="0.7"/>
+        <circle cx="430" cy="398" r="3.5" opacity="0.8"/>
+        <circle cx="500" cy="404" r="4.5" opacity="0.7"/>
+        <circle cx="260" cy="200" r="3.5" opacity="0.5"/>
+        <circle cx="360" cy="560" r="4" opacity="0.5"/>
       </g>
     </svg>
-    <div class="auth-brand-mark auth-brand-mark--xl" aria-hidden="true">
-      <img src="img/calidda-logo.png" alt="Cálidda" style="width:100%; height:100%; object-fit:contain;">
-    </div>
     <p class="auth-brand-foot">© Cálidda · Plataforma de Seguimiento Comercial</p>
   </aside>
 

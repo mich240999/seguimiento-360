@@ -1655,14 +1655,20 @@
     background: var(--background);
   }
   body .auth-view.auth-split .auth-brand-panel {
-    position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between;
+    position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end;
     padding: clamp(32px, 5vw, 72px); color: #fff;
     background: linear-gradient(150deg, #06283d 0%, #0a7aa5 55%, #129a6c 100%);
   }
   body .auth-view.auth-split .auth-brand-art { position: absolute; inset: 0; width: 100%; height: 100%; }
-  body .auth-view.auth-split .auth-brand-mark--xl {
-    position: relative; z-index: 1; width: 120px; height: 120px; padding: 14px; box-sizing: border-box;
-    background: #fff; border-radius: 32px; box-shadow: 0 24px 60px rgba(0,20,40,.35);
+  body .auth-view.auth-split .auth-gusts .gust { animation: gustDrift 14s ease-in-out infinite alternate; }
+  body .auth-view.auth-split .auth-gusts .gust--b { animation-duration: 18s; }
+  body .auth-view.auth-split .auth-gusts .gust--c { animation-duration: 22s; }
+  @keyframes gustDrift {
+    from { transform: translateX(-16px); }
+    to { transform: translateX(16px); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    body .auth-view.auth-split .auth-gusts .gust { animation: none; }
   }
   body .auth-view.auth-split .auth-brand-foot { position: relative; z-index: 1; margin: 0; color: rgba(255,255,255,.75); font-size: 12px; }
   body .auth-view.auth-split .auth-form-panel {
