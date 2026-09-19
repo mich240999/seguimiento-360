@@ -42,6 +42,37 @@
 
 <section id="authView" class="auth-view auth-split" aria-labelledby="authTitle">
   <aside class="auth-brand-panel">
+    <div class="auth-brand-bg" aria-hidden="true"></div>
+    <svg class="auth-brand-art" viewBox="0 0 600 800" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <defs>
+        <filter id="flowBlur" x="-40%" y="-40%" width="180%" height="180%">
+          <feGaussianBlur stdDeviation="7"/>
+        </filter>
+        <radialGradient id="dotHalo" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#ffffff" stop-opacity="0.9"/>
+          <stop offset="35%" stop-color="#ffffff" stop-opacity="0.35"/>
+          <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <g fill="none" stroke-linecap="round">
+        <path d="M-60,150 C180,170 340,300 660,270" stroke="#ffffff" stroke-width="14" opacity="0.28" filter="url(#flowBlur)"/>
+        <path d="M-60,150 C180,170 340,300 660,270" stroke="#ffffff" stroke-width="5" opacity="0.85"/>
+        <path d="M-60,430 C200,410 360,540 660,470" stroke="#ffffff" stroke-width="12" opacity="0.25" filter="url(#flowBlur)"/>
+        <path d="M-60,430 C200,410 360,540 660,470" stroke="#ffffff" stroke-width="4.5" opacity="0.8"/>
+        <path d="M-60,620 C220,600 380,690 660,640" stroke="#ffffff" stroke-width="9" opacity="0.22" filter="url(#flowBlur)"/>
+        <path d="M-60,620 C220,600 380,690 660,640" stroke="#ffffff" stroke-width="3.5" opacity="0.55"/>
+      </g>
+      <g>
+        <circle cx="150" cy="80" r="16" fill="url(#dotHalo)"/><circle cx="150" cy="80" r="4" fill="#ffffff"/>
+        <circle cx="330" cy="175" r="13" fill="url(#dotHalo)"/><circle cx="330" cy="175" r="3.5" fill="#ffffff"/>
+        <circle cx="470" cy="255" r="15" fill="url(#dotHalo)"/><circle cx="470" cy="255" r="4" fill="#ffffff"/>
+        <circle cx="540" cy="300" r="11" fill="url(#dotHalo)"/><circle cx="540" cy="300" r="3" fill="#ffffff"/>
+        <circle cx="640" cy="330" r="12" fill="url(#dotHalo)"/><circle cx="640" cy="330" r="3.5" fill="#ffffff"/>
+        <circle cx="110" cy="400" r="11" fill="url(#dotHalo)"/><circle cx="110" cy="400" r="3" fill="#ffffff"/>
+        <circle cx="400" cy="500" r="15" fill="url(#dotHalo)"/><circle cx="400" cy="500" r="4" fill="#ffffff"/>
+        <circle cx="210" cy="630" r="11" fill="url(#dotHalo)"/><circle cx="210" cy="630" r="3" fill="#ffffff"/>
+      </g>
+    </svg>
     <p class="auth-brand-foot">© Cálidda · Plataforma de Seguimiento Comercial</p>
   </aside>
 
