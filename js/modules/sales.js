@@ -1919,9 +1919,19 @@ const SALES_STATE = {
     if (SALES_STATE.activeView === "ABONOS") {
       const estadoAbonos = String(item.estado || item.estadoEntrega || "").toUpperCase();
       const canCancelAbonos = estadoAbonos !== "ENTREGADA" && estadoAbonos !== "ANULADA";
+      var abonoScope29P_ = "NINGUNO";
+      try { abonoScope29P_ = String((typeof activePermissionScope === "function" ? activePermissionScope("VENTAS_CONTADO", "CONFIRMAR_ABONO") : "NINGUNO") || "NINGUNO").toUpperCase(); } catch (_) {}
+      var abonoUserProv29P_ = "";
+      try { var abonoCtxU29P_ = (typeof APP_STATE !== "undefined" && APP_STATE && APP_STATE.context && APP_STATE.context.usuario) || {}; abonoUserProv29P_ = String(abonoCtxU29P_.idProveedor || abonoCtxU29P_.id_proveedor || "").trim(); } catch (_) {}
+      var abonoRowProv29P_ = String(item.idProveedor || "").trim();
+      var abonoDetProvs29P_ = Array.isArray(item.proveedoresDetalle) ? item.proveedoresDetalle : [];
+      var abonoMatch29P_ = !!abonoRowProv29P_ && !!abonoUserProv29P_ && abonoRowProv29P_ === abonoUserProv29P_;
+      if (!abonoMatch29P_ && abonoUserProv29P_ && abonoDetProvs29P_.indexOf(abonoUserProv29P_) !== -1) abonoMatch29P_ = true;
+      var payBlocked29P_ = (abonoScope29P_ === "PROVEEDOR" || abonoScope29P_ === "ASIGNADOS") && !!abonoUserProv29P_ && !abonoMatch29P_ && !!(abonoRowProv29P_ || abonoDetProvs29P_.length);
+      var payTip29P_ = payBlocked29P_ ? "Solo el proveedor de esta venta puede validar el abono" : "Validar abono";
       return wrapRows(
         [
-          '<button class="table-button has-tooltip" type="button" data-sales-pay="' + id + '" data-tooltip="Validar abono" aria-label="Validar abono" title="Validar abono"><span class="material-symbols-rounded">fact_check</span></button>',
+          '<button class="table-button has-tooltip" type="button"' + (payBlocked29P_ ? " disabled" : "") + ' data-sales-pay="' + id + '" data-tooltip="' + payTip29P_ + '" aria-label="' + payTip29P_ + '" title="' + payTip29P_ + '"><span class="material-symbols-rounded">fact_check</span></button>',
           '<button class="table-button has-tooltip" type="button" data-sales-view-detail="' + id + '" data-tooltip="Ver" aria-label="Ver" title="Ver"><span class="material-symbols-rounded">visibility</span></button>'
         ],
         canCancelAbonos ? [

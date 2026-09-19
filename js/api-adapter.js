@@ -403,6 +403,11 @@
         const idVenta = args[0];
         const v = s.ventas.find(x => x.idVenta === idVenta);
         if (v) {
+          var demoUsr29A_ = (s.usuarios && s.usuarios[0]) || {};
+          var demoProvU29A_ = String(demoUsr29A_.idProveedor || demoUsr29A_.id_proveedor || "").trim();
+          var demoProvsV29A_ = [];
+          [v.idProveedor, v.gestionEntrega && v.gestionEntrega.idProveedor].concat(((v.detalles || []).map(function(d) { return d && (d.idProveedorPrecio || d.id_proveedor); }) || [])).forEach(function(p) { var s0 = String(p || "").trim(); if (s0 && demoProvsV29A_.indexOf(s0) === -1) demoProvsV29A_.push(s0); });
+          if (demoProvU29A_ && demoProvsV29A_.length && demoProvsV29A_.indexOf(demoProvU29A_) === -1) return { correcto: false, mensaje: "Solo una cuenta del proveedor de esta venta puede validar el abono." };
           v.estadoAbono = "ABONO_CONFIRMADO";
           v.abonoAprobadoId = (s.usuarios[0] && s.usuarios[0].idUsuario) || "";
           v.abonoAprobadoNombre = (s.usuarios[0] && s.usuarios[0].nombre) || "";
@@ -419,6 +424,11 @@
         if (String(v.estadoAbono || "").toUpperCase() !== "ABONO_CONFIRMADO") {
           return { correcto: false, mensaje: "Confirma el abono de la venta antes de gestionar su entrega." };
         }
+        var demoUsr29G_ = (s.usuarios && s.usuarios[0]) || {};
+        var demoProvU29G_ = String(demoUsr29G_.idProveedor || demoUsr29G_.id_proveedor || "").trim();
+        var demoProvsV29G_ = [];
+        [v.idProveedor, v.gestionEntrega && v.gestionEntrega.idProveedor].concat(((v.detalles || []).map(function(d) { return d && (d.idProveedorPrecio || d.id_proveedor); }) || [])).forEach(function(p) { var s1 = String(p || "").trim(); if (s1 && demoProvsV29G_.indexOf(s1) === -1) demoProvsV29G_.push(s1); });
+        if (demoProvU29G_ && demoProvsV29G_.length && demoProvsV29G_.indexOf(demoProvU29G_) === -1) return { correcto: false, mensaje: "Solo una cuenta del proveedor de esta venta puede gestionar la entrega." };
         {
           v.estadoEntrega = entregaPayload.estadoEntrega || v.estadoEntrega;
           if (String(entregaPayload.estadoEntrega || "").toUpperCase() === "ENTREGADA") v.estadoGeneral = "ENTREGADA";
@@ -639,6 +649,63 @@
         if (abonoVentaGestion.error) throw abonoVentaGestion.error;
         if (!abonoVentaGestion.data) throw new Error("No se encontró la venta.");
         if (String(abonoVentaGestion.data.estado_abono || "").toUpperCase() !== "ABONO_CONFIRMADO") throw new Error("Confirma el abono de la venta antes de gestionar su entrega.");
+        var usuarioPuente29G_ = ((localCache && localCache.usuarios && localCache.usuarios[0]) || {});
+        var rolPuente29G_ = String(usuarioPuente29G_.rol || usuarioPuente29G_.rolUsuario || "").toUpperCase();
+        if (rolPuente29G_ !== "SUPERADMIN") {
+          var filasPuente29G_ = [];
+          try {
+            var qpPuente29G_ = await client.from("seg_permisos").select("id_sujeto,recurso,permitido,alcance").eq("estado", "ACTIVO").eq("modulo", "VENTAS_CONTADO").in("id_sujeto", [usuarioPuente29G_.idUsuario, rolPuente29G_]);
+            if (!qpPuente29G_.error) filasPuente29G_ = qpPuente29G_.data || [];
+          } catch (_) {}
+          var recsPuente29G_ = ["GESTIONAR_ENTREGA", "PROGRAMAR_ENTREGA", "CONFIRMAR_ENTREGA"], hallPuente29G_ = null, r29G_;
+          for (var i29G_ = 0; i29G_ < recsPuente29G_ && !hallPuente29G_; i29G_++) {
+            r29G_ = recsPuente29G_[i29G_];
+            var mu29G_ = filasPuente29G_.filter(function(x) { return String(x.recurso || "") === r29G_ && x.permitido === true && String(x.id_sujeto || "") === String(usuarioPuente29G_.idUsuario || ""); });
+            if (mu29G_.length) hallPuente29G_ = { alcance: String(mu29G_[0].alcance || "PROPIO").toUpperCase() };
+            else { var mr29G_ = filasPuente29G_.filter(function(x) { return String(x.recurso || "") === r29G_ && x.permitido === true && String(x.id_sujeto || "").toUpperCase() === rolPuente29G_; }); if (mr29G_.length) hallPuente29G_ = { alcance: String(mr29G_[0].alcance || "PROPIO").toUpperCase() }; }
+          }
+          if (!hallPuente29G_) throw new Error("No tienes permiso para gestionar la entrega.");
+          var alcPuente29G_ = hallPuente29G_.alcance, okPuente29G_ = false;
+          var vvPuente29G_ = await client.from("vta_ventas_contado").select("id_venta,id_usuario,id_proveedor,id_oficina,id_grupo").eq("id_venta", idVentaGestion).maybeSingle();
+          if (vvPuente29G_.error) throw vvPuente29G_.error;
+          if (!vvPuente29G_.data) throw new Error("No se encontró la venta.");
+          var mpPuente29G_ = String(usuarioPuente29G_.idProveedor || usuarioPuente29G_.id_proveedor || "").trim();
+          if (alcPuente29G_ === "GLOBAL" || alcPuente29G_ === "TOTAL") okPuente29G_ = true;
+          else if (alcPuente29G_ === "PROPIO") okPuente29G_ = !!String(usuarioPuente29G_.idUsuario || "") && String(vvPuente29G_.data.id_usuario || "") === String(usuarioPuente29G_.idUsuario || "");
+          else if (alcPuente29G_ === "PROVEEDOR" || alcPuente29G_ === "ASIGNADOS") {
+            if (mpPuente29G_ && String(vvPuente29G_.data.id_proveedor || "") === mpPuente29G_) okPuente29G_ = true;
+            else if (mpPuente29G_) {
+              var ddPuente29G_ = await client.from("vta_ventas_contado_detalle").select("id_material,precio_unitario").eq("id_venta", idVentaGestion);
+              if (ddPuente29G_.error) throw ddPuente29G_.error;
+              var matsPuente29G_ = [], seenMP29G_ = {};
+              (ddPuente29G_.data || []).forEach(function(d) { var mm = String(d.id_material || ""); if (mm && !seenMP29G_[mm]) { seenMP29G_[mm] = true; matsPuente29G_.push(mm); } });
+              if (matsPuente29G_.length) {
+                var pdPuente29G_ = await client.from("pre_lista_precio_detalle").select("id_material,precio_base,id_lista_precio").in("id_material", matsPuente29G_);
+                if (pdPuente29G_.error) throw pdPuente29G_.error;
+                var lidsPuente29G_ = [], seenLP29G_ = {};
+                (ddPuente29G_.data || []).forEach(function(d) {
+                  var hit = ((pdPuente29G_.data || []).filter(function(p) { return String(p.id_material || "") === String(d.id_material || "") && Number(p.precio_base || 0) === Number(d.precio_unitario || 0); })[0]) || null;
+                  var lid = hit && String(hit.id_lista_precio || "");
+                  if (lid && !seenLP29G_[lid]) { seenLP29G_[lid] = true; lidsPuente29G_.push(lid); }
+                });
+                if (lidsPuente29G_.length) {
+                  var lpPuente29G_ = await client.from("pre_listas_precios").select("id_proveedor").in("id_lista_precio", lidsPuente29G_);
+                  if (lpPuente29G_.error) throw lpPuente29G_.error;
+                  okPuente29G_ = (lpPuente29G_.data || []).some(function(l) { return String(l.id_proveedor || "").trim() === mpPuente29G_; });
+                }
+              }
+              if (!okPuente29G_ && !String(vvPuente29G_.data.id_proveedor || "").trim()) {
+                var gqPuente29G_ = await client.from("vta_gestion_entrega").select("id_proveedor").eq("id_venta", idVentaGestion).maybeSingle();
+                if (gqPuente29G_.error) throw gqPuente29G_.error;
+                var provGPuente29G_ = String((gqPuente29G_.data && gqPuente29G_.data.id_proveedor) || "").trim();
+                okPuente29G_ = !!provGPuente29G_ && provGPuente29G_ === mpPuente29G_;
+              }
+            }
+          }
+          else if (alcPuente29G_ === "OFICINA") { var moPuente29G_ = String(usuarioPuente29G_.idOficina || usuarioPuente29G_.id_oficina || "").trim(); okPuente29G_ = !!moPuente29G_ && !!String(vvPuente29G_.data.id_oficina || "") && String(vvPuente29G_.data.id_oficina || "") === moPuente29G_; }
+          else if (alcPuente29G_ === "GRUPO") { var mgPuente29G_ = String(usuarioPuente29G_.idGrupo || usuarioPuente29G_.id_grupo || "").trim(); okPuente29G_ = !!mgPuente29G_ && !!String(vvPuente29G_.data.id_grupo || "") && String(vvPuente29G_.data.id_grupo || "") === mgPuente29G_; }
+          if (!okPuente29G_) throw new Error("Solo una cuenta del proveedor de esta venta puede gestionar la entrega (alcance " + alcPuente29G_ + ").");
+        }
         const estadoGestion = String(entregaPayload.estadoEntrega || "PROGRAMADA").toUpperCase();
         const gestionExistente = await client.from("vta_gestion_entrega").select("id_gestion_entrega").eq("id_venta", idVentaGestion).maybeSingle();
         if (gestionExistente.error) throw gestionExistente.error;
@@ -676,18 +743,18 @@
         const cellExp = function(v) { var t = String(v === null || v === undefined ? "" : v); return '"' + t.replace(/"/g, '""') + '"'; };
         const headExp = ["CODIGO", "FECHA", "CLIENTE", "DOCUMENTO", "PROVEEDOR", "OFICINA", "MONTO", "ABONO", "ENTREGA", "VENTA_EFECTUADA_POR", "ABONO_APROBADO_POR", "PROGRAMADO_POR", "ENTREGA_REALIZADA_POR", "OBSERVACION", "BONO_VENDEDOR"];
         const provNameExp = function(id) {
-          var found = (s.proveedores || []).filter(function(p) { return String(p.idProveedor || "") === String(id || ""); })[0] || {};
+          var found = (localCache.proveedores || []).filter(function(p) { return String(p.idProveedor || "") === String(id || ""); })[0] || {};
           return found.nombreComercial || found.razonSocial || String(id || "");
         };
         const userNameExp = function(id) {
-          var found = (s.usuarios || []).filter(function(u) { return String(u.idUsuario || "") === String(id || ""); })[0] || {};
+          var found = (localCache.usuarios || []).filter(function(u) { return String(u.idUsuario || "") === String(id || ""); })[0] || {};
           return found.nombre || found.correo || String(id || "");
         };
         const cliExp = function(v) { return [v.nombresCliente, v.apellidosCliente].filter(Boolean).join(" ") || v.nombreCliente || ""; };
-        const linesExp = [headExp.map(cellExp).join(",")].concat((s.ventas || []).map(function(v) {
+        const linesExp = [headExp.map(cellExp).join(",")].concat((localCache.ventas || []).map(function(v) {
           return [v.codigoVenta || "", String(v.fechaRegistro || "").split("T")[0], cliExp(v), v.numeroDocumentoCliente || "", provNameExp(v.idProveedor), v.nombreOficina || "", Number(v.montoTotalVenta || 0), String(v.estadoAbono || "").replace(/_/g, " "), String(v.estadoEntrega || "").replace(/_/g, " "), userNameExp(v.idUsuario) || cliExp(v), v.abonoAprobadoNombre || "", v.programadoNombre || "", v.entregadoNombre || "", v.observacionEntrega || "", 0].map(cellExp).join(",");
         }));
-        return { nombre: "ventas_360.csv", nombreArchivo: "ventas_360.csv", contenido: "﻿" + linesExp.join("\r\n"), mimeType: "text/csv;charset=utf-8", cantidad: (s.ventas || []).length };
+        return { nombre: "ventas_360.csv", nombreArchivo: "ventas_360.csv", contenido: "﻿" + linesExp.join("\r\n"), mimeType: "text/csv;charset=utf-8", cantidad: (localCache.ventas || []).length };
       }
       default:
         return undefined; // Despacho a local fallback

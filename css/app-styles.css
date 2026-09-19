@@ -518,6 +518,8 @@
   .table-actions { display: flex; justify-content: flex-end; align-items: center; gap: 4px; flex-wrap: nowrap; }
   .table-button { width: 32px; height: 32px; display: grid; place-items: center; color: var(--primary-700); background: transparent; border: 0; border-radius: 9px; cursor: pointer; }
   .table-button:hover { background: var(--primary-100); }
+  .table-button:disabled { opacity: .45; cursor: not-allowed; }
+  .table-button:disabled:hover { background: transparent; }
   .chip { display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px; border-radius: 999px; font-size: 10px; font-weight: 800; }
   .chip--active { color: #116746; background: #e6f6ef; }
   .chip--inactive { color: #805a14; background: #fff4db; }

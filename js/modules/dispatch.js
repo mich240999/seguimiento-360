@@ -66,6 +66,29 @@ function disp360CurrentProvider() {
 }
 
 /**
+ * Indica si la fila pertenece a otro proveedor (alcance PROVEEDOR): en ese
+ * caso las acciones se muestran deshabilitadas; el servidor también las
+ * rechaza (gate en guardarGestionEntregaVentaContadoModulo).
+ */
+function disp360RowBlocked29_(row) {
+  try {
+    var scopes29D_ = ["GESTIONAR_ENTREGA", "PROGRAMAR_ENTREGA", "CONFIRMAR_ENTREGA"].map(function(rec) {
+      try { return String((typeof activePermissionScope === "function" ? activePermissionScope("VENTAS_CONTADO", rec) : "NINGUNO") || "NINGUNO").toUpperCase(); } catch (_) { return "NINGUNO"; }
+    });
+    var scoped29D_ = scopes29D_.some(function(sc) { return sc === "PROVEEDOR" || sc === "ASIGNADOS"; });
+    if (!scoped29D_) return false;
+    var mp = disp360CurrentProvider();
+    if (!mp) return false;
+    row = row || {};
+    if (String(row.idProveedor || "").trim() === mp) return false;
+    var pds29D_ = Array.isArray(row.proveedoresDetalle) ? row.proveedoresDetalle : [];
+    if (pds29D_.indexOf(mp) !== -1) return false;
+    if (!String(row.idProveedor || "").trim() && !pds29D_.length) return false;
+    return true;
+  } catch (error) { return false; }
+}
+
+/**
  * Indica si el usuario puede ejecutar acciones de despacho: gestionar
  * despachos en VENTAS_CONTADO (PROGRAMAR_ENTREGA o CONFIRMAR_ENTREGA),
  * rol DESPACHADOR, o el permiso histórico del módulo standalone.
@@ -223,6 +246,7 @@ function disp360NormalizeRow(row) {
     fechaProgramada: String(gestion.fechaProgramadaEntrega || "").split("T")[0],
     detalleObservacion: String(gestion.detalleObservacion || ""),
     idProveedor: String(gestion.idProveedor || row.idProveedor || ""),
+    proveedoresDetalle: Array.isArray(row.proveedoresDetalle) ? row.proveedoresDetalle : [],
     receptor: String(gestion.nombreReceptor || row.nombreReceptor || ""),
     evidencias: evidences
   };
@@ -293,11 +317,16 @@ function renderDispatchResults() {
   var canManage = disp360CanManage();
   body.innerHTML = rows.map(function(row) {
     var actions = '<button class="table-button has-tooltip" type="button" data-disp360-detail="' + escapeHtml(row.idVenta) + '" data-tooltip="Ver" aria-label="Ver" title="Ver"><span class="material-symbols-rounded">visibility</span></button>';
+    var blocked29D_ = disp360RowBlocked29_(row);
+    var blockedTip29D_ = "Solo el proveedor de esta venta puede gestionarla";
+    var disAttr29D_ = blocked29D_ ? " disabled" : "";
     if (canManage && row.estadoEntrega === "PROGRAMADA") {
-      actions += ' <button class="table-button has-tooltip" type="button" data-disp360-take="' + escapeHtml(row.idVenta) + '" data-tooltip="Tomar despacho" aria-label="Tomar despacho" title="Tomar despacho"><span class="material-symbols-rounded">local_shipping</span></button>';
+      var takeTip29D_ = blocked29D_ ? blockedTip29D_ : "Tomar despacho";
+      actions += ' <button class="table-button has-tooltip" type="button"' + disAttr29D_ + ' data-disp360-take="' + escapeHtml(row.idVenta) + '" data-tooltip="' + takeTip29D_ + '" aria-label="' + takeTip29D_ + '" title="' + takeTip29D_ + '"><span class="material-symbols-rounded">local_shipping</span></button>';
     }
     if (canManage && row.estadoEntrega === "EN_RUTA") {
-      actions += ' <button class="table-button has-tooltip" type="button" data-disp360-confirm="' + escapeHtml(row.idVenta) + '" data-tooltip="Confirmar entrega" aria-label="Confirmar entrega" title="Confirmar entrega"><span class="material-symbols-rounded">task_alt</span></button>';
+      var confirmTip29D_ = blocked29D_ ? blockedTip29D_ : "Confirmar entrega";
+      actions += ' <button class="table-button has-tooltip" type="button"' + disAttr29D_ + ' data-disp360-confirm="' + escapeHtml(row.idVenta) + '" data-tooltip="' + confirmTip29D_ + '" aria-label="' + confirmTip29D_ + '" title="' + confirmTip29D_ + '"><span class="material-symbols-rounded">task_alt</span></button>';
     }
     return "<tr><td><strong>" + escapeHtml(row.codigoVenta || "—") + "</strong></td>" +
       "<td>" + escapeHtml(row.fechaProgramada || "—") + "</td>" +
