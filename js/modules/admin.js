@@ -410,6 +410,7 @@ const ADMIN_STATE = {
     if (action === "new-role") openRoleEditor(null);
     if (action === "new-module") openModuleEditor(null);
     if (action === "new-catalog") openCatalogEditor(null);
+    if (action === "new-provider-catalog") openProviderCatalogCreator();
     if (action === "new-resource") openResourceEditor(null);
     if (action === "save-permissions") savePermissionMatrix();
   }
@@ -1822,6 +1823,59 @@ const ADMIN_STATE = {
       secureRpc("guardarCatalogoAdminMotor", [formDataObject(form)], adminRpcModuleCode())
         .then(function() { closeSideSheet(); setLoader(false); toast("Catálogo guardado", "La lista quedó disponible para los campos dinámicos."); return loadAdminCatalogs(); })
         .catch(function(error) { setLoader(false); toast("No fue posible guardar", error.message, true); });
+    });
+  }
+
+  /**
+   * Crea el catálogo (lista base) de un proveedor.
+   * Todo catálogo nuevo pertenece a un proveedor.
+   */
+  function openProviderCatalogCreator() {
+    openModal({
+      eyebrow: "CATÁLOGO DE PROVEEDOR",
+      title: "Nuevo catálogo",
+      body: '<form id="providerCatalogForm" class="form-grid">' +
+        '<label class="field field--full"><span>Proveedor</span><select name="idProveedor" id="providerCatalogProvider" required><option value="">Seleccionar…</option></select></label>' +
+        '<p class="mp-note">Se creará la lista "Catálogo &lt;proveedor&gt;" con vigencia del mes. Los materiales se agregan desde las cargas.</p>' +
+        "</form>",
+      footer: '<button class="button button--ghost" type="button" data-modal-close>Cancelar</button>' +
+        '<button id="saveProviderCatalogButton" class="button button--primary" type="button">Crear catálogo</button>'
+    });
+    bindModalCloseButtons();
+    secureRpc("listarProveedoresModulo", [], adminRpcModuleCode()).then(function(res) {
+      const rows = (res && (res.registros || res.proveedores)) || [];
+      const select = document.getElementById("providerCatalogProvider");
+      if (select) {
+        select.innerHTML = '<option value="">Seleccionar…</option>' + rows.map(function(p) {
+          const id = String(p.idProveedor || "");
+          const name = p.nombreComercial || p.razonSocial || id;
+          return '<option value="' + escapeHtml(id) + '">' + escapeHtml(name) + "</option>";
+        }).join("");
+      }
+    }).catch(function() {});
+    on("saveProviderCatalogButton", "click", function() {
+      const select = document.getElementById("providerCatalogProvider");
+      const idProveedor = select ? String(select.value || "").trim() : "";
+      if (!idProveedor) {
+        toast("Falta proveedor", "Selecciona el proveedor dueño del catálogo.", true);
+        return;
+      }
+      const button = document.getElementById("saveProviderCatalogButton");
+      if (button) button.disabled = true;
+      setLoader(true, "Creando catálogo…");
+      const providerName = select && select.selectedIndex >= 0 ? String(select.options[select.selectedIndex].text || "").trim() : "";
+      secureRpc("guardarListaOficialPrecioModulo", [{ idProveedor: idProveedor, nombre: providerName ? "Catálogo " + providerName : "", es_catalogo: true }], adminRpcModuleCode())
+        .then(function(res) {
+          closeModal();
+          setLoader(false);
+          toast("Catálogo creado", (res && res.mensaje) || "El catálogo del proveedor quedó listo.");
+          return loadAdminCatalogs();
+        })
+        .catch(function(error) {
+          setLoader(false);
+          toast("No fue posible crear", errorMessage(error), true);
+          if (button) button.disabled = false;
+        });
     });
   }
 
