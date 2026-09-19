@@ -1647,3 +1647,65 @@
   body.dark-mode .button--ghost { color: var(--ink); }
   body.dark-mode .loader-panel { background: rgba(16,30,39,.92); border-color: var(--border); color: var(--ink); }
   body.dark-mode .loader-copy p, body.dark-mode .loader-status-row { color: var(--muted); }
+
+  /* ============ LOGIN DIVIDIDO (marca + formulario) ============ */
+  body .auth-view.auth-split {
+    display: grid; grid-template-columns: minmax(420px, 46%) minmax(0, 1fr);
+    min-height: 100vh; min-height: 100dvh; padding: 0; overflow: hidden;
+    background: var(--background);
+  }
+  body .auth-view.auth-split .auth-brand-panel {
+    position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: center;
+    padding: clamp(32px, 5vw, 72px); color: #fff;
+    background: linear-gradient(150deg, #06283d 0%, #0a7aa5 55%, #129a6c 100%);
+  }
+  body .auth-view.auth-split .auth-brand-art { position: absolute; inset: 0; width: 100%; height: 100%; }
+  body .auth-view.auth-split .auth-brand-mark--xl {
+    position: relative; z-index: 1; width: 120px; height: 120px; padding: 14px; box-sizing: border-box;
+    background: #fff; border-radius: 32px; box-shadow: 0 24px 60px rgba(0,20,40,.35);
+  }
+  body .auth-view.auth-split .eyebrow--light { position: relative; z-index: 1; color: #aee8f7; margin: 26px 0 0; }
+  body .auth-view.auth-split .auth-brand-headline {
+    position: relative; z-index: 1; margin: 10px 0 0; max-width: 480px;
+    font-size: clamp(30px, 3.4vw, 48px); line-height: 1.08; letter-spacing: -.04em;
+  }
+  body .auth-view.auth-split .auth-brand-sub { position: relative; z-index: 1; margin: 14px 0 0; max-width: 420px; color: rgba(255,255,255,.85); font-size: 15px; line-height: 1.6; }
+  body .auth-view.auth-split .auth-brand-points { position: relative; z-index: 1; list-style: none; margin: 26px 0 0; padding: 0; display: grid; gap: 12px; }
+  body .auth-view.auth-split .auth-brand-points li { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 14px; }
+  body .auth-view.auth-split .auth-brand-points .material-symbols-rounded { font-size: 22px; color: #7dedb0; }
+  body .auth-view.auth-split .auth-brand-foot { position: relative; z-index: 1; margin: 34px 0 0; color: rgba(255,255,255,.65); font-size: 12px; }
+  body .auth-view.auth-split .auth-form-panel {
+    position: relative; display: flex; flex-direction: column; justify-content: center; align-items: center;
+    width: 100%; max-width: none; min-height: 100vh; min-height: 100dvh; margin: 0; padding: 32px 24px;
+    text-align: center; background:
+      radial-gradient(500px 300px at 85% 10%, rgba(0,161,222,.10), transparent 60%),
+      radial-gradient(500px 340px at 10% 90%, rgba(46,204,113,.12), transparent 60%),
+      #fff;
+    border: 0; border-radius: 0; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none;
+  }
+  body .auth-view.auth-split .auth-form-logo img { width: min(220px, 60%); display: block; margin: 0 auto; }
+  body .auth-view.auth-split #authTitle { font-size: clamp(20px, 2vw, 26px); max-width: 460px; margin: 18px 0 0; }
+  body .auth-view.auth-split .auth-form-sub { margin: 8px 0 0; color: var(--muted); font-size: 14px; }
+  body .auth-view.auth-split .auth-actions { width: min(400px, 100%); margin-top: 24px; }
+  body .auth-view.auth-split .supabase-auth-form { background: transparent; border: 0; box-shadow: none; padding: 0; gap: 16px; }
+  body .auth-view.auth-split .login-field { display: flex; align-items: center; gap: 10px; border-bottom: 2px solid var(--border); padding: 4px 2px 8px; text-align: left; }
+  body .auth-view.auth-split .login-field .material-symbols-rounded { color: var(--muted); font-size: 22px; }
+  body .auth-view.auth-split .login-field:focus-within { border-color: var(--primary-500); }
+  body .auth-view.auth-split .supabase-auth-input { border: 0; border-radius: 0; padding: 8px 2px; background: transparent; box-shadow: none !important; }
+  body .auth-view.auth-split .login-submit { justify-content: center; border-radius: 999px; border: 0; min-height: 50px; background: linear-gradient(135deg, var(--primary-500), var(--primary-700)); color: #fff; }
+  body .auth-view.auth-split .auth-footnote { text-align: center; }
+  body .auth-view.auth-split .inline-message { width: min(400px, 100%); box-sizing: border-box; text-align: left; }
+  body.dark-mode .auth-view.auth-split .auth-form-panel { background:
+      radial-gradient(500px 300px at 85% 10%, rgba(0,161,222,.16), transparent 60%),
+      radial-gradient(500px 340px at 10% 90%, rgba(46,204,113,.14), transparent 60%),
+      #101e27; }
+  @media (max-width: 900px) {
+    body .auth-view.auth-split { grid-template-columns: 1fr; overflow: visible; min-height: 100vh; }
+    body .auth-view.auth-split .auth-brand-panel { padding: 28px 24px; min-height: 0; }
+    body .auth-view.auth-split .auth-brand-mark--xl { width: 72px; height: 72px; border-radius: 20px; padding: 10px; }
+    body .auth-view.auth-split .auth-brand-headline { font-size: clamp(24px, 6vw, 32px); }
+    body .auth-view.auth-split .auth-brand-sub,
+    body .auth-view.auth-split .auth-brand-points,
+    body .auth-view.auth-split .auth-brand-foot { display: none; }
+    body .auth-view.auth-split .auth-form-panel { min-height: 0; padding: 28px 20px 40px; }
+  }
