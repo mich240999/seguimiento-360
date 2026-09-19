@@ -107,17 +107,6 @@
   .supabase-auth-forgot { justify-self: center; padding: 3px; color: var(--primary-700); font: inherit; font-size: 13px; font-weight: 700; background: transparent; border: 0; cursor: pointer; }
   .supabase-auth-forgot:hover { text-decoration: underline; }
   .auth-footnote { max-width: 420px; margin: 24px 0 0; color: #83949e; font-size: 12px; }
-  .auth-info-box {
-    display: flex; align-items: flex-start; gap: 10px;
-    max-width: 400px; width: 100%;
-    padding: 14px 16px; margin-top: 18px;
-    border: 1px solid var(--border); border-radius: 12px;
-    background: rgba(248,251,252,.8);
-    color: var(--muted); font-size: 13px; line-height: 1.5;
-    text-align: left;
-  }
-  .auth-info-box .material-symbols-rounded { font-size: 20px; color: var(--primary-600); flex-shrink: 0; margin-top: 1px; }
-  .auth-info-box p { margin: 0; }
   .auth-panel { align-items: center; text-align: center; }
   .auth-brand--center { flex-direction: column; align-items: center; gap: 18px; margin-bottom: 36px; }
   .auth-brand--center .eyebrow { letter-spacing: .18em; }
@@ -1615,8 +1604,6 @@
   body.dark-mode .supabase-auth-form { background: var(--surface); border-color: var(--border); }
   body.dark-mode .auth-panel { background: rgba(16,30,39,.95); border-color: var(--border); }
   body.dark-mode .auth-panel h1, body.dark-mode .auth-panel h2 { color: var(--ink); }
-  body.dark-mode .auth-info-box { background: rgba(16,30,39,.6); border-color: var(--border); color: var(--muted); }
-  body.dark-mode .auth-info-box .material-symbols-rounded { color: var(--primary-400); }
   /* Componentes MP / ventas con fondos claros fijos */
   body.dark-mode .mp-card,
   body.dark-mode .mp-panel,
@@ -1706,9 +1693,8 @@
   body .auth-view.auth-split .login-field:focus-within { border-color: var(--primary-500); }
   body .auth-view.auth-split .supabase-auth-input { border: 0; border-radius: 0; padding: 8px 2px; background: transparent; box-shadow: none !important; }
   body .auth-view.auth-split .login-submit { justify-content: center; border-radius: 999px; border: 0; min-height: 50px; background: linear-gradient(135deg, var(--primary-500), var(--primary-700)); color: #fff; }
-  body .auth-view.auth-split .auth-footnote { text-align: center; }
-  body .auth-view.auth-split .auth-info-box { border-color: #e0ebf1; background: rgba(248,251,252,.6); }
-  body .auth-view.auth-split .inline-message { width: min(400px, 100%); box-sizing: border-box; text-align: left; }
+  body .auth-view.auth-split .auth-footnote { text-align: center; margin-top: 10px; }
+  body .auth-view.auth-split .inline-message { width: min(400px, 100%); box-sizing: border-box; text-align: left; margin-top: 10px; }
   body.dark-mode .auth-view.auth-split .auth-form-panel { background:
       radial-gradient(500px 300px at 85% 10%, rgba(0,161,222,.16), transparent 60%),
       radial-gradient(500px 340px at 10% 90%, rgba(46,204,113,.14), transparent 60%),
@@ -1745,7 +1731,7 @@
   body .auth-view.auth-split .auth-brand-panel { display: none; }
   body .auth-view.auth-split .auth-form-panel {
     position: relative; z-index: 1; min-height: 0; justify-content: flex-start;
-    width: min(450px, calc(100% - 32px)); margin: 14px auto 18px; padding: 24px 34px;
+    width: min(450px, calc(100% - 32px)); margin: 12px auto 16px; padding: 20px 32px;
     background: #fff; border: 1px solid #e3e9ee; border-radius: 20px;
     box-shadow: 0 24px 70px rgba(20, 50, 70, .10);
   }
