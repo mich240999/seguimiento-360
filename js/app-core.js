@@ -72,7 +72,7 @@ const APP_STORAGE = Object.freeze({
         const session = result.data && result.data.session;
         if (!session || !session.access_token) {
           clearLocalSession();
-          showLogin("Inicia sesión con una cuenta autorizada.", false);
+          showLogin("", false);
           return;
         }
         APP_STATE.token = session.access_token;
