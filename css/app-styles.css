@@ -1660,6 +1660,7 @@
   /* ── Panel izquierdo: arte abstracto gas Cálidda full-bleed (sin textos) ── */
   body .auth-view.auth-split .auth-brand-panel {
     position: relative; overflow: hidden; display: block;
+    width: 100%; min-width: 0; max-width: 100%; justify-self: stretch;
     height: 100vh; height: 100dvh; max-height: 100vh; max-height: 100dvh;
     min-height: 100vh; min-height: 100dvh; padding: 0; margin: 0; color: #fff;
     background: linear-gradient(155deg, #041e2c 0%, #07354d 30%, #0a6ea8 58%, #00a1de 82%, #2ec4b6 100%);
