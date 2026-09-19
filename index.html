@@ -319,9 +319,8 @@
 <template id="administrationTemplate">
   <section class="admin-workspace">
     <div class="toolbar toolbar--end sales-main-toolbar">
-      <button class="button button--primary" type="button" data-admin-action="refresh">
+      <button class="button button--primary has-tooltip" type="button" data-admin-action="refresh" data-tooltip="Actualizar" aria-label="Actualizar" title="Actualizar">
         <span class="material-symbols-rounded">sync</span>
-        Actualizar
       </button>
     </div>
 
@@ -354,9 +353,8 @@
                 <span class="material-symbols-rounded">search</span>
                 <input id="adminUsersSearch" type="search" placeholder="Buscar por nombre, correo o documento">
               </label>
-              <button class="button button--secondary" type="button" data-admin-action="new-user">
+              <button class="icon-button has-tooltip" type="button" data-admin-action="new-user" data-tooltip="Nuevo usuario" aria-label="Nuevo usuario" title="Nuevo usuario">
                 <span class="material-symbols-rounded">person_add</span>
-                Nuevo usuario
               </button>
             </div>
             <div id="adminUsersContent" class="data-region"></div>
@@ -375,9 +373,8 @@
           </button>
           <div class="accordion-panel" hidden>
             <div class="toolbar toolbar--end">
-              <button class="button button--secondary" type="button" data-admin-action="new-role">
+              <button class="icon-button has-tooltip" type="button" data-admin-action="new-role" data-tooltip="Nuevo rol" aria-label="Nuevo rol" title="Nuevo rol">
                 <span class="material-symbols-rounded">add_moderator</span>
-                Nuevo rol
               </button>
             </div>
             <div id="adminRolesContent" class="data-region"></div>
@@ -399,9 +396,8 @@
                 <span>Rol</span>
                 <select id="adminPermissionRole"></select>
               </label>
-              <button class="button button--primary" type="button" data-admin-action="save-permissions">
+              <button class="icon-button has-tooltip" type="button" data-admin-action="save-permissions" data-tooltip="Guardar permisos" aria-label="Guardar permisos" title="Guardar permisos">
                 <span class="material-symbols-rounded">save</span>
-                Guardar permisos
               </button>
             </div>
             <div id="adminPermissionsContent" class="permission-region"></div>
@@ -444,25 +440,20 @@
                       <small>Administra los datos del proveedor y las oficinas que tendrá disponibles</small>
                     </div>
                     <div class="organization-card-actions">
-                      <button class="button button--ghost button--compact" type="button" data-admin-action="template-providers" title="Descargar plantilla de proveedores">
+                      <button class="icon-button has-tooltip" type="button" data-admin-action="template-providers" data-tooltip="Plantilla" aria-label="Plantilla" title="Descargar plantilla de proveedores">
                         <span class="material-symbols-rounded">download</span>
-                        Plantilla
                       </button>
-                      <button class="button button--secondary button--compact" type="button" data-admin-action="import-providers">
+                      <button class="icon-button has-tooltip" type="button" data-admin-action="import-providers" data-tooltip="Importar" aria-label="Importar" title="Importar">
                         <span class="material-symbols-rounded">upload_file</span>
-                        Importar
                       </button>
-                      <button class="button button--ghost button--compact" type="button" data-admin-action="template-provider-offices" title="Descargar plantilla de relación proveedor-oficina">
+                      <button class="icon-button has-tooltip" type="button" data-admin-action="template-provider-offices" data-tooltip="Relaciones" aria-label="Relaciones" title="Descargar plantilla de relación proveedor-oficina">
                         <span class="material-symbols-rounded">account_tree</span>
-                        Relaciones
                       </button>
-                      <button class="button button--secondary button--compact" type="button" data-admin-action="import-provider-offices" title="Importar relación proveedor-oficina">
+                      <button class="icon-button has-tooltip" type="button" data-admin-action="import-provider-offices" data-tooltip="Asignar oficinas" aria-label="Asignar oficinas" title="Importar relación proveedor-oficina">
                         <span class="material-symbols-rounded">upload_file</span>
-                        Asignar oficinas
                       </button>
-                      <button class="button button--secondary button--compact" type="button" data-admin-action="new-provider">
+                      <button class="icon-button has-tooltip" type="button" data-admin-action="new-provider" data-tooltip="Nuevo" aria-label="Nuevo" title="Nuevo">
                         <span class="material-symbols-rounded">add_business</span>
-                        Nuevo
                       </button>
                     </div>
                   </div>
@@ -497,17 +488,14 @@
                         <small>Maestro independiente reutilizable por uno o varios proveedores</small>
                       </div>
                       <div class="organization-card-actions">
-                        <button class="button button--ghost button--compact" type="button" data-admin-action="template-offices" title="Descargar plantilla de oficinas">
+                        <button class="icon-button has-tooltip" type="button" data-admin-action="template-offices" data-tooltip="Plantilla" aria-label="Plantilla" title="Descargar plantilla de oficinas">
                           <span class="material-symbols-rounded">download</span>
-                          Plantilla
                         </button>
-                        <button class="button button--secondary button--compact" type="button" data-admin-action="import-offices">
+                        <button class="icon-button has-tooltip" type="button" data-admin-action="import-offices" data-tooltip="Importar" aria-label="Importar" title="Importar">
                           <span class="material-symbols-rounded">upload_file</span>
-                          Importar
                         </button>
-                        <button class="button button--secondary button--compact" type="button" data-admin-action="new-office">
+                        <button class="icon-button has-tooltip" type="button" data-admin-action="new-office" data-tooltip="Nueva" aria-label="Nueva" title="Nueva">
                           <span class="material-symbols-rounded">add_location_alt</span>
-                          Nueva
                         </button>
                       </div>
                     </div>
@@ -521,17 +509,14 @@
                         <small>Cada grupo pertenece obligatoriamente a una oficina</small>
                       </div>
                       <div class="organization-card-actions">
-                        <button class="button button--ghost button--compact" type="button" data-admin-action="template-groups" title="Descargar plantilla de grupos">
+                        <button class="icon-button has-tooltip" type="button" data-admin-action="template-groups" data-tooltip="Plantilla" aria-label="Plantilla" title="Descargar plantilla de grupos">
                           <span class="material-symbols-rounded">download</span>
-                          Plantilla
                         </button>
-                        <button class="button button--secondary button--compact" type="button" data-admin-action="import-groups">
+                        <button class="icon-button has-tooltip" type="button" data-admin-action="import-groups" data-tooltip="Importar" aria-label="Importar" title="Importar">
                           <span class="material-symbols-rounded">upload_file</span>
-                          Importar
                         </button>
-                        <button class="button button--secondary button--compact" type="button" data-admin-action="new-group">
+                        <button class="icon-button has-tooltip" type="button" data-admin-action="new-group" data-tooltip="Nuevo" aria-label="Nuevo" title="Nuevo">
                           <span class="material-symbols-rounded">group_add</span>
-                          Nuevo
                         </button>
                       </div>
                     </div>
@@ -564,9 +549,8 @@
           </button>
           <div class="accordion-panel" hidden>
             <div class="toolbar toolbar--end">
-              <button class="button button--secondary" type="button" data-admin-action="new-module">
+              <button class="icon-button has-tooltip" type="button" data-admin-action="new-module" data-tooltip="Nuevo módulo" aria-label="Nuevo módulo" title="Nuevo módulo">
                 <span class="material-symbols-rounded">add_box</span>
-                Nuevo módulo
               </button>
             </div>
             <div id="adminModulesContent" class="module-builder-grid"></div>
@@ -585,13 +569,11 @@
           </button>
           <div class="accordion-panel" hidden>
             <div class="toolbar toolbar--end">
-              <button class="button button--secondary" type="button" data-admin-action="new-provider-catalog">
+              <button class="icon-button has-tooltip" type="button" data-admin-action="new-provider-catalog" data-tooltip="Nuevo catálogo de proveedor" aria-label="Nuevo catálogo de proveedor" title="Nuevo catálogo de proveedor">
                 <span class="material-symbols-rounded">folder_shared</span>
-                Nuevo catálogo de proveedor
               </button>
-              <button class="button button--secondary" type="button" data-admin-action="new-catalog">
+              <button class="icon-button has-tooltip" type="button" data-admin-action="new-catalog" data-tooltip="Nuevo catálogo" aria-label="Nuevo catálogo" title="Nuevo catálogo">
                 <span class="material-symbols-rounded">playlist_add</span>
-                Nuevo catálogo
               </button>
             </div>
             <div id="adminCatalogsContent" class="data-region"></div>
@@ -610,9 +592,8 @@
           </button>
           <div class="accordion-panel" hidden>
             <div class="toolbar toolbar--end">
-              <button class="button button--secondary" type="button" data-admin-action="new-resource">
+              <button class="icon-button has-tooltip" type="button" data-admin-action="new-resource" data-tooltip="Nuevo recurso" aria-label="Nuevo recurso" title="Nuevo recurso">
                 <span class="material-symbols-rounded">add_photo_alternate</span>
-                Nuevo recurso
               </button>
             </div>
             <div id="adminResourcesContent" class="data-region"></div>
@@ -672,13 +653,11 @@
                       <option value="TODAS">Todas</option>
                     </select>
                   </label>
-                  <button class="button button--ghost" type="button" data-admin-action="refresh-sessions">
+                  <button class="button button--ghost has-tooltip" type="button" data-admin-action="refresh-sessions" data-tooltip="Actualizar sesiones" aria-label="Actualizar sesiones" title="Actualizar sesiones">
                     <span class="material-symbols-rounded">refresh</span>
-                    Actualizar sesiones
                   </button>
-                  <button class="button button--ghost" type="button" data-admin-action="expire-sessions">
+                  <button class="button button--ghost has-tooltip" type="button" data-admin-action="expire-sessions" data-tooltip="Limpiar expiradas" aria-label="Limpiar expiradas" title="Limpiar expiradas">
                     <span class="material-symbols-rounded">auto_delete</span>
-                    Limpiar expiradas
                   </button>
                 </div>
                 <div id="adminSessionsContent" class="data-region"></div>
@@ -726,17 +705,17 @@
   <section class="providers-workspace" aria-label="Proveedores">
     <header class="providers-header">
       <div class="providers-actions">
-        <button id="providersTemplateButton" class="button button--ghost" type="button">
-          <span class="material-symbols-rounded">download</span> Plantilla masiva
+        <button id="providersTemplateButton" class="icon-button has-tooltip" type="button" data-tooltip="Plantilla masiva" aria-label="Plantilla masiva" title="Plantilla masiva">
+          <span class="material-symbols-rounded">download</span>
         </button>
-        <button id="providersImportButton" class="button button--secondary" type="button">
-          <span class="material-symbols-rounded">upload_file</span> Carga masiva
+        <button id="providersImportButton" class="icon-button has-tooltip" type="button" data-tooltip="Carga masiva" aria-label="Carga masiva" title="Carga masiva">
+          <span class="material-symbols-rounded">upload_file</span>
         </button>
-        <button id="providersExportButton" class="button button--secondary" type="button">
-          <span class="material-symbols-rounded">file_download</span> Exportar
+        <button id="providersExportButton" class="icon-button has-tooltip" type="button" data-tooltip="Exportar" aria-label="Exportar" title="Exportar">
+          <span class="material-symbols-rounded">file_download</span>
         </button>
-        <button id="providersNewButton" class="button button--primary" type="button">
-          <span class="material-symbols-rounded">add_business</span> Nuevo proveedor
+        <button id="providersNewButton" class="icon-button has-tooltip" type="button" data-tooltip="Nuevo proveedor" aria-label="Nuevo proveedor" title="Nuevo proveedor">
+          <span class="material-symbols-rounded">add_business</span>
         </button>
         <input id="providersImportInput" type="file" accept=".csv,text/csv" hidden>
       </div>
@@ -778,8 +757,8 @@
         </nav>
         <span class="sales-tabs-spacer"></span>
         <div class="providers-actions">
-          <button id="mpRefreshButton" class="button button--secondary" type="button">
-            <span class="material-symbols-rounded">refresh</span>Actualizar
+          <button id="mpRefreshButton" class="button button--secondary has-tooltip" type="button" data-tooltip="Actualizar" aria-label="Actualizar" title="Actualizar">
+            <span class="material-symbols-rounded">refresh</span>
           </button>
         </div>
       </div>
@@ -2029,20 +2008,20 @@
 
 
   <!-- CONFIGURACIÓN Y CLIENTE SUPABASE -->
-  <script src="js/config.js?v=20260923"></script>
-  <script src="js/supabase-client.js?v=20260923"></script>
-  <script src="js/api-adapter.js?v=20260923"></script>
+  <script src="js/config.js?v=20260919g"></script>
+  <script src="js/supabase-client.js?v=20260919g"></script>
+  <script src="js/api-adapter.js?v=20260919g"></script>
 
   <!-- SCRIPTS DEL NÚCLEO Y MÓDULOS -->
   <script src="js/app-core.js?v=20260919f"></script>
-  <script src="js/modules/admin.js?v=20260923"></script>
-  <script src="js/modules/providers.js?v=20260923"></script>
-  <script src="js/modules/materials-prices.js?v=20260923"></script>
-  <script src="js/modules/sales.js?v=20260923"></script>
-  <script src="js/modules/sales-dashboard.js?v=20260923"></script>
-  <script src="js/modules/delivery-calendar.js?v=20260923"></script>
-  <script src="js/modules/dispatch.js?v=20260923"></script>
-  <script src="js/modules/dynamic.js?v=20260923"></script>
+  <script src="js/modules/admin.js?v=20260919g"></script>
+  <script src="js/modules/providers.js?v=20260919g"></script>
+  <script src="js/modules/materials-prices.js?v=20260919g"></script>
+  <script src="js/modules/sales.js?v=20260919g"></script>
+  <script src="js/modules/sales-dashboard.js?v=20260919g"></script>
+  <script src="js/modules/delivery-calendar.js?v=20260919g"></script>
+  <script src="js/modules/dispatch.js?v=20260919g"></script>
+  <script src="js/modules/dynamic.js?v=20260919g"></script>
 
   <!-- CONTROLADOR DEL MODAL DE CONFIGURACIÓN SUPABASE -->
   <script>

@@ -88,7 +88,7 @@ function renderDeliveryCalendarFrame() {
         "@media(max-width:1100px){.dc360-layout{grid-template-columns:minmax(0,1fr)}.dc360-filters{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}" +
         "@media(max-width:640px){.dc360-filters{grid-template-columns:minmax(0,1fr)}.dc360-day{min-height:64px}}" +
       "</style>" +
-      '<div class="toolbar toolbar--end sales-main-toolbar"><button id="dc360RefreshButton" class="button button--secondary" type="button"><span class="material-symbols-rounded">refresh</span>Actualizar</button></div>' +
+      '<div class="toolbar toolbar--end sales-main-toolbar"><button id="dc360RefreshButton" class="button button--secondary has-tooltip" type="button" data-tooltip="Actualizar" aria-label="Actualizar" title="Actualizar"><span class="material-symbols-rounded">refresh</span></button></div>' +
       '<div class="sales-card"><div class="dc360-filters">' +
         '<label class="search-field"><span class="material-symbols-rounded">search</span><input id="dc360Search" type="search" placeholder="Código, cliente o dirección"></label>' +
         '<label class="select-field"><span>Estado</span><select id="dc360EstadoFilter"><option value="TODOS">Todos</option></select></label>' +
@@ -96,10 +96,10 @@ function renderDeliveryCalendarFrame() {
       "</div></div>" +
       '<div id="dc360Region">' +
         '<div class="sales-card"><div class="dc360-topbar">' +
-          '<button id="dc360PrevMonth" class="button button--secondary button--compact" type="button"><span class="material-symbols-rounded">chevron_left</span></button>' +
+          '<button id="dc360PrevMonth" class="button button--secondary button--compact has-tooltip" type="button" data-tooltip="Mes anterior" aria-label="Mes anterior" title="Mes anterior"><span class="material-symbols-rounded">chevron_left</span></button>' +
           "<h3 id=\"dc360MonthLabel\">—</h3>" +
-          '<button id="dc360NextMonth" class="button button--secondary button--compact" type="button"><span class="material-symbols-rounded">chevron_right</span></button>' +
-          '<button id="dc360TodayButton" class="button button--ghost button--compact" type="button">Hoy</button>' +
+          '<button id="dc360NextMonth" class="button button--secondary button--compact has-tooltip" type="button" data-tooltip="Mes siguiente" aria-label="Mes siguiente" title="Mes siguiente"><span class="material-symbols-rounded">chevron_right</span></button>' +
+          '<button id="dc360TodayButton" class="button button--ghost button--compact has-tooltip" type="button" data-tooltip="Hoy" aria-label="Hoy" title="Hoy"><span class="material-symbols-rounded">today</span></button>' +
           '<span id="dc360MonthCount" style="margin-left:auto;color:#64748b;font-size:13px"></span>' +
         "</div></div>" +
         '<div class="dc360-layout">' +
@@ -201,6 +201,7 @@ function dc360NormalizeDelivery(row) {
     direccion: row.direccionInstalacion || row.direccionEntrega || "",
     distrito: row.distrito || "",
     oficina: row.nombreOficina || row.idOficina || "",
+    nombreUsuario: row.nombreUsuario || "",
     estadoEntrega: String(first.estadoEntrega || row.estadoEntrega || row.estado || ""),
     receptor: [first.nombreReceptor, row.nombreReceptor].filter(Boolean)[0] || "",
     monto: Number(row.montoTotalVenta || row.totalVenta || row.importeVisible || 0) || 0
@@ -321,8 +322,9 @@ function renderDeliveryCalendarDay(items) {
       "<small>" + escapeHtml(d.cliente || "—") + (d.distrito ? " · " + escapeHtml(d.distrito) : "") + "</small>" +
       (d.direccion ? "<small>" + escapeHtml(d.direccion) + "</small>" : "") +
       "<small>" + escapeHtml(d.oficina || "—") + (d.receptor ? " · Recibe: " + escapeHtml(d.receptor) : "") + "</small>" +
+      "<small>Vendido por: " + escapeHtml(d.nombreUsuario || "—") + "</small>" +
       '<span class="mp-status ' + dc360StatusTone(d.estadoEntrega) + '">' + escapeHtml(String(d.estadoEntrega || "—").replace(/_/g, " ")) + "</span>" +
-      '<div><button class="button button--ghost button--compact" type="button" data-dc360-detail="' + escapeHtml(d.idVenta) + '"><span class="material-symbols-rounded">visibility</span>Ver venta</button></div>' +
+      '<div><button class="table-button has-tooltip" type="button" data-dc360-detail="' + escapeHtml(d.idVenta) + '" data-tooltip="Ver venta" aria-label="Ver venta" title="Ver venta"><span class="material-symbols-rounded">visibility</span></button></div>' +
     "</div>";
   }).join("");
 

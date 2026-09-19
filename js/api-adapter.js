@@ -423,13 +423,13 @@
           v.estadoEntrega = entregaPayload.estadoEntrega || v.estadoEntrega;
           if (String(entregaPayload.estadoEntrega || "").toUpperCase() === "ENTREGADA") v.estadoGeneral = "ENTREGADA";
           const demoUser = s.usuarios[0] || {};
-          if (String(entregaPayload.estadoEntrega || "").toUpperCase() === "PROGRAMADA") {
+          if (String(entregaPayload.estadoEntrega || "").toUpperCase() === "PROGRAMADA" || String(entregaPayload.estadoEntrega || "").toUpperCase() === "EN_RUTA") {
             v.programadoId = demoUser.idUsuario || "";
-            v.programadoNombre = demoUser.nombre || "";
+            v.programadoNombre = demoUser.nombre || demoUser.correo || "";
           }
           if (String(entregaPayload.estadoEntrega || "").toUpperCase() === "ENTREGADA") {
             v.entregadoId = demoUser.idUsuario || "";
-            v.entregadoNombre = demoUser.nombre || "";
+            v.entregadoNombre = demoUser.nombre || demoUser.correo || "";
           }
           v.gestionEntrega = Object.assign(v.gestionEntrega || {}, entregaPayload);
           v.gestionesEntrega = v.gestionesEntrega || [];
@@ -647,9 +647,11 @@
         if (estadoGestion === "ENTREGADA") filaGestion.fecha_real_entrega = new Date().toISOString();
         const { error: gestionError } = await client.from("vta_gestion_entrega").upsert(filaGestion, { onConflict: "id_gestion_entrega" });
         if (gestionError) throw gestionError;
+        const usuarioGestion = ((localCache && localCache.usuarios && localCache.usuarios[0]) || (typeof s !== "undefined" && s.usuarios && s.usuarios[0]) || {});
         const actualizacionVentaGestion = { estado_entrega: estadoGestion };
         if (estadoGestion === "ENTREGADA") actualizacionVentaGestion.estado_general = "ENTREGADA";
-        // Nota: la trazabilidad (programado/entregado por) la registra la ruta principal del bridge.
+        if (estadoGestion === "PROGRAMADA" || estadoGestion === "EN_RUTA") { actualizacionVentaGestion.programado_id = usuarioGestion.idUsuario || null; actualizacionVentaGestion.programado_nombre = usuarioGestion.nombre || usuarioGestion.correo || ""; }
+        if (estadoGestion === "ENTREGADA") { actualizacionVentaGestion.entregado_id = usuarioGestion.idUsuario || null; actualizacionVentaGestion.entregado_nombre = usuarioGestion.nombre || usuarioGestion.correo || ""; }
         const { error: ventaGestionError } = await client.from("vta_ventas_contado").update(actualizacionVentaGestion).eq("id_venta", idVentaGestion);
         if (ventaGestionError) throw ventaGestionError;
         return { correcto: true, mensaje: "Gestión de entrega actualizada." };

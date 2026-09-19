@@ -104,7 +104,7 @@ function renderSalesDashboardFrame() {
         '<div class="sales-card"><h3>Entrega</h3><canvas id="sd360ChartEntrega"></canvas></div>' +
       "</div>" +
       '<div class="sales-card"><div class="sales-list-head"><div><h3>Detalle</h3><p id="sd360Count" style="margin:0;color:#64748b">—</p></div></div>' +
-      '<div class="mp-table-wrap"><table class="mp-table"><thead><tr><th>Código</th><th>Fecha</th><th>Cliente</th><th>Oficina</th><th>Monto</th><th>Abono</th><th>Entrega</th></tr></thead>' +
+      '<div class="mp-table-wrap"><table class="mp-table"><thead><tr><th>Código</th><th>Fecha</th><th>Cliente</th><th>Oficina</th><th>Vendido por</th><th>Monto</th><th>Abono</th><th>Entrega</th></tr></thead>' +
       '<tbody id="sd360TableBody"></tbody></table></div></div>' +
     "</section>";
 
@@ -237,6 +237,8 @@ function sd360NormalizeRow(row) {
     distrito: row.distrito || "",
     nombreOficina: row.nombreOficina || "",
     idOficina: row.idOficina || "",
+    idUsuario: row.idUsuario || "",
+    nombreUsuario: row.nombreUsuario || "",
     montoTotalVenta: Number(row.montoTotalVenta || row.totalVenta || row.importeVisible || 0) || 0,
     estadoAbono: row.estadoAbono || "",
     estadoEntrega: row.estadoEntrega || row.estado || "",
@@ -407,7 +409,7 @@ function renderSalesDashboardTable(rows) {
   }
 
   if (!rows.length) {
-    body.innerHTML = '<tr><td colspan="7">Sin resultados para los filtros seleccionados.</td></tr>';
+    body.innerHTML = '<tr><td colspan="8">Sin resultados para los filtros seleccionados.</td></tr>';
     return;
   }
 
@@ -417,12 +419,13 @@ function renderSalesDashboardTable(rows) {
       "<td>" + escapeHtml(date) + "</td>" +
       "<td>" + escapeHtml(row.cliente || "—") + "</td>" +
       "<td>" + escapeHtml(row.nombreOficina || row.idOficina || "—") + "</td>" +
+      "<td>" + escapeHtml(row.nombreUsuario || "—") + "</td>" +
       "<td><strong>" + escapeHtml(sd360Money(Number(row.montoTotalVenta) || 0)) + "</strong></td>" +
       "<td>" + sd360StatusChip(row.estadoAbono) + "</td>" +
       "<td" + (row.motivoAnulacion ? ' title="Motivo de anulación: ' + escapeHtml(row.motivoAnulacion) + '"' : "") + ">" +
       sd360StatusChip(row.estadoEntrega) + "</td></tr>";
   }).join("") + (rows.length > 200 ?
-    '<tr><td colspan="7">Mostrando las primeras 200 de ' + rows.length + ". Usa los filtros para acotar.</td></tr>" :
+    '<tr><td colspan="8">Mostrando las primeras 200 de ' + rows.length + ". Usa los filtros para acotar.</td></tr>" :
     "");
 }
 
@@ -435,7 +438,7 @@ function exportSalesDashboardCsv() {
     toast("Nada que exportar", "No hay ventas con los filtros actuales.", true);
     return;
   }
-  var header = ["codigo", "fecha", "cliente", "documento", "oficina", "monto", "abono", "entrega"];
+  var header = ["codigo", "fecha", "cliente", "documento", "oficina", "vendedor", "monto", "abono", "entrega"];
   var lines = [header.join(";")].concat(rows.map(function(row) {
     return [
       row.codigoVenta || row.idVenta || "",
@@ -443,6 +446,7 @@ function exportSalesDashboardCsv() {
       row.cliente,
       row.numeroDocumentoCliente || "",
       row.nombreOficina || row.idOficina || "",
+      row.nombreUsuario || "",
       Number(row.montoTotalVenta) || 0,
       row.estadoAbono || "",
       row.estadoEntrega || ""

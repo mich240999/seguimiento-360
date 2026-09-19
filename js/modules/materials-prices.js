@@ -416,8 +416,8 @@ const MP_STATE = {
     const total = Number(p.total || 0);
     if (!total || totalPages <= 1) return "";
     return '<div class="mp-pagination"><span>Página ' + escapeHtml(page) + ' de ' + escapeHtml(totalPages) + ' · ' + escapeHtml(total) + ' registros</span><div class="mp-actions">' +
-      '<button class="button button--ghost button--compact" type="button" data-mp-page-scope="' + escapeHtml(scope) + '" data-mp-page-value="' + escapeHtml(page - 1) + '" ' + (page <= 1 ? 'disabled' : '') + '>Anterior</button>' +
-      '<button class="button button--ghost button--compact" type="button" data-mp-page-scope="' + escapeHtml(scope) + '" data-mp-page-value="' + escapeHtml(page + 1) + '" ' + (page >= totalPages ? 'disabled' : '') + '>Siguiente</button>' +
+      '<button class="button button--ghost button--compact has-tooltip" type="button" data-mp-page-scope="' + escapeHtml(scope) + '" data-mp-page-value="' + escapeHtml(page - 1) + '" ' + (page <= 1 ? 'disabled' : '') + ' data-tooltip="Anterior" aria-label="Anterior" title="Anterior"><span class="material-symbols-rounded">chevron_left</span></button>' +
+      '<button class="button button--ghost button--compact has-tooltip" type="button" data-mp-page-scope="' + escapeHtml(scope) + '" data-mp-page-value="' + escapeHtml(page + 1) + '" ' + (page >= totalPages ? 'disabled' : '') + ' data-tooltip="Siguiente" aria-label="Siguiente" title="Siguiente"><span class="material-symbols-rounded">chevron_right</span></button>' +
       '</div></div>';
   }
 
@@ -511,8 +511,8 @@ const MP_STATE = {
     content.innerHTML = '<div class="mp-table-wrap"><table class="mp-table"><thead><tr><th>Código</th><th>SAP</th><th>Producto</th><th>Tipo/Subtipo</th><th>Material</th><th>Marca</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>' +
       rows.map(function(row) {
         const payload = escapeHtml(JSON.stringify(row || {}));
-        const editButton = canEditMaterial ? '<button class="button button--ghost button--compact" type="button" data-mp-material-edit="' + payload + '">Modificar</button>' : '';
-        const deleteButton = canEditMaterial ? '<button class="button button--ghost button--compact" type="button" data-mp-material-delete="' + escapeHtml(row.idMaterial || "") + '">Eliminar</button>' : '';
+        const editButton = canEditMaterial ? '<button class="table-button has-tooltip" type="button" data-mp-material-edit="' + payload + '" data-tooltip="Modificar" aria-label="Modificar" title="Modificar"><span class="material-symbols-rounded">edit</span></button>' : '';
+        const deleteButton = canEditMaterial ? '<button class="table-button has-tooltip" type="button" data-mp-material-delete="' + escapeHtml(row.idMaterial || "") + '" data-tooltip="Eliminar" aria-label="Eliminar" title="Eliminar"><span class="material-symbols-rounded">delete</span></button>' : '';
         return '<tr><td>' + escapeHtml(row.codigoMaterial) + '</td><td>' + escapeHtml(row.codigoSap || "—") + '</td><td>' + escapeHtml(row.producto || "—") + '</td><td>' + escapeHtml((row.tipo || "—") + " / " + (row.subtipo || "—")) + '</td><td><strong>' + escapeHtml(row.descripcionMaterial) + '</strong></td><td>' + escapeHtml(row.marca || "—") + '</td><td><span class="mp-status ' + escapeHtml(row.estado) + '">' + escapeHtml(row.estado) + '</span></td><td><div class="mp-actions mp-actions--inline">' + editButton + deleteButton + '</div></td></tr>';
       }).join("") + '</tbody></table></div>' + mpPaginationHtml(result, "materials");
     bindMpPagination("materials", function() { loadMaterialsTable(false); });
@@ -742,10 +742,8 @@ const MP_STATE = {
       '<label>Estado<select name="estado"><option value="ACTIVO">Activo</option><option value="INACTIVO">Inactivo</option></select></label>' +
       '<div class="mp-form-span-2 mp-note">La clasificación es relacional: Producto principal → Tipo → Subtipo. Si una opción no tiene hijos configurados, no podrá completarse el material hasta definirlos.</div>' +
       '<div id="mpMaterialSaveFeedback" class="mp-material-save-feedback" role="status" aria-live="polite" hidden></div>' +
-      '<div class="mp-actions mp-form-span-2"><button id="mpMaterialSubmit" class="button button--primary" type="submit">' +
-        '<span class="material-symbols-rounded">save</span><span data-mp-material-submit-label>' +
-        (materialData.idMaterial ? 'Guardar cambios' : 'Guardar material') +
-        '</span></button></div></form>';
+      '<div class="mp-actions mp-form-span-2"><button id="mpMaterialSubmit" class="button button--primary has-tooltip" type="submit" data-tooltip="Guardar" aria-label="Guardar" title="Guardar">' +
+        '<span class="material-symbols-rounded">save</span></button></div></form>';
 
     const form = document.getElementById("mpMaterialForm");
     if (!form) return;
@@ -943,7 +941,7 @@ const MP_STATE = {
       const dateStart = row.fechaInicio || row.FECHA_INICIO || "";
       const dateEnd = row.fechaFin || row.FECHA_FIN || "";
       const dateCell = '<div class="mp-vigencia-cell"><div><strong>I:</strong> ' + escapeHtml(dateStart || "—") + '</div><div><strong>F:</strong> ' + escapeHtml(dateEnd || "—") + '</div></div>';
-      return '<tr><td>' + escapeHtml(row.proveedor || "Proveedor no definido") + '</td><td>' + escapeHtml(row.responsableVenta || row.RESPONSABLE_VENTA || "—") + '</td><td>' + escapeHtml(row.negocio || "—") + '</td><td>' + escapeHtml(mpScopeLabel(row)) + '</td><td><strong>' + escapeHtml(row.codigoSap || row.CODIGO_SAP || "—") + '</strong><br><small>' + escapeHtml(row.codigoMaterial || row.CODIGO_MATERIAL || "") + '</small></td><td class="mp-material-name">' + escapeHtml(row.nombreCortoMaterial || row.descripcionMaterial || row.NOMBRE_MATERIAL || "—") + '</td><td>' + (combo ? '<small>' + escapeHtml(combo) + '</small>' : '<span class="sales-muted">—</span>') + '</td><td class="mp-money-cell"><strong>' + escapeHtml(priceText) + '</strong></td>' + (hideFeeForProvider ? '' : '<td>' + escapeHtml(feeText) + '</td>') + '<td>' + dateCell + '</td><td><div class="mp-actions"><button class="button button--ghost button--compact" type="button" data-mp-edit-price="' + escapeHtml(row.idDetallePrecio || row.idPrecio || row.ID_DETALLE_PRECIO || "") + '">Modificar</button>' + (canDeletePrice ? '<button class="button button--ghost button--compact" type="button" data-mp-delete-price="' + escapeHtml(row.idDetallePrecio || row.idPrecio || row.ID_DETALLE_PRECIO || "") + '">Eliminar</button>' : '') + '</div></td></tr>';
+      return '<tr><td>' + escapeHtml(row.proveedor || "Proveedor no definido") + '</td><td>' + escapeHtml(row.responsableVenta || row.RESPONSABLE_VENTA || "—") + '</td><td>' + escapeHtml(row.negocio || "—") + '</td><td>' + escapeHtml(mpScopeLabel(row)) + '</td><td><strong>' + escapeHtml(row.codigoSap || row.CODIGO_SAP || "—") + '</strong><br><small>' + escapeHtml(row.codigoMaterial || row.CODIGO_MATERIAL || "") + '</small></td><td class="mp-material-name">' + escapeHtml(row.nombreCortoMaterial || row.descripcionMaterial || row.NOMBRE_MATERIAL || "—") + '</td><td>' + (combo ? '<small>' + escapeHtml(combo) + '</small>' : '<span class="sales-muted">—</span>') + '</td><td class="mp-money-cell"><strong>' + escapeHtml(priceText) + '</strong></td>' + (hideFeeForProvider ? '' : '<td>' + escapeHtml(feeText) + '</td>') + '<td>' + dateCell + '</td><td><div class="mp-actions"><button class="table-button has-tooltip" type="button" data-mp-edit-price="' + escapeHtml(row.idDetallePrecio || row.idPrecio || row.ID_DETALLE_PRECIO || "") + '" data-tooltip="Modificar" aria-label="Modificar" title="Modificar"><span class="material-symbols-rounded">edit</span></button>' + (canDeletePrice ? '<button class="table-button has-tooltip" type="button" data-mp-delete-price="' + escapeHtml(row.idDetallePrecio || row.idPrecio || row.ID_DETALLE_PRECIO || "") + '" data-tooltip="Eliminar" aria-label="Eliminar" title="Eliminar"><span class="material-symbols-rounded">delete</span></button>' : '') + '</div></td></tr>';
     }).join("") + '</tbody></table></div>' + mpPaginationHtml(result, "prices");
     bindMpPagination("prices", function() { loadOfficialPricesTable(false); });
     document.querySelectorAll("[data-mp-edit-price]").forEach(function(button) {
@@ -1037,7 +1035,7 @@ const MP_STATE = {
       order.map(function(key) {
         var group = groups[key];
         return '<tr><td><strong>' + escapeHtml(key) + '</strong></td><td>' + escapeHtml(group.proveedor) + '</td><td>' + escapeHtml(group.negocio) + '</td><td>' + escapeHtml(group.vigencia) + '</td><td>' + group.items.length + '</td>' +
-          (canDelete ? '<td><div class="mp-actions"><button class="button button--ghost button--compact" type="button" data-mp-delete-list="' + escapeHtml(key) + '">Eliminar</button></div></td>' : '') + '</tr>';
+          (canDelete ? '<td><div class="mp-actions"><button class="table-button has-tooltip" type="button" data-mp-delete-list="' + escapeHtml(key) + '" data-tooltip="Eliminar" aria-label="Eliminar" title="Eliminar"><span class="material-symbols-rounded">delete</span></button></div></td>' : '') + '</tr>';
       }).join("") + '</tbody></table></div>';
     box.querySelectorAll("[data-mp-delete-list]").forEach(function(button) {
       button.addEventListener("click", function() {
@@ -1071,7 +1069,7 @@ const MP_STATE = {
         if (!content) return;
         if (!rows.length) { content.innerHTML = mpEmpty("No hay listas para mostrar."); return; }
         content.innerHTML = '<div class="mp-table-wrap"><table class="mp-table"><thead><tr><th>Solicitud</th><th>Proveedor</th><th>Negocio</th><th>Alcance</th><th>Origen</th><th>Vigencia</th><th>Errores</th><th>Advertencias</th><th>Estado</th><th></th></tr></thead><tbody>' + rows.map(function(row) {
-          return '<tr><td><strong>' + escapeHtml(row.codigoSolicitud) + '</strong><br><small>' + escapeHtml(row.fechaCarga || "") + '</small></td><td>' + escapeHtml(row.proveedor || "Proveedor no definido") + '</td><td>' + escapeHtml(row.negocio || "—") + '</td><td>' + escapeHtml(mpScopeLabel(row)) + '</td><td>' + escapeHtml(row.origenCarga || "—") + '</td><td>' + escapeHtml(row.fechaInicio + " / " + row.fechaFin) + '</td><td>' + escapeHtml(row.totalErrores) + '</td><td>' + escapeHtml(row.totalAdvertencias) + '</td><td><span class="mp-status ' + escapeHtml(row.estado) + '">' + escapeHtml(row.estado) + '</span></td><td><button class="button button--ghost button--compact" type="button" data-mp-request="' + escapeHtml(row.idSolicitud) + '">Abrir</button></td></tr>';
+          return '<tr><td><strong>' + escapeHtml(row.codigoSolicitud) + '</strong><br><small>' + escapeHtml(row.fechaCarga || "") + '</small></td><td>' + escapeHtml(row.proveedor || "Proveedor no definido") + '</td><td>' + escapeHtml(row.negocio || "—") + '</td><td>' + escapeHtml(mpScopeLabel(row)) + '</td><td>' + escapeHtml(row.origenCarga || "—") + '</td><td>' + escapeHtml(row.fechaInicio + " / " + row.fechaFin) + '</td><td>' + escapeHtml(row.totalErrores) + '</td><td>' + escapeHtml(row.totalAdvertencias) + '</td><td><span class="mp-status ' + escapeHtml(row.estado) + '">' + escapeHtml(row.estado) + '</span></td><td><button class="table-button has-tooltip" type="button" data-mp-request="' + escapeHtml(row.idSolicitud) + '" data-tooltip="Abrir solicitud" aria-label="Abrir solicitud" title="Abrir solicitud"><span class="material-symbols-rounded">open_in_new</span></button></td></tr>';
         }).join("") + '</tbody></table></div>' + mpPaginationHtml(result, "requests");
         bindMpPagination("requests", function() { loadRequestsTable(false, renderToken); });
         document.querySelectorAll("[data-mp-request]").forEach(function(button) { button.addEventListener("click", function() { openRequestDetail(button.dataset.mpRequest); }); });
@@ -1138,7 +1136,7 @@ const MP_STATE = {
       data.contenidoCsv = String(reader.result || "");
       secureRpc("crearSolicitudListaPrecioModulo", [data], "MATERIALES_PRECIOS")
         .then(function(result) {
-          resultBox.innerHTML = '<div class="mp-upload-summary"><div><small>Solicitud</small><strong>' + escapeHtml(result.codigoSolicitud || "") + '</strong></div><div><small>Filas</small><strong>' + escapeHtml(result.totalFilas || 0) + '</strong></div><div><small>Errores</small><strong>' + escapeHtml(result.totalErrores || 0) + '</strong></div><div><small>Advertencias</small><strong>' + escapeHtml(result.totalAdvertencias || 0) + '</strong></div><div><small>Estado</small><strong>' + escapeHtml(result.estado || "") + '</strong></div></div><p class="mp-note">' + escapeHtml(result.mensaje || "La lista quedó registrada.") + '</p><div class="mp-actions"><button class="button button--ghost" type="button" id="mpDownloadCreatedObservations">Descargar observaciones</button><button class="button button--primary" type="button" id="mpCloseUploadSuccess">Confirmar</button></div>';
+          resultBox.innerHTML = '<div class="mp-upload-summary"><div><small>Solicitud</small><strong>' + escapeHtml(result.codigoSolicitud || "") + '</strong></div><div><small>Filas</small><strong>' + escapeHtml(result.totalFilas || 0) + '</strong></div><div><small>Errores</small><strong>' + escapeHtml(result.totalErrores || 0) + '</strong></div><div><small>Advertencias</small><strong>' + escapeHtml(result.totalAdvertencias || 0) + '</strong></div><div><small>Estado</small><strong>' + escapeHtml(result.estado || "") + '</strong></div></div><p class="mp-note">' + escapeHtml(result.mensaje || "La lista quedó registrada.") + '</p><div class="mp-actions"><button class="button button--ghost has-tooltip" type="button" id="mpDownloadCreatedObservations" data-tooltip="Descargar observaciones" aria-label="Descargar observaciones" title="Descargar observaciones"><span class="material-symbols-rounded">download</span></button><button class="button button--primary has-tooltip" type="button" id="mpCloseUploadSuccess" data-tooltip="Confirmar" aria-label="Confirmar" title="Confirmar"><span class="material-symbols-rounded">check</span></button></div>';
           on("mpDownloadCreatedObservations", "click", function() { exportRequestDetail(result.idSolicitud); });
           on("mpCloseUploadSuccess", "click", function() { closeMpModal(); renderMaterialsPricesLists(true); });
           toast("Lista registrada", "La solicitud quedó registrada como pendiente u observada.");
@@ -1574,7 +1572,7 @@ const MP_STATE = {
       '<div id="mpListsBulkResult" class="mp-material-bulk-result"></div>' +
       '<div class="mp-upload-actions">' +
       '<button id="mpListsBulkTemplateLink" class="button button--ghost" type="button"><span class="material-symbols-rounded">download</span>Descargar plantilla XLSX (Plantilla_Carga_Listas_GSD.xlsx)</button>' +
-      '<button id="mpListsBulkSubmit" class="button button--primary" type="submit"><span class="material-symbols-rounded">fact_check</span>Prevalidar listas</button>' +
+      '<button id="mpListsBulkSubmit" class="button button--primary has-tooltip" type="submit" data-tooltip="Prevalidar listas" aria-label="Prevalidar listas" title="Prevalidar listas"><span class="material-symbols-rounded">fact_check</span></button>' +
       '</div></form>';
     on("mpListsBulkTemplateLink", "click", function() { descargarPlantillaListasBulkXlsx_(); });
     var form = document.getElementById("mpListsBulkForm");
@@ -1606,7 +1604,7 @@ const MP_STATE = {
     if (submit) {
       submit.disabled = true;
       submit.dataset.originalHtml = submit.innerHTML;
-      submit.innerHTML = '<span class="material-symbols-rounded">progress_activity</span>Prevalidando listas…';
+      submit.innerHTML = '<span class="material-symbols-rounded">progress_activity</span>';
     }
     if (resultBox) resultBox.innerHTML = '<div class="mp-inline-loader"><span class="material-symbols-rounded">fact_check</span>Validando archivo. Todavía no se grabará ninguna lista...</div>';
     var reader = new FileReader();
@@ -1642,7 +1640,7 @@ const MP_STATE = {
   function restaurarBotonListasBulk_(submit) {
     if (!submit) return;
     submit.disabled = false;
-    submit.innerHTML = submit.dataset.originalHtml || '<span class="material-symbols-rounded">fact_check</span>Prevalidar listas';
+    submit.innerHTML = submit.dataset.originalHtml || '<span class="material-symbols-rounded">fact_check</span>';
   }
 
   function prevalidarListasBulkLocal_(parsed, resultBox, submit) {
@@ -1824,7 +1822,7 @@ const MP_STATE = {
     if (!region) return;
     const s = result.solicitud || {};
     const rows = result.detalles || [];
-    region.innerHTML = '<section class="mp-panel"><div class="mp-detail-head"><div><p class="eyebrow">SOLICITUD</p><h3>' + escapeHtml(s.codigoSolicitud || "Solicitud") + '</h3><p>' + escapeHtml((s.proveedor || "—") + " · " + (s.negocio || "—") + " · " + mpScopeLabel(s)) + '</p><p><strong>Origen:</strong> ' + escapeHtml(s.origenCarga || "—") + '</p><span class="mp-status ' + escapeHtml(s.estado || "") + '">' + escapeHtml(s.estado || "") + '</span></div><div class="mp-actions"><button id="mpBackRequests" class="button button--secondary" type="button">Volver</button><button id="mpExportRequest" class="button button--ghost" type="button">Descargar observaciones</button>' + (mpPermission("TOMAR_REVISION_PRECIO") ? '<button id="mpTakeReview" class="button button--secondary" type="button">Tomar revisión</button>' : '') + (mpPermission("APROBAR_LISTA_PRECIO") ? '<button id="mpApproveRequest" class="button button--primary" type="button">Aprobar</button>' : '') + (mpPermission("OBSERVAR_LISTA_PRECIO") ? '<button id="mpObserveRequest" class="button button--secondary" type="button">Observar</button>' : '') + (mpPermission("RECHAZAR_LISTA_PRECIO") ? '<button id="mpRejectRequest" class="button button--secondary" type="button">Rechazar</button>' : '') + (mpPermission("PUBLICAR_LISTA_PRECIO") ? '<button id="mpPublishRequest" class="button button--primary" type="button">Publicar</button>' : '') + '</div></div><div class="mp-grid">' + mpMetric("Filas", s.totalFilas || 0) + mpMetric("Errores", s.totalErrores || 0) + mpMetric("Advertencias", s.totalAdvertencias || 0) + mpMetric("Vigencia", escapeHtml((s.fechaInicio || "") + " / " + (s.fechaFin || ""))) + '</div></section>' +
+    region.innerHTML = '<section class="mp-panel"><div class="mp-detail-head"><div><p class="eyebrow">SOLICITUD</p><h3>' + escapeHtml(s.codigoSolicitud || "Solicitud") + '</h3><p>' + escapeHtml((s.proveedor || "—") + " · " + (s.negocio || "—") + " · " + mpScopeLabel(s)) + '</p><p><strong>Origen:</strong> ' + escapeHtml(s.origenCarga || "—") + '</p><span class="mp-status ' + escapeHtml(s.estado || "") + '">' + escapeHtml(s.estado || "") + '</span></div><div class="mp-actions"><button id="mpBackRequests" class="button button--secondary has-tooltip" type="button" data-tooltip="Volver" aria-label="Volver" title="Volver"><span class="material-symbols-rounded">arrow_back</span></button><button id="mpExportRequest" class="button button--ghost has-tooltip" type="button" data-tooltip="Descargar observaciones" aria-label="Descargar observaciones" title="Descargar observaciones"><span class="material-symbols-rounded">download</span></button>' + (mpPermission("TOMAR_REVISION_PRECIO") ? '<button id="mpTakeReview" class="button button--secondary has-tooltip" type="button" data-tooltip="Tomar revisión" aria-label="Tomar revisión" title="Tomar revisión"><span class="material-symbols-rounded">fact_check</span></button>' : '') + (mpPermission("APROBAR_LISTA_PRECIO") ? '<button id="mpApproveRequest" class="button button--primary has-tooltip" type="button" data-tooltip="Aprobar" aria-label="Aprobar" title="Aprobar"><span class="material-symbols-rounded">check_circle</span></button>' : '') + (mpPermission("OBSERVAR_LISTA_PRECIO") ? '<button id="mpObserveRequest" class="button button--secondary has-tooltip" type="button" data-tooltip="Observar" aria-label="Observar" title="Observar"><span class="material-symbols-rounded">report</span></button>' : '') + (mpPermission("RECHAZAR_LISTA_PRECIO") ? '<button id="mpRejectRequest" class="button button--secondary has-tooltip" type="button" data-tooltip="Rechazar" aria-label="Rechazar" title="Rechazar"><span class="material-symbols-rounded">cancel</span></button>' : '') + (mpPermission("PUBLICAR_LISTA_PRECIO") ? '<button id="mpPublishRequest" class="button button--primary has-tooltip" type="button" data-tooltip="Publicar" aria-label="Publicar" title="Publicar"><span class="material-symbols-rounded">publish</span></button>' : '') + '</div></div><div class="mp-grid">' + mpMetric("Filas", s.totalFilas || 0) + mpMetric("Errores", s.totalErrores || 0) + mpMetric("Advertencias", s.totalAdvertencias || 0) + mpMetric("Vigencia", escapeHtml((s.fechaInicio || "") + " / " + (s.fechaFin || ""))) + '</div></section>' +
       '<section class="mp-panel"><div class="mp-table-wrap"><table class="mp-table"><thead><tr><th>Fila</th><th>Código</th><th>Clasificación</th><th>Descripción</th><th>Combo</th><th>Detalle combo</th><th>Precio</th><th>Estado</th><th>Errores</th><th>Advertencias</th></tr></thead><tbody>' + rows.map(function(row) {
         return '<tr><td>' + escapeHtml(row.numeroFila) + '</td><td>' + escapeHtml((row.codigoMaterial || "—") + " / " + (row.codigoSap || "—")) + '</td><td>' + escapeHtml((row.productoPrincipal || "—") + " / " + (row.tipoMaterial || "—") + " / " + (row.subtipoMaterial || "—")) + '</td><td>' + escapeHtml(row.descripcionMaterial || "") + '</td><td>' + escapeHtml(row.esCombo ? "Sí" : "No") + '</td><td>' + escapeHtml(row.componentesIncluidos || "—") + '</td><td>S/ ' + escapeHtml(row.precioBase || 0) + '</td><td><span class="mp-status ' + escapeHtml(row.estadoFila) + '">' + escapeHtml(row.estadoFila) + '</span></td><td>' + escapeHtml((row.errores || []).join(" | ")) + '</td><td>' + escapeHtml((row.advertencias || []).join(" | ")) + '</td></tr>';
       }).join("") + '</tbody></table></div></section>';
@@ -2030,8 +2028,8 @@ const MP_STATE = {
         '<div id="mpPriceInlineAlert" class="mp-price-alert" hidden></div>' +
 
         '<div class="mp-upload-actions">' +
-          '<button id="mpIndividualPriceSubmit" class="button button--primary" type="submit">' +
-            '<span class="material-symbols-rounded">save</span>Guardar precio individual' +
+          '<button id="mpIndividualPriceSubmit" class="button button--primary has-tooltip" type="submit" data-tooltip="Guardar precio individual" aria-label="Guardar precio individual" title="Guardar precio individual">' +
+            '<span class="material-symbols-rounded">save</span>' +
           '</button>' +
         '</div>' +
       '</form>';
@@ -2141,7 +2139,7 @@ const MP_STATE = {
         submit.disabled = true;
         submit.dataset.originalHtml = submit.innerHTML;
         submit.innerHTML =
-          '<span class="material-symbols-rounded">progress_activity</span>Guardando precio…';
+          '<span class="material-symbols-rounded">progress_activity</span>';
       }
 
       secureRpc(
@@ -2176,7 +2174,7 @@ const MP_STATE = {
             submit.disabled = false;
             submit.innerHTML =
               submit.dataset.originalHtml ||
-              '<span class="material-symbols-rounded">save</span>Guardar precio individual';
+              '<span class="material-symbols-rounded">save</span>';
           }
         });
     });
@@ -2511,8 +2509,8 @@ const MP_STATE = {
             '<span class="material-symbols-rounded">progress_activity</span>Preparando plantilla…' +
           '</a>' +
 
-          '<button id="mpBulkPriceSubmit" class="button button--primary" type="submit">' +
-            '<span class="material-symbols-rounded">fact_check</span>Prevalidar precios' +
+          '<button id="mpBulkPriceSubmit" class="button button--primary has-tooltip" type="submit" data-tooltip="Prevalidar precios" aria-label="Prevalidar precios" title="Prevalidar precios">' +
+            '<span class="material-symbols-rounded">fact_check</span>' +
           '</button>' +
         '</div>' +
 
@@ -2582,7 +2580,7 @@ const MP_STATE = {
       submit.disabled = true;
       submit.dataset.originalHtml = submit.innerHTML;
       submit.innerHTML =
-        '<span class="material-symbols-rounded">progress_activity</span>Prevalidando precios…';
+        '<span class="material-symbols-rounded">progress_activity</span>';
     }
 
     resultBox.innerHTML =
@@ -2819,7 +2817,7 @@ const MP_STATE = {
     submit.disabled = false;
     submit.innerHTML =
       submit.dataset.originalHtml ||
-      '<span class="material-symbols-rounded">fact_check</span>Prevalidar precios';
+      '<span class="material-symbols-rounded">fact_check</span>';
   }
 
   function renderBulkPricePreviewPaso28O_(resultBox, result) {
@@ -4297,8 +4295,8 @@ function renderBulkMaterialPreview(resultBox, result) {
 
     html += '<div class="mp-actions">';
     if (result.puedeConfirmar && result.tokenPreview) {
-      html += '<button id="mpConfirmBulkMaterial" class="button button--primary" type="button">' +
-        '<span class="material-symbols-rounded">check_circle</span>Confirmar carga</button>';
+      html += '<button id="mpConfirmBulkMaterial" class="button button--primary has-tooltip" type="button" data-tooltip="Confirmar carga" aria-label="Confirmar carga" title="Confirmar carga">' +
+        '<span class="material-symbols-rounded">check</span></button>';
     }
     html += '</div>';
 

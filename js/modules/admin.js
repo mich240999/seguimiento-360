@@ -614,16 +614,16 @@ const ADMIN_STATE = {
           const buttons = [];
           if (canViewDetail) {
             buttons.push(
-              '<button class="table-button" type="button" data-view-user="' +
+              '<button class="table-button has-tooltip" type="button" data-view-user="' +
               escapeHtml(row.idUsuario) +
-              '" aria-label="Ver detalle"><span class="material-symbols-rounded">visibility</span></button>'
+              '" data-tooltip="Ver detalle" aria-label="Ver detalle" title="Ver detalle"><span class="material-symbols-rounded">visibility</span></button>'
             );
           }
           if (canEdit) {
             buttons.push(
-              '<button class="table-button" type="button" data-edit-user="' +
+              '<button class="table-button has-tooltip" type="button" data-edit-user="' +
               escapeHtml(row.idUsuario) +
-              '" aria-label="Editar"><span class="material-symbols-rounded">edit</span></button>'
+              '" data-tooltip="Editar" aria-label="Editar" title="Editar"><span class="material-symbols-rounded">edit</span></button>'
             );
           }
           return '<div class="table-actions">' + buttons.join("") + "</div>";
@@ -705,8 +705,8 @@ const ADMIN_STATE = {
       { key: "actions", label: "", render: function(row) {
         const icon = row.protegido ? "visibility" : "edit";
         const label = row.protegido ? "Ver rol protegido" : "Editar rol";
-        return '<div class="table-actions"><button class="table-button" type="button" data-edit-role="' +
-          escapeHtml(row.idRol) + '" aria-label="' + label + '"><span class="material-symbols-rounded">' +
+        return '<div class="table-actions"><button class="table-button has-tooltip" type="button" data-edit-role="' +
+          escapeHtml(row.idRol) + '" data-tooltip="' + label + '" aria-label="' + label + '" title="' + label + '"><span class="material-symbols-rounded">' +
           icon + "</span></button></div>";
       } }
     ], ADMIN_STATE.roles);
@@ -745,9 +745,9 @@ const ADMIN_STATE = {
       return '<article class="builder-card"><div class="builder-card-head">' +
         '<span class="module-card-icon">' + moduleIconHtml(module.icono) + "</span>" +
         '<div><strong>' + escapeHtml(module.nombre) + '</strong><small>' + escapeHtml(module.codigo + " · " + module.tipoVista) + "</small></div>" +
-        '<button class="table-button" type="button" data-edit-module="' + escapeHtml(module.idModulo) + '"><span class="material-symbols-rounded">edit</span></button>' +
+        '<button class="table-button has-tooltip" type="button" data-edit-module="' + escapeHtml(module.idModulo) + '" data-tooltip="Editar módulo" aria-label="Editar módulo" title="Editar módulo"><span class="material-symbols-rounded">edit</span></button>' +
         '</div><p>' + escapeHtml(module.descripcion || "Sin descripción") + '</p><div class="toolbar toolbar--end">' +
-        (module.tipoVista === "DINAMICA" ? '<button class="button button--ghost" type="button" data-module-fields="' + escapeHtml(module.codigo) + '"><span class="material-symbols-rounded">view_column</span>Campos</button>' : "") +
+        (module.tipoVista === "DINAMICA" ? '<button class="button button--ghost has-tooltip" type="button" data-module-fields="' + escapeHtml(module.codigo) + '" data-tooltip="Ver campos" aria-label="Ver campos" title="Ver campos"><span class="material-symbols-rounded">view_column</span></button>' : "") +
         '</div></article>';
     }).join("");
     region.querySelectorAll("[data-edit-module]").forEach(function(button) {
@@ -800,7 +800,7 @@ const ADMIN_STATE = {
       { key: "codigo", label: "Código" },
       { key: "descripcion", label: "Descripción" },
       { key: "estado", label: "Estado", render: statusChip },
-      { key: "actions", label: "", render: function(row) { return '<div class="table-actions"><button class="table-button" type="button" data-catalog-values="' + escapeHtml(row.codigo) + '" title="Valores"><span class="material-symbols-rounded">list_alt</span></button><button class="table-button" type="button" data-edit-catalog="' + escapeHtml(row.idCatalogo) + '" title="Editar"><span class="material-symbols-rounded">edit</span></button></div>'; } }
+      { key: "actions", label: "", render: function(row) { return '<div class="table-actions"><button class="table-button has-tooltip" type="button" data-catalog-values="' + escapeHtml(row.codigo) + '" data-tooltip="Valores" aria-label="Valores" title="Valores"><span class="material-symbols-rounded">list_alt</span></button><button class="table-button has-tooltip" type="button" data-edit-catalog="' + escapeHtml(row.idCatalogo) + '" data-tooltip="Editar" aria-label="Editar" title="Editar"><span class="material-symbols-rounded">edit</span></button></div>'; } }
     ], ADMIN_STATE.catalogs);
     region.querySelectorAll("[data-edit-catalog]").forEach(function(button) {
       button.addEventListener("click", function() { openCatalogEditor(ADMIN_STATE.catalogs.find(function(item) { return item.idCatalogo === button.dataset.editCatalog; })); });
@@ -978,7 +978,7 @@ const ADMIN_STATE = {
       { key: "tipo", label: "Tipo" },
       { key: "version", label: "Versión" },
       { key: "estado", label: "Estado", render: statusChip },
-      { key: "actions", label: "", render: function(row) { return '<div class="table-actions"><button class="table-button" type="button" data-edit-resource="' + escapeHtml(row.idRecurso) + '"><span class="material-symbols-rounded">edit</span></button></div>'; } }
+      { key: "actions", label: "", render: function(row) { return '<div class="table-actions"><button class="table-button has-tooltip" type="button" data-edit-resource="' + escapeHtml(row.idRecurso) + '" data-tooltip="Editar recurso" aria-label="Editar recurso" title="Editar recurso"><span class="material-symbols-rounded">edit</span></button></div>'; } }
     ], ADMIN_STATE.resources);
 
     region.querySelectorAll("[data-edit-resource]").forEach(function(button) {
@@ -1133,7 +1133,7 @@ const ADMIN_STATE = {
         '<div id="resourcePreview" class="field field--full"></div>' +
       '</form>',
       footer: '<button class="button button--ghost" type="button" data-sheet-close>Cancelar</button>' +
-        '<button id="saveResourceButton" class="button button--primary" type="button">Guardar recurso</button>'
+        '<button id="saveResourceButton" class="button button--primary has-tooltip" type="button" data-tooltip="Guardar recurso" aria-label="Guardar recurso" title="Guardar recurso"><span class="material-symbols-rounded">save</span></button>'
     });
 
     bindSideSheetCloseButtons();
@@ -1265,7 +1265,7 @@ const ADMIN_STATE = {
           '><span class="switch-track"></span></label>' +
           '<strong data-refresh-setting-status>' + (enabled ? "Activada" : "Desactivada") + '</strong>' +
           '</span></div>' +
-          (setting.editable ? '<button class="button button--secondary" type="button" data-save-setting="APP_REFRESH_ENABLED">Guardar</button>' : "") +
+          (setting.editable ? '<button class="button button--secondary has-tooltip" type="button" data-save-setting="APP_REFRESH_ENABLED" data-tooltip="Guardar" aria-label="Guardar" title="Guardar"><span class="material-symbols-rounded">save</span></button>' : "") +
           '</article>';
       }
 
@@ -1274,7 +1274,7 @@ const ADMIN_STATE = {
       const minimum = setting.clave === "APP_REFRESH_SECONDS" ? ' min="60" step="1"' : "";
       return '<article class="setting-card"><div><strong>' + escapeHtml(setting.clave) + '</strong><p>' + escapeHtml(setting.descripcion || "") + '</p></div>' +
         '<label class="field"><span>Valor</span><input type="' + inputType + '" data-setting-key="' + escapeHtml(setting.clave) + '" value="' + escapeHtml(setting.valor) + '"' + minimum + ' ' + (setting.editable ? "" : "disabled") + '></label>' +
-        (setting.editable ? '<button class="button button--secondary" type="button" data-save-setting="' + escapeHtml(setting.clave) + '">Guardar</button>' : "") +
+        (setting.editable ? '<button class="button button--secondary has-tooltip" type="button" data-save-setting="' + escapeHtml(setting.clave) + '" data-tooltip="Guardar" aria-label="Guardar" title="Guardar"><span class="material-symbols-rounded">save</span></button>' : "") +
         "</article>";
     }).join("");
 
@@ -1605,7 +1605,7 @@ const ADMIN_STATE = {
         statusSelect("estado", user.estado || "ACTIVO") +
         '<p class="assignment-note">Para Vendedor y Coordinador de Ventas debes asignar una oficina y un grupo. El grupo siempre pertenece a la oficina seleccionada.</p>' +
         "</form>",
-      footer: '<button class="button button--ghost" type="button" data-sheet-close>Cancelar</button><button id="saveUserButton" class="button button--primary" type="button">Guardar usuario</button>'
+      footer: '<button class="button button--ghost" type="button" data-sheet-close>Cancelar</button><button id="saveUserButton" class="button button--primary has-tooltip" type="button" data-tooltip="Guardar usuario" aria-label="Guardar usuario" title="Guardar usuario"><span class="material-symbols-rounded">save</span></button>'
     });
 
     bindSideSheetCloseButtons();
@@ -1687,7 +1687,7 @@ const ADMIN_STATE = {
         protectedNotice + codeField + nameField + descriptionField + levelField + stateField + "</form>",
       footer: isProtected ?
         '<button class="button button--primary" type="button" data-sheet-close>Cerrar</button>' :
-        '<button class="button button--ghost" type="button" data-sheet-close>Cancelar</button><button id="saveRoleButton" class="button button--primary" type="button">Guardar rol</button>'
+        '<button class="button button--ghost" type="button" data-sheet-close>Cancelar</button><button id="saveRoleButton" class="button button--primary has-tooltip" type="button" data-tooltip="Guardar rol" aria-label="Guardar rol" title="Guardar rol"><span class="material-symbols-rounded">save</span></button>'
     });
     bindSideSheetCloseButtons();
     if (isProtected) return;
@@ -1738,7 +1738,7 @@ const ADMIN_STATE = {
         fieldInput("campoUsuario", "Campo ID usuario", module.campoUsuario) + fieldInput("campoProveedor", "Campo ID proveedor", module.campoProveedor) +
         fieldInput("campoGrupo", "Campo ID grupo", module.campoGrupo) + statusSelect("estado", module.estado || "ACTIVO") +
         '<label class="checkbox-field field--full"><input type="checkbox" name="administrable" ' + (module.administrable !== false ? "checked" : "") + '> Permitir administración dinámica</label></form>',
-      footer: '<button class="button button--ghost" type="button" data-sheet-close>Cancelar</button><button id="saveModuleButton" class="button button--primary" type="button">Guardar módulo</button>'
+      footer: '<button class="button button--ghost" type="button" data-sheet-close>Cancelar</button><button id="saveModuleButton" class="button button--primary has-tooltip" type="button" data-tooltip="Guardar módulo" aria-label="Guardar módulo" title="Guardar módulo"><span class="material-symbols-rounded">save</span></button>'
     });
     bindSideSheetCloseButtons();
     on("saveModuleButton", "click", function() {
@@ -1764,9 +1764,9 @@ const ADMIN_STATE = {
           title: moduleCode,
           body: '<div id="moduleFieldsList">' + tableHtml([
             { key: "etiqueta", label: "Campo" }, { key: "campo", label: "Técnico" }, { key: "tipo", label: "Tipo" },
-            { key: "actions", label: "", render: function(row) { return '<button class="table-button" type="button" data-edit-field="' + escapeHtml(row.idCampo) + '"><span class="material-symbols-rounded">edit</span></button>'; } }
+            { key: "actions", label: "", render: function(row) { return '<button class="table-button has-tooltip" type="button" data-edit-field="' + escapeHtml(row.idCampo) + '" data-tooltip="Editar campo" aria-label="Editar campo" title="Editar campo"><span class="material-symbols-rounded">edit</span></button>'; } }
           ], fields || []) + "</div>",
-          footer: '<button class="button button--ghost" type="button" data-sheet-close>Cerrar</button><button id="newFieldButton" class="button button--primary" type="button">Nuevo campo</button>'
+          footer: '<button class="button button--ghost" type="button" data-sheet-close>Cerrar</button><button id="newFieldButton" class="button button--primary has-tooltip" type="button" data-tooltip="Nuevo campo" aria-label="Nuevo campo" title="Nuevo campo"><span class="material-symbols-rounded">add</span></button>'
         });
         bindSideSheetCloseButtons();
         document.querySelectorAll("[data-edit-field]").forEach(function(button) { button.addEventListener("click", function() { openFieldEditor(moduleCode, (fields || []).find(function(item) { return item.idCampo === button.dataset.editField; })); }); });
@@ -1791,7 +1791,7 @@ const ADMIN_STATE = {
         checkboxInput("obligatorio", "Obligatorio", field.obligatorio) + checkboxInput("visibleTabla", "Visible en tabla", field.visibleTabla !== false) +
         checkboxInput("visibleFormulario", "Visible en formulario", field.visibleFormulario !== false) + checkboxInput("editable", "Editable", field.editable !== false) +
         checkboxInput("buscable", "Buscable", field.buscable) + "</form>",
-      footer: '<button class="button button--ghost" type="button" data-modal-close>Cancelar</button><button id="saveFieldButton" class="button button--primary" type="button">Guardar campo</button>'
+      footer: '<button class="button button--ghost" type="button" data-modal-close>Cancelar</button><button id="saveFieldButton" class="button button--primary has-tooltip" type="button" data-tooltip="Guardar campo" aria-label="Guardar campo" title="Guardar campo"><span class="material-symbols-rounded">save</span></button>'
     });
     bindModalCloseButtons();
     on("saveFieldButton", "click", function() {
@@ -1814,7 +1814,7 @@ const ADMIN_STATE = {
       eyebrow: catalog.idCatalogo ? "EDITAR CATÁLOGO" : "NUEVO CATÁLOGO",
       title: catalog.nombre || "Configurar catálogo",
       body: '<form id="catalogEditorForm" class="form-grid">' + hiddenInput("idCatalogo", catalog.idCatalogo) + fieldInput("codigo", "Código", catalog.codigo, true) + fieldInput("nombre", "Nombre", catalog.nombre, true) + '<label class="field field--full"><span>Descripción</span><textarea name="descripcion">' + escapeHtml(catalog.descripcion || "") + "</textarea></label>" + statusSelect("estado", catalog.estado || "ACTIVO") + "</form>",
-      footer: '<button class="button button--ghost" type="button" data-sheet-close>Cancelar</button><button id="saveCatalogButton" class="button button--primary" type="button">Guardar catálogo</button>'
+      footer: '<button class="button button--ghost" type="button" data-sheet-close>Cancelar</button><button id="saveCatalogButton" class="button button--primary has-tooltip" type="button" data-tooltip="Guardar catálogo" aria-label="Guardar catálogo" title="Guardar catálogo"><span class="material-symbols-rounded">save</span></button>'
     });
     bindSideSheetCloseButtons();
     on("saveCatalogButton", "click", function() {
@@ -1839,7 +1839,7 @@ const ADMIN_STATE = {
         '<p class="mp-note">Se creará la lista "Catálogo &lt;proveedor&gt;" con vigencia del mes. Los materiales se agregan desde las cargas.</p>' +
         "</form>",
       footer: '<button class="button button--ghost" type="button" data-modal-close>Cancelar</button>' +
-        '<button id="saveProviderCatalogButton" class="button button--primary" type="button">Crear catálogo</button>'
+        '<button id="saveProviderCatalogButton" class="button button--primary has-tooltip" type="button" data-tooltip="Crear catálogo" aria-label="Crear catálogo" title="Crear catálogo"><span class="material-symbols-rounded">save</span></button>'
     });
     bindModalCloseButtons();
     secureRpc("listarProveedoresModulo", [], adminRpcModuleCode()).then(function(res) {
@@ -1896,7 +1896,7 @@ const ADMIN_STATE = {
       body: '<div id="catalogValuesList" class="catalog-values-region">' +
         (Array.isArray(cachedValues) ? catalogValuesTableHtml(cachedValues, catalogCode) : catalogValuesLoadingHtml()) +
         "</div>",
-      footer: '<button class="button button--ghost" type="button" data-sheet-close>Cerrar</button><button id="newCatalogValueButton" class="button button--primary" type="button"><span class="material-symbols-rounded">add</span>Nuevo valor</button>'
+      footer: '<button class="button button--ghost" type="button" data-sheet-close>Cerrar</button><button id="newCatalogValueButton" class="button button--primary has-tooltip" type="button" data-tooltip="Nuevo valor" aria-label="Nuevo valor" title="Nuevo valor"><span class="material-symbols-rounded">add</span></button>'
     });
 
     bindSideSheetCloseButtons();
@@ -1997,9 +1997,9 @@ const ADMIN_STATE = {
       { key: "orden", label: "Orden" },
       { key: "estado", label: "Estado", render: statusChip },
       { key: "actions", label: "", render: function(row) {
-        return '<button class="table-button" type="button" data-edit-value="' +
+        return '<button class="table-button has-tooltip" type="button" data-edit-value="' +
           escapeHtml(row.idValor) +
-          '" title="Editar valor"><span class="material-symbols-rounded">edit</span></button>';
+          '" data-tooltip="Editar valor" aria-label="Editar valor" title="Editar valor"><span class="material-symbols-rounded">edit</span></button>';
       } }
     );
 
@@ -2527,9 +2527,9 @@ const ADMIN_STATE = {
           key: "actions",
           label: "",
           render: function(row) {
-            return '<button class="table-button" type="button" data-edit-provider="' +
+            return '<button class="table-button has-tooltip" type="button" data-edit-provider="' +
               escapeHtml(row.idProveedor) +
-              '" aria-label="Editar proveedor"><span class="material-symbols-rounded">edit</span></button>';
+              '" data-tooltip="Editar proveedor" aria-label="Editar proveedor" title="Editar proveedor"><span class="material-symbols-rounded">edit</span></button>';
           }
         }
       ], ADMIN_STATE.providers);
@@ -2552,9 +2552,9 @@ const ADMIN_STATE = {
           key: "actions",
           label: "",
           render: function(row) {
-            return '<button class="table-button" type="button" data-edit-office="' +
+            return '<button class="table-button has-tooltip" type="button" data-edit-office="' +
               escapeHtml(row.idOficina) +
-              '" aria-label="Editar oficina"><span class="material-symbols-rounded">edit</span></button>';
+              '" data-tooltip="Editar oficina" aria-label="Editar oficina" title="Editar oficina"><span class="material-symbols-rounded">edit</span></button>';
           }
         }
       ], ADMIN_STATE.offices);
@@ -2577,9 +2577,9 @@ const ADMIN_STATE = {
           key: "actions",
           label: "",
           render: function(row) {
-            return '<button class="table-button" type="button" data-edit-group="' +
+            return '<button class="table-button has-tooltip" type="button" data-edit-group="' +
               escapeHtml(row.idGrupo) +
-              '" aria-label="Editar grupo"><span class="material-symbols-rounded">edit</span></button>';
+              '" data-tooltip="Editar grupo" aria-label="Editar grupo" title="Editar grupo"><span class="material-symbols-rounded">edit</span></button>';
           }
         }
       ], ADMIN_STATE.groups);
@@ -2658,7 +2658,7 @@ const ADMIN_STATE = {
         statusSelect("estado", provider.estado || "ACTIVO") +
         '<p class="assignment-note">La razón social y el nombre comercial pueden actualizarse. El código interno permanece estable y es el único valor utilizado en las asignaciones.</p>' +
         "</form>",
-      footer: '<button class="button button--ghost" type="button" data-sheet-close>Cancelar</button><button id="saveProviderButton" class="button button--primary" type="button">Guardar proveedor</button>'
+      footer: '<button class="button button--ghost" type="button" data-sheet-close>Cancelar</button><button id="saveProviderButton" class="button button--primary has-tooltip" type="button" data-tooltip="Guardar proveedor" aria-label="Guardar proveedor" title="Guardar proveedor"><span class="material-symbols-rounded">save</span></button>'
     });
 
     bindSideSheetCloseButtons();
@@ -2710,7 +2710,7 @@ const ADMIN_STATE = {
         '<label class="field field--full"><span>Descripción</span><textarea name="descripcion">' +
           escapeHtml(office.descripcion || "") + "</textarea></label>" +
         statusSelect("estado", office.estado || "ACTIVO") + "</form>",
-      footer: '<button class="button button--ghost" type="button" data-sheet-close>Cancelar</button><button id="saveOfficeButton" class="button button--primary" type="button">Guardar oficina</button>'
+      footer: '<button class="button button--ghost" type="button" data-sheet-close>Cancelar</button><button id="saveOfficeButton" class="button button--primary has-tooltip" type="button" data-tooltip="Guardar oficina" aria-label="Guardar oficina" title="Guardar oficina"><span class="material-symbols-rounded">save</span></button>'
     });
     bindSideSheetCloseButtons();
     on("saveOfficeButton", "click", function() {
@@ -2740,7 +2740,7 @@ const ADMIN_STATE = {
         '<label class="field field--full"><span>Descripción</span><textarea name="descripcion">' +
           escapeHtml(group.descripcion || "") + "</textarea></label>" +
         statusSelect("estado", group.estado || "ACTIVO") + "</form>",
-      footer: '<button class="button button--ghost" type="button" data-sheet-close>Cancelar</button><button id="saveGroupButton" class="button button--primary" type="button">Guardar grupo</button>'
+      footer: '<button class="button button--ghost" type="button" data-sheet-close>Cancelar</button><button id="saveGroupButton" class="button button--primary has-tooltip" type="button" data-tooltip="Guardar grupo" aria-label="Guardar grupo" title="Guardar grupo"><span class="material-symbols-rounded">save</span></button>'
     });
     bindSideSheetCloseButtons();
     on("saveGroupButton", "click", function() {
@@ -3041,11 +3041,11 @@ const ADMIN_STATE = {
       } },
       { key: "moduloActual", label: "Módulo" },
       { key: "acciones", label: "Acciones", render: function(row) {
-        const detail = '<button class="button button--ghost button--small" type="button" data-session-detail="' +
-          escapeHtml(row.idSesion) + '">Ver detalle</button>';
+        const detail = '<button class="table-button has-tooltip" type="button" data-session-detail="' +
+          escapeHtml(row.idSesion) + '" data-tooltip="Ver detalle" aria-label="Ver detalle" title="Ver detalle"><span class="material-symbols-rounded">visibility</span></button>';
         const close = canClose && row.puedeCerrar ?
-          '<button class="button button--danger button--small" type="button" data-session-close="' +
-            escapeHtml(row.idSesion) + '" data-session-user="' + escapeHtml(row.correo || row.nombre || "") + '">Cerrar</button>' :
+          '<button class="table-button has-tooltip" type="button" data-session-close="' +
+            escapeHtml(row.idSesion) + '" data-session-user="' + escapeHtml(row.correo || row.nombre || "") + '" data-tooltip="Cerrar sesión" aria-label="Cerrar sesión" title="Cerrar sesión"><span class="material-symbols-rounded">close</span></button>' :
           "";
         return '<div class="table-actions">' + detail + close + '</div>';
       } }
@@ -3096,7 +3096,7 @@ const ADMIN_STATE = {
           ], auditRows);
         document.getElementById("sideSheetFooter").innerHTML =
           '<button class="button button--ghost" type="button" data-sheet-close>Cerrar</button>' +
-          (canClose ? '<button id="forceCloseSessionDetailButton" class="button button--danger" type="button">Forzar cierre</button>' : "");
+          (canClose ? '<button id="forceCloseSessionDetailButton" class="button button--danger has-tooltip" type="button" data-tooltip="Forzar cierre" aria-label="Forzar cierre" title="Forzar cierre"><span class="material-symbols-rounded">block</span></button>' : "");
         bindSideSheetCloseButtons();
         const closeButton = document.getElementById("forceCloseSessionDetailButton");
         if (closeButton) {
@@ -3361,7 +3361,7 @@ const ADMIN_STATE = {
     if (footer) {
       footer.innerHTML =
         '<button class="button button--ghost" type="button" data-modal-close>Cerrar</button>' +
-        '<button id="massImportRetryButton" class="button button--primary" type="button">Volver a validar</button>';
+        '<button id="massImportRetryButton" class="button button--primary has-tooltip" type="button" data-tooltip="Volver a validar" aria-label="Volver a validar" title="Volver a validar"><span class="material-symbols-rounded">fact_check</span></button>';
     }
     bindMassImportCloseButtons();
     on("massImportRetryButton", "click", function() {
@@ -3421,14 +3421,14 @@ const ADMIN_STATE = {
           '</div>' +
           '<div class="mass-import-toolbar-actions">' +
             (Number(summary.errores || 0) > 0 ?
-              '<button id="massImportDownloadErrorsButton" class="button button--secondary button--compact" type="button">' +
-              '<span class="material-symbols-rounded">download</span> Errores</button>' +
+              '<button id="massImportDownloadErrorsButton" class="button button--secondary button--compact has-tooltip" type="button" data-tooltip="Descargar errores" aria-label="Descargar errores" title="Descargar errores">' +
+              '<span class="material-symbols-rounded">download</span></button>' +
               (hasCorrectableRows ?
-                '<button id="massImportDownloadCorrectionButton" class="button button--secondary button--compact" type="button">' +
-                '<span class="material-symbols-rounded">download</span> Filas para corregir</button>' : '') : '') +
+                '<button id="massImportDownloadCorrectionButton" class="button button--secondary button--compact has-tooltip" type="button" data-tooltip="Descargar filas para corregir" aria-label="Descargar filas para corregir" title="Descargar filas para corregir">' +
+                '<span class="material-symbols-rounded">download</span></button>' : '') : '') +
             (Number(summary.crear || 0) + Number(summary.actualizar || 0) > 0 ?
-              '<button id="massImportDownloadChangesButton" class="button button--secondary button--compact" type="button">' +
-              '<span class="material-symbols-rounded">download</span> Cambios</button>' : '') +
+              '<button id="massImportDownloadChangesButton" class="button button--secondary button--compact has-tooltip" type="button" data-tooltip="Descargar cambios" aria-label="Descargar cambios" title="Descargar cambios">' +
+              '<span class="material-symbols-rounded">download</span></button>' : '') +
           '</div>' +
         '</div>' +
         '<div class="mass-import-table-wrap">' +
@@ -3446,7 +3446,7 @@ const ADMIN_STATE = {
 
     footer.innerHTML =
       '<button class="button button--ghost" type="button" data-modal-close>Cancelar</button>' +
-      '<button id="massImportRevalidateButton" class="button button--secondary" type="button">Volver a validar</button>' +
+      '<button id="massImportRevalidateButton" class="button button--secondary has-tooltip" type="button" data-tooltip="Volver a validar" aria-label="Volver a validar" title="Volver a validar"><span class="material-symbols-rounded">fact_check</span></button>' +
       '<button id="massImportApproveButton" class="button button--primary" type="button" ' +
         (summary.aprobable ? "" : "disabled") +
         '>Aprobar importación</button>';

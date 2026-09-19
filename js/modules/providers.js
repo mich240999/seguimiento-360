@@ -246,9 +246,9 @@ const PROVIDERS_STATE = {
 
   function providerActionsHtml(row) {
     const buttons = [];
-    if (providerPermission("VER_DETALLE")) buttons.push('<button class="icon-button has-tooltip" type="button" data-provider-action="view" data-provider-id="' + escapeHtml(row.idProveedor) + '" title="Ver detalle"><span class="material-symbols-rounded">visibility</span></button>');
-    if (providerPermission("EDITAR")) buttons.push('<button class="icon-button has-tooltip" type="button" data-provider-action="edit" data-provider-id="' + escapeHtml(row.idProveedor) + '" title="Editar"><span class="material-symbols-rounded">edit</span></button>');
-    if (providerPermission("CAMBIAR_ESTADO")) buttons.push('<button class="icon-button has-tooltip" type="button" data-provider-action="status" data-provider-id="' + escapeHtml(row.idProveedor) + '" data-provider-status="' + (row.estado === "ACTIVO" ? "INACTIVO" : "ACTIVO") + '" title="' + (row.estado === "ACTIVO" ? "Inactivar" : "Activar") + '"><span class="material-symbols-rounded">' + (row.estado === "ACTIVO" ? "toggle_off" : "toggle_on") + '</span></button>');
+    if (providerPermission("VER_DETALLE")) buttons.push('<button class="icon-button has-tooltip" type="button" data-provider-action="view" data-provider-id="' + escapeHtml(row.idProveedor) + '" data-tooltip="Ver detalle" aria-label="Ver detalle" title="Ver detalle"><span class="material-symbols-rounded">visibility</span></button>');
+    if (providerPermission("EDITAR")) buttons.push('<button class="icon-button has-tooltip" type="button" data-provider-action="edit" data-provider-id="' + escapeHtml(row.idProveedor) + '" data-tooltip="Editar" aria-label="Editar" title="Editar"><span class="material-symbols-rounded">edit</span></button>');
+    if (providerPermission("CAMBIAR_ESTADO")) buttons.push('<button class="icon-button has-tooltip" type="button" data-provider-action="status" data-provider-id="' + escapeHtml(row.idProveedor) + '" data-provider-status="' + (row.estado === "ACTIVO" ? "INACTIVO" : "ACTIVO") + '" data-tooltip="' + (row.estado === "ACTIVO" ? "Inactivar" : "Activar") + '" aria-label="' + (row.estado === "ACTIVO" ? "Inactivar" : "Activar") + '" title="' + (row.estado === "ACTIVO" ? "Inactivar" : "Activar") + '"><span class="material-symbols-rounded">' + (row.estado === "ACTIVO" ? "toggle_off" : "toggle_on") + '</span></button>');
     return '<div class="providers-row-actions">' + buttons.join("") + '</div>';
   }
 
@@ -259,7 +259,7 @@ const PROVIDERS_STATE = {
     const page = Number(pagination.pagina || 1);
     const totalPages = Number(pagination.totalPaginas || 1);
     element.innerHTML = '<span>Página ' + page + ' de ' + totalPages + ' · ' + total + ' registros</span>' +
-      '<div class="providers-pagination-actions"><button id="providersPreviousPage" class="button button--ghost button--compact" type="button" ' + (page <= 1 ? "disabled" : "") + '>Anterior</button><button id="providersNextPage" class="button button--ghost button--compact" type="button" ' + (page >= totalPages ? "disabled" : "") + '>Siguiente</button></div>';
+      '<div class="providers-pagination-actions"><button id="providersPreviousPage" class="button button--ghost button--compact has-tooltip" type="button" data-tooltip="Anterior" aria-label="Anterior" title="Anterior" ' + (page <= 1 ? "disabled" : "") + '><span class="material-symbols-rounded">chevron_left</span></button><button id="providersNextPage" class="button button--ghost button--compact has-tooltip" type="button" data-tooltip="Siguiente" aria-label="Siguiente" title="Siguiente" ' + (page >= totalPages ? "disabled" : "") + '><span class="material-symbols-rounded">chevron_right</span></button></div>';
     on("providersPreviousPage", "click", function() { PROVIDERS_STATE.page -= 1; refreshProvidersWorkspace(true); });
     on("providersNextPage", "click", function() { PROVIDERS_STATE.page += 1; refreshProvidersWorkspace(true); });
   }
@@ -400,7 +400,7 @@ const PROVIDERS_STATE = {
         '<td>' + escapeHtml(String(item.fechaInicio || "") + " / " + String(item.fechaFin || "")) + '</td></tr>';
     }).join("") || '<tr><td colspan="4">Sin precios para mostrar.</td></tr>';
     box.innerHTML = '<div class="providers-chip-list">' + chips + '</div>' +
-      (filter ? '<p><button class="button button--ghost button--compact" type="button" data-provider-resp-clear>Quitar filtro: ' + escapeHtml(filter) + '</button></p>' : "") +
+      (filter ? '<p><button class="button button--ghost button--compact has-tooltip" type="button" data-provider-resp-clear data-tooltip="Quitar filtro: ' + escapeHtml(filter) + '" aria-label="Quitar filtro: ' + escapeHtml(filter) + '" title="Quitar filtro: ' + escapeHtml(filter) + '"><span class="material-symbols-rounded">filter_alt_off</span></button></p>' : "") +
       '<div class="sales-card"><h3>Agregar responsable (alta rápida de precio)</h3>' +
       '<p class="providers-field-hint">El responsable nace en el precio: se graba con guardarPrecioIndividualMaterialesPreciosModulo.</p>' +
       '<div class="form-grid">' +
@@ -409,7 +409,7 @@ const PROVIDERS_STATE = {
       '<label class="field"><span>Precio base S/</span><input id="providerRespPrice" type="number" min="0" step="0.01" placeholder="0.00"></label>' +
       '<label class="field"><span>Inicio vigencia</span><input id="providerRespStart" type="date"></label>' +
       '<label class="field"><span>Fin vigencia</span><input id="providerRespEnd" type="date"></label>' +
-      '</div><div class="toolbar toolbar--end"><button class="button button--primary button--compact" type="button" data-provider-resp-add>Agregar responsable</button></div></div>' +
+      '</div><div class="toolbar toolbar--end"><button class="button button--primary button--compact has-tooltip" type="button" data-provider-resp-add data-tooltip="Agregar responsable" aria-label="Agregar responsable" title="Agregar responsable"><span class="material-symbols-rounded">person_add</span></button></div></div>' +
       '<div class="mp-table-wrap"><table class="mp-table"><thead><tr><th>Responsable</th><th>Material</th><th>Precio</th><th>Vigencia</th></tr></thead><tbody>' + body + '</tbody></table></div>';
     bindProviderSalesResponsibles_(idProveedor);
     loadProviderRespMaterialOptions_();
@@ -590,8 +590,8 @@ const PROVIDERS_STATE = {
         ),
       body: body,
       footer: '<button class="button button--ghost" type="button" data-sheet-close>Cancelar</button>' +
-        '<button id="providerModuleSaveButton" class="button button--primary" type="button" ' +
-        (cachedOptions ? "" : "disabled") + '>Guardar</button>'
+        '<button id="providerModuleSaveButton" class="button button--primary has-tooltip" type="button" data-tooltip="Guardar" aria-label="Guardar" title="Guardar" ' +
+        (cachedOptions ? "" : "disabled") + '><span class="material-symbols-rounded">save</span></button>'
     });
 
     bindProviderSheetClose();
@@ -677,7 +677,7 @@ const PROVIDERS_STATE = {
       '</button>' +
       '<div class="providers-combo-panel" data-provider-multiselect-panel="' + escapeHtml(type) + '" hidden>' +
         '<input class="providers-combo-search" type="search" placeholder="' + escapeHtml(placeholder) + '" data-provider-search="' + escapeHtml(type) + '">' +
-        '<div class="providers-combo-actions"><button type="button" data-provider-select-all="' + escapeHtml(type) + '">Todos</button><button type="button" data-provider-clear="' + escapeHtml(type) + '">Limpiar</button></div>' +
+        '<div class="providers-combo-actions"><button class="has-tooltip" type="button" data-provider-select-all="' + escapeHtml(type) + '" data-tooltip="Todos" aria-label="Todos" title="Todos"><span class="material-symbols-rounded">done_all</span></button><button class="has-tooltip" type="button" data-provider-clear="' + escapeHtml(type) + '" data-tooltip="Limpiar" aria-label="Limpiar" title="Limpiar"><span class="material-symbols-rounded">clear_all</span></button></div>' +
         '<div class="providers-combo-options" data-provider-options="' + escapeHtml(type) + '">' +
           renderProviderMultiOptions(name, items) +
         '</div>' +
@@ -922,7 +922,7 @@ const PROVIDERS_STATE = {
         '<li>Canal de venta: ' + escapeHtml(officesCount ? officesCount + " oficina(s)" : "No asignado") + '</li>' +
         '<li>Grupos: ' + escapeHtml(groupText) + '</li></ul></div></div>',
       footer: '<button class="button button--ghost" type="button" data-modal-close>Cerrar</button>' +
-        (id ? '<button id="providerSavedViewButton" class="button button--primary" type="button">Ver detalle</button>' : '')
+        (id ? '<button id="providerSavedViewButton" class="button button--primary has-tooltip" type="button" data-tooltip="Ver detalle" aria-label="Ver detalle" title="Ver detalle"><span class="material-symbols-rounded">visibility</span></button>' : '')
     });
     bindProviderModalClose();
     on("providerSavedViewButton", "click", function() {
@@ -936,7 +936,7 @@ const PROVIDERS_STATE = {
       eyebrow: "CAMBIAR ESTADO",
       title: status === "ACTIVO" ? "Activar proveedor" : "Inactivar proveedor",
       body: '<p>¿Confirmas el cambio de estado del proveedor <strong>' + escapeHtml(id) + '</strong> a <strong>' + escapeHtml(status) + '</strong>?</p>',
-      footer: '<button class="button button--ghost" type="button" data-modal-close>Cancelar</button><button id="providerConfirmStatusButton" class="button button--primary" type="button">Confirmar</button>'
+      footer: '<button class="button button--ghost" type="button" data-modal-close>Cancelar</button><button id="providerConfirmStatusButton" class="button button--primary has-tooltip" type="button" data-tooltip="Confirmar" aria-label="Confirmar" title="Confirmar"><span class="material-symbols-rounded">check</span></button>'
     });
     bindProviderModalClose();
     on("providerConfirmStatusButton", "click", function() {
@@ -1098,8 +1098,8 @@ const PROVIDERS_STATE = {
         '<div class="providers-detail-item"><span>Flujo</span><strong>Validar, previsualizar y confirmar</strong><small class="providers-field-hint">Nada se guarda hasta confirmar.</small></div>' +
         '</div><p class="providers-import-note">El grupo siempre pertenece a la oficina de su misma fila. Una fila solo con proveedor y sin oficina ni grupo se omite.</p></div>',
       footer: '<button class="button button--ghost" type="button" data-modal-close>Cerrar</button>' +
-        '<button id="providersChannelTemplateBtn" class="button button--secondary" type="button">Descargar plantilla</button>' +
-        '<button id="providersChannelPickBtn" class="button button--primary" type="button">Seleccionar archivo</button>'
+        '<button id="providersChannelTemplateBtn" class="button button--secondary has-tooltip" type="button" data-tooltip="Descargar plantilla" aria-label="Descargar plantilla" title="Descargar plantilla"><span class="material-symbols-rounded">download</span></button>' +
+        '<button id="providersChannelPickBtn" class="button button--primary has-tooltip" type="button" data-tooltip="Seleccionar archivo" aria-label="Seleccionar archivo" title="Seleccionar archivo"><span class="material-symbols-rounded">folder_open</span></button>'
     });
     bindProviderModalClose();
     on("providersChannelTemplateBtn", "click", downloadProvidersChannelTemplate_);
@@ -1381,7 +1381,7 @@ const PROVIDERS_STATE = {
         { label: "Detalle", render: function(row) { return escapeHtml(row.detalle || ""); } }
       ], validated) + '</div><p class="providers-import-note">Solo las filas listas se guardarán al confirmar. Las filas con error o sin cambios se omiten y quedan en el reporte.</p>';
     footer.innerHTML = '<button class="button button--ghost" type="button" data-modal-close>Cancelar</button>' +
-      '<button id="providersChannelConfirmBtn" class="button button--primary" type="button" ' + (ready ? "" : "disabled") + '>Confirmar (' + ready + ')</button>';
+      '<button id="providersChannelConfirmBtn" class="button button--primary has-tooltip" type="button" data-tooltip="Confirmar (' + ready + ')" aria-label="Confirmar (' + ready + ')" title="Confirmar (' + ready + ')" ' + (ready ? "" : "disabled") + '><span class="material-symbols-rounded">check</span></button>';
     bindProviderModalClose();
     on("providersChannelConfirmBtn", "click", confirmProvidersChannelBulk_);
   }

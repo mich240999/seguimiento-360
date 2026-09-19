@@ -137,7 +137,7 @@ function renderDispatchFrame() {
         '<label class="select-field"><span>Oficina</span><select id="disp360OficinaFilter"><option value="TODOS">Todas</option></select></label>' +
       "</div></div>" +
       '<div id="disp360Region" class="sales-card"><div class="sales-list-head"><div><h3>Bandeja</h3><p id="disp360Count" style="margin:0;color:#64748b">—</p></div></div>' +
-      '<div class="mp-table-wrap"><table class="mp-table"><thead><tr><th>Código</th><th>Programada</th><th>Cliente</th><th>Dirección</th><th>Oficina</th><th>Estado</th><th>Acciones</th></tr></thead>' +
+      '<div class="mp-table-wrap"><table class="mp-table"><thead><tr><th>Código</th><th>Programada</th><th>Cliente</th><th>Dirección</th><th>Oficina</th><th>Vendido por</th><th>Estado</th><th>Acciones</th></tr></thead>' +
       '<tbody id="disp360TableBody"></tbody></table></div></div>' +
     "</section>";
 
@@ -177,7 +177,7 @@ function bindDispatchControls() {
 function loadDispatchData(silent) {
   var body = document.getElementById("disp360TableBody");
   DISP360_STATE.provider = disp360CurrentProvider();
-  if (body && !silent) body.innerHTML = '<tr><td colspan="7">Cargando despachos…</td></tr>';
+  if (body && !silent) body.innerHTML = '<tr><td colspan="8">Cargando despachos…</td></tr>';
 
   secureRpc("listarDespachoModulo", [], "VENTAS_CONTADO")
     .then(function(response) {
@@ -189,7 +189,7 @@ function loadDispatchData(silent) {
     })
     .catch(function(error) {
       if (body) {
-        body.innerHTML = '<tr><td colspan="7"><div class="mp-note"><strong>No fue posible cargar el despacho.</strong> ' +
+        body.innerHTML = '<tr><td colspan="8"><div class="mp-note"><strong>No fue posible cargar el despacho.</strong> ' +
           escapeHtml(errorMessage(error)) + "</div></td></tr>";
       }
       toast("No fue posible cargar el despacho", errorMessage(error), true);
@@ -215,6 +215,8 @@ function disp360NormalizeRow(row) {
     direccion: row.direccionEntrega || row.direccionInstalacion || "",
     distrito: row.distrito || "",
     oficina: row.nombreOficina || row.idOficina || "",
+    idUsuario: row.idUsuario || "",
+    nombreUsuario: row.nombreUsuario || "",
     monto: Number(row.montoTotalVenta || row.totalVenta || 0) || 0,
     estadoAbono: String(row.estadoAbono || ""),
     estadoEntrega: String(gestion.estadoEntrega || row.estadoEntrega || row.estado || ""),
@@ -284,24 +286,25 @@ function renderDispatchResults() {
   }
 
   if (!rows.length) {
-    body.innerHTML = '<tr><td colspan="7">Sin despachos propios en PROGRAMADA o EN_RUTA.</td></tr>';
+    body.innerHTML = '<tr><td colspan="8">Sin despachos propios en PROGRAMADA o EN_RUTA.</td></tr>';
     return;
   }
 
   var canManage = disp360CanManage();
   body.innerHTML = rows.map(function(row) {
-    var actions = '<button class="button button--ghost button--compact" type="button" data-disp360-detail="' + escapeHtml(row.idVenta) + '"><span class="material-symbols-rounded">visibility</span>Ver</button>';
+    var actions = '<button class="table-button has-tooltip" type="button" data-disp360-detail="' + escapeHtml(row.idVenta) + '" data-tooltip="Ver" aria-label="Ver" title="Ver"><span class="material-symbols-rounded">visibility</span></button>';
     if (canManage && row.estadoEntrega === "PROGRAMADA") {
-      actions += ' <button class="button button--secondary button--compact" type="button" data-disp360-take="' + escapeHtml(row.idVenta) + '"><span class="material-symbols-rounded">local_shipping</span>Tomar despacho</button>';
+      actions += ' <button class="table-button has-tooltip" type="button" data-disp360-take="' + escapeHtml(row.idVenta) + '" data-tooltip="Tomar despacho" aria-label="Tomar despacho" title="Tomar despacho"><span class="material-symbols-rounded">local_shipping</span></button>';
     }
     if (canManage && row.estadoEntrega === "EN_RUTA") {
-      actions += ' <button class="button button--primary button--compact" type="button" data-disp360-confirm="' + escapeHtml(row.idVenta) + '"><span class="material-symbols-rounded">task_alt</span>Confirmar entrega</button>';
+      actions += ' <button class="table-button has-tooltip" type="button" data-disp360-confirm="' + escapeHtml(row.idVenta) + '" data-tooltip="Confirmar entrega" aria-label="Confirmar entrega" title="Confirmar entrega"><span class="material-symbols-rounded">task_alt</span></button>';
     }
     return "<tr><td><strong>" + escapeHtml(row.codigoVenta || "—") + "</strong></td>" +
       "<td>" + escapeHtml(row.fechaProgramada || "—") + "</td>" +
       "<td>" + escapeHtml(row.cliente || "—") + "</td>" +
       "<td>" + escapeHtml([row.direccion, row.distrito].filter(Boolean).join(" · ") || "—") + "</td>" +
       "<td>" + escapeHtml(row.oficina || "—") + "</td>" +
+      "<td>" + escapeHtml(row.nombreUsuario || "—") + "</td>" +
       "<td>" + disp360StatusChip(row.estadoEntrega) + "</td>" +
       '<td><div class="mp-actions">' + actions + "</div></td></tr>";
   }).join("");
@@ -333,7 +336,7 @@ function disp360TakeDelivery(idVenta) {
       escapeHtml(row.cliente ? "Cliente: " + row.cliente + ". " : "") +
       escapeHtml(row.fechaProgramada ? "Fecha programada: " + row.fechaProgramada + "." : "") + "</div>",
     footer: '<button class="button button--secondary" type="button" data-disp360-close>Cerrar</button>' +
-      '<button id="disp360TakeConfirm" class="button button--primary" type="button"><span class="material-symbols-rounded">local_shipping</span>Tomar despacho</button>'
+      '<button id="disp360TakeConfirm" class="button button--primary has-tooltip" type="button" data-tooltip="Tomar despacho" aria-label="Tomar despacho" title="Tomar despacho"><span class="material-symbols-rounded">local_shipping</span></button>'
   });
   disp360BindModalClose();
 
@@ -341,7 +344,7 @@ function disp360TakeDelivery(idVenta) {
     var button = document.getElementById("disp360TakeConfirm");
     if (button) {
       button.disabled = true;
-      button.innerHTML = '<span class="material-symbols-rounded">progress_activity</span>Tomando…';
+      button.innerHTML = '<span class="material-symbols-rounded">progress_activity</span>';
     }
     secureRpc("guardarGestionEntregaVentaContadoModulo", [{
       idVenta: idVenta,
@@ -360,7 +363,7 @@ function disp360TakeDelivery(idVenta) {
         toast("No se pudo tomar el despacho", errorMessage(error), true);
         if (button) {
           button.disabled = false;
-          button.innerHTML = '<span class="material-symbols-rounded">local_shipping</span>Tomar despacho';
+          button.innerHTML = '<span class="material-symbols-rounded">local_shipping</span>';
         }
       });
   });
@@ -387,7 +390,7 @@ function disp360OpenConfirmDelivery(idVenta) {
     "</div>" +
     '<div class="mp-note" style="margin-top:12px">Para confirmar debe existir al menos un sustento de entrega (adjunto ahora o ya registrado). PDF, PNG, JPG o WEBP; máximo 5 MB por archivo.</div>',
     footer: '<button class="button button--secondary" type="button" data-disp360-close>Cerrar</button>' +
-      '<button id="disp360ConfirmButton" class="button button--primary" type="button"><span class="material-symbols-rounded">task_alt</span>Confirmar entrega</button>'
+      '<button id="disp360ConfirmButton" class="button button--primary has-tooltip" type="button" data-tooltip="Confirmar entrega" aria-label="Confirmar entrega" title="Confirmar entrega"><span class="material-symbols-rounded">task_alt</span></button>'
   });
   disp360BindModalClose();
 
@@ -432,7 +435,7 @@ function disp360ConfirmDelivery(idVenta) {
     var button = document.getElementById("disp360ConfirmButton");
     if (button) {
       button.disabled = true;
-      button.innerHTML = '<span class="material-symbols-rounded">progress_activity</span>Confirmando…';
+      button.innerHTML = '<span class="material-symbols-rounded">progress_activity</span>';
     }
     return secureRpc("guardarGestionEntregaVentaContadoModulo", [{
       idVenta: idVenta,
@@ -451,7 +454,7 @@ function disp360ConfirmDelivery(idVenta) {
         toast("No se pudo confirmar la entrega", errorMessage(error), true);
         if (button) {
           button.disabled = false;
-          button.innerHTML = '<span class="material-symbols-rounded">task_alt</span>Confirmar entrega';
+          button.innerHTML = '<span class="material-symbols-rounded">task_alt</span>';
         }
       });
   }).catch(function(error) {
@@ -479,6 +482,7 @@ function disp360ShowDetail(idVenta) {
       "<tr><th>Cliente</th><td>" + escapeHtml(row.cliente || "—") + "</td></tr>" +
       "<tr><th>Dirección</th><td>" + escapeHtml([row.direccion, row.distrito].filter(Boolean).join(" · ") || "—") + "</td></tr>" +
       "<tr><th>Oficina</th><td>" + escapeHtml(row.oficina || "—") + "</td></tr>" +
+      "<tr><th>Vendedor</th><td>" + escapeHtml(row.nombreUsuario || "—") + "</td></tr>" +
       "<tr><th>Fecha programada</th><td>" + escapeHtml(row.fechaProgramada || "—") + "</td></tr>" +
       "<tr><th>Estado de entrega</th><td>" + disp360StatusChip(row.estadoEntrega) + "</td></tr>" +
       "<tr><th>Receptor</th><td>" + escapeHtml(row.receptor || "—") + "</td></tr>" +
@@ -508,7 +512,7 @@ function exportDispatchCsv() {
     toast("Nada que exportar", "No hay despachos con los filtros actuales.", true);
     return;
   }
-  var header = ["codigo", "fecha_programada", "cliente", "direccion", "oficina", "estado"];
+  var header = ["codigo", "fecha_programada", "cliente", "direccion", "oficina", "vendedor", "estado"];
   var lines = [header.join(";")].concat(rows.map(function(row) {
     return [
       row.codigoVenta || row.idVenta || "",
@@ -516,6 +520,7 @@ function exportDispatchCsv() {
       row.cliente,
       [row.direccion, row.distrito].filter(Boolean).join(" - "),
       row.oficina || "",
+      row.nombreUsuario || "",
       row.estadoEntrega || ""
     ].map(disp360CsvCell).join(";");
   }));

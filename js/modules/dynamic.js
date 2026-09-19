@@ -143,16 +143,16 @@ const DYNAMIC_STATE = {
           const buttons = [];
           if (canEdit) {
             buttons.push(
-              '<button class="table-button" type="button" data-dynamic-edit="' +
+              '<button class="table-button has-tooltip" type="button" data-dynamic-edit="' +
               escapeHtml(row.__ID) +
-              '" title="Editar"><span class="material-symbols-rounded">edit</span></button>'
+              '" data-tooltip="Editar" aria-label="Editar" title="Editar"><span class="material-symbols-rounded">edit</span></button>'
             );
           }
           if (canChangeStatus) {
             buttons.push(
-              '<button class="table-button" type="button" data-dynamic-status="' +
+              '<button class="table-button has-tooltip" type="button" data-dynamic-status="' +
               escapeHtml(row.__ID) +
-              '" title="Cambiar estado"><span class="material-symbols-rounded">toggle_on</span></button>'
+              '" data-tooltip="Cambiar estado" aria-label="Cambiar estado" title="Cambiar estado"><span class="material-symbols-rounded">toggle_on</span></button>'
             );
           }
           return '<div class="table-actions">' + buttons.join("") + "</div>";
@@ -198,8 +198,8 @@ const DYNAMIC_STATE = {
     const pagination = DYNAMIC_STATE.pagination;
     if (!region || !pagination) return;
     region.innerHTML = '<span>Mostrando página ' + pagination.pagina + ' de ' + pagination.totalPaginas + ' · ' + pagination.total + ' registros</span>' +
-      '<button id="dynamicPrevPage" class="button button--ghost" type="button" ' + (pagination.pagina <= 1 ? "disabled" : "") + '><span class="material-symbols-rounded">chevron_left</span>Anterior</button>' +
-      '<button id="dynamicNextPage" class="button button--ghost" type="button" ' + (pagination.pagina >= pagination.totalPaginas ? "disabled" : "") + '>Siguiente<span class="material-symbols-rounded">chevron_right</span></button>';
+      '<button id="dynamicPrevPage" class="button button--ghost has-tooltip" type="button" ' + (pagination.pagina <= 1 ? "disabled" : "") + ' data-tooltip="Anterior" aria-label="Anterior" title="Anterior"><span class="material-symbols-rounded">chevron_left</span></button>' +
+      '<button id="dynamicNextPage" class="button button--ghost has-tooltip" type="button" ' + (pagination.pagina >= pagination.totalPaginas ? "disabled" : "") + ' data-tooltip="Siguiente" aria-label="Siguiente" title="Siguiente"><span class="material-symbols-rounded">chevron_right</span></button>';
     on("dynamicPrevPage", "click", function() { DYNAMIC_STATE.filters.pagina -= 1; refreshDynamicModule(true); });
     on("dynamicNextPage", "click", function() { DYNAMIC_STATE.filters.pagina += 1; refreshDynamicModule(true); });
   }
@@ -242,7 +242,7 @@ const DYNAMIC_STATE = {
       eyebrow: isNew ? "NUEVO REGISTRO" : "EDITAR REGISTRO",
       title: DYNAMIC_STATE.module.nombre,
       body: body,
-      footer: '<button class="button button--ghost" type="button" data-sheet-close>Cancelar</button><button id="saveDynamicRecordButton" class="button button--primary" type="button">Guardar</button>'
+      footer: '<button class="button button--ghost" type="button" data-sheet-close>Cancelar</button><button id="saveDynamicRecordButton" class="button button--primary has-tooltip" type="button" data-tooltip="Guardar" aria-label="Guardar" title="Guardar"><span class="material-symbols-rounded">save</span></button>'
     });
     bindSideSheetCloseButtons();
     populateDynamicCatalogFields(record);
@@ -327,7 +327,7 @@ const DYNAMIC_STATE = {
       eyebrow: "CAMBIAR ESTADO",
       title: DYNAMIC_STATE.module.nombre,
       body: '<label class="field"><span>Nuevo estado</span><select id="dynamicNewStatus"><option value="ACTIVO">Activo</option><option value="INACTIVO">Inactivo</option></select></label>',
-      footer: '<button class="button button--ghost" type="button" data-modal-close>Cancelar</button><button id="saveDynamicStatusButton" class="button button--primary" type="button">Guardar estado</button>'
+      footer: '<button class="button button--ghost" type="button" data-modal-close>Cancelar</button><button id="saveDynamicStatusButton" class="button button--primary has-tooltip" type="button" data-tooltip="Guardar estado" aria-label="Guardar estado" title="Guardar estado"><span class="material-symbols-rounded">save</span></button>'
     });
     bindModalCloseButtons();
     on("saveDynamicStatusButton", "click", function() {

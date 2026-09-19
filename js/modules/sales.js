@@ -1803,12 +1803,12 @@ const SALES_STATE = {
     if (!region) return;
     if (!rows || !rows.length) { region.innerHTML='<div class="empty-state"><span class="material-symbols-rounded">inbox</span><strong>Sin registros</strong><p>No hay ventas para los filtros seleccionados.</p></div>'; return; }
     const showDeliveryState = String(SALES_STATE.activeView || "").toUpperCase() === "ENTREGAS";
-    region.innerHTML = '<div class="table-wrap"><table class="data-table sales29-table"><thead><tr><th>Código venta</th><th>Fecha</th><th>Tipo</th><th>Cliente (Cuenta contrato)</th><th>Nombre del cliente</th><th>Importe</th><th>Abono</th><th>Estado de venta</th><th>Opciones</th></tr></thead><tbody>' +
+    region.innerHTML = '<div class="table-wrap"><table class="data-table sales29-table"><thead><tr><th>Código venta</th><th>Fecha</th><th>Tipo</th><th>Cliente (Cuenta contrato)</th><th>Nombre del cliente</th><th>Vendido por</th><th>Importe</th><th>Abono</th><th>Estado de venta</th><th>Opciones</th></tr></thead><tbody>' +
       rows.map(function(item){
         const amount = item.importeVisible !== undefined ? item.importeVisible : item.totalVenta;
         const archived=String(item.tipoRegistro||'').toUpperCase()==='PRUEBA' && String(item.estadoPrueba||'').toUpperCase()==='ARCHIVADA';
         const estadoColumna = showDeliveryState ? (item.estadoEntrega || item.estado) : item.estado;
-        return '<tr class="'+(archived?'sales29-row-archived':'')+'"><td><div class="sales29-code-cell"><strong>'+escapeHtml(item.codigoVenta||'')+'</strong>'+salesRecordTypeBadge29T(item,true)+'</div></td><td>'+escapeHtml(item.fechaRegistro||'')+'</td><td>'+escapeHtml(item.nombreTipoVenta||item.tipoVenta||'—')+'</td><td>'+escapeHtml(item.cuentaContrato||'—')+'</td><td>'+escapeHtml(item.nombreCliente||'—')+'</td><td>'+formatSalesMoney(amount,item.moneda)+'</td><td>'+salesPaymentBadge29(item.estadoAbono)+'</td><td>'+salesStatusBadge29(estadoColumna)+'</td><td>'+renderSalesRowActions29(item)+'</td></tr>';
+        return '<tr class="'+(archived?'sales29-row-archived':'')+'"><td><div class="sales29-code-cell"><strong>'+escapeHtml(item.codigoVenta||'')+'</strong>'+salesRecordTypeBadge29T(item,true)+'</div></td><td>'+escapeHtml(item.fechaRegistro||'')+'</td><td>'+escapeHtml(item.nombreTipoVenta||item.tipoVenta||'—')+'</td><td>'+escapeHtml(item.cuentaContrato||'—')+'</td><td>'+escapeHtml(item.nombreCliente||'—')+'</td><td>'+escapeHtml(item.nombreUsuario||'—')+'</td><td>'+formatSalesMoney(amount,item.moneda)+'</td><td>'+salesPaymentBadge29(item.estadoAbono)+'</td><td>'+salesStatusBadge29(estadoColumna)+'</td><td>'+renderSalesRowActions29(item)+'</td></tr>';
       }).join('') + '</tbody></table></div>';
     region.querySelectorAll('[data-sales-view-detail]').forEach(function(btn){
       btn.addEventListener('mouseenter', function(){
@@ -1932,11 +1932,11 @@ const SALES_STATE = {
       const canCancelAbonos = estadoAbonos !== "ENTREGADA" && estadoAbonos !== "ANULADA";
       return wrapRows(
         [
-          '<button class="button button--primary button--compact" type="button" data-sales-pay="' + id + '"><span class="material-symbols-rounded">fact_check</span>Validar abono</button>',
-          '<button class="button button--ghost button--compact" type="button" data-sales-view-detail="' + id + '">Ver</button>'
+          '<button class="table-button has-tooltip" type="button" data-sales-pay="' + id + '" data-tooltip="Validar abono" aria-label="Validar abono" title="Validar abono"><span class="material-symbols-rounded">fact_check</span></button>',
+          '<button class="table-button has-tooltip" type="button" data-sales-view-detail="' + id + '" data-tooltip="Ver" aria-label="Ver" title="Ver"><span class="material-symbols-rounded">visibility</span></button>'
         ],
         canCancelAbonos ? [
-          '<button class="button button--secondary button--compact sales29-cancel-button" type="button" data-sales-cancel-observed="' + id + '"><span class="material-symbols-rounded">cancel</span>Anular</button>'
+          '<button class="table-button has-tooltip sales29-cancel-button" type="button" data-sales-cancel-observed="' + id + '" data-tooltip="Anular" aria-label="Anular" title="Anular"><span class="material-symbols-rounded">cancel</span></button>'
         ] : []
       );
     }
@@ -1944,14 +1944,14 @@ const SALES_STATE = {
     if (SALES_STATE.activeView === "ENTREGAS") {
       return wrapRows(
         [
-          '<button class="button button--primary button--compact" type="button" data-sales-delivery="' + id + '"><span class="material-symbols-rounded">local_shipping</span>Gestionar</button>',
-          '<button class="button button--ghost button--compact" type="button" data-sales-view-detail="' + id + '">Ver</button>'
+          '<button class="table-button has-tooltip" type="button" data-sales-delivery="' + id + '" data-tooltip="Gestionar" aria-label="Gestionar" title="Gestionar"><span class="material-symbols-rounded">local_shipping</span></button>',
+          '<button class="table-button has-tooltip" type="button" data-sales-view-detail="' + id + '" data-tooltip="Ver" aria-label="Ver" title="Ver"><span class="material-symbols-rounded">visibility</span></button>'
         ]
       );
     }
 
     const principales = [
-      '<button class="button button--ghost button--compact" type="button" data-sales-view-detail="' + id + '">Ver</button>'
+      '<button class="table-button has-tooltip" type="button" data-sales-view-detail="' + id + '" data-tooltip="Ver" aria-label="Ver" title="Ver"><span class="material-symbols-rounded">visibility</span></button>'
     ];
 
     const secundarios = [];
@@ -1964,25 +1964,25 @@ const SALES_STATE = {
 
     if (sePuedeModificar) {
       principales.push(
-        '<button class="button button--ghost button--compact" type="button" data-sales-edit="' + id + '">Modificar</button>'
+        '<button class="table-button has-tooltip" type="button" data-sales-edit="' + id + '" data-tooltip="Modificar" aria-label="Modificar" title="Modificar"><span class="material-symbols-rounded">edit</span></button>'
       );
     }
 
     if (sePuedeAnular) {
       secundarios.push(
-        '<button class="button button--secondary button--compact sales29-cancel-button" type="button" data-sales-cancel-observed="' + id + '"><span class="material-symbols-rounded">cancel</span>Anular</button>'
+        '<button class="table-button has-tooltip sales29-cancel-button" type="button" data-sales-cancel-observed="' + id + '" data-tooltip="Anular" aria-label="Anular" title="Anular"><span class="material-symbols-rounded">cancel</span></button>'
       );
     }
 
     if (item.puedeArchivarPrueba) {
       secundarios.push(
-        '<button class="button button--secondary button--compact" type="button" data-sales-archive-test="' + id + '"><span class="material-symbols-rounded">archive</span>Archivar prueba</button>'
+        '<button class="table-button has-tooltip" type="button" data-sales-archive-test="' + id + '" data-tooltip="Archivar prueba" aria-label="Archivar prueba" title="Archivar prueba"><span class="material-symbols-rounded">archive</span></button>'
       );
     }
 
     if (item.puedeReclasificarTipoRegistro) {
       secundarios.push(
-        '<button class="button button--ghost button--compact" type="button" data-sales-reclassify="' + id + '"><span class="material-symbols-rounded">swap_horiz</span>Clasificación</button>'
+        '<button class="table-button has-tooltip" type="button" data-sales-reclassify="' + id + '" data-tooltip="Clasificación" aria-label="Clasificación" title="Clasificación"><span class="material-symbols-rounded">swap_horiz</span></button>'
       );
     }
 
@@ -2390,14 +2390,15 @@ const SALES_STATE = {
 
       if (/^(https?:|data:)/i.test(direct)) {
         return '<div class="sales29-secure-file-actions">' +
-          '<button class="button button--secondary' + cls + '" type="button" ' +
+          '<button class="table-button has-tooltip' + cls + '" type="button" ' +
             'data-sales-file-preview="' + escapeHtml(direct) + '" ' +
             'data-sales-file-name="' + escapeHtml(nombre || "archivo") + '" ' +
-            'data-sales-file-mime="' + escapeHtml(mimeTypeOfSalesUrl29U(direct)) + '">' +
-            '<span class="material-symbols-rounded">visibility</span>Ver' +
+            'data-sales-file-mime="' + escapeHtml(mimeTypeOfSalesUrl29U(direct)) + '" ' +
+            'data-tooltip="Ver" aria-label="Ver" title="Ver">' +
+            '<span class="material-symbols-rounded">visibility</span>' +
           "</button>" +
-          '<a class="button button--ghost' + cls + '" href="' + escapeHtml(direct) + '" download="' + escapeHtml(salesDownloadName29U(nombre, direct)) + '">' +
-            '<span class="material-symbols-rounded">download</span>Descargar' +
+          '<a class="table-button has-tooltip' + cls + '" href="' + escapeHtml(direct) + '" download="' + escapeHtml(salesDownloadName29U(nombre, direct)) + '" data-tooltip="Descargar" aria-label="Descargar" title="Descargar">' +
+            '<span class="material-symbols-rounded">download</span>' +
           "</a>" +
         "</div>";
       }
@@ -2406,17 +2407,19 @@ const SALES_STATE = {
     }
 
     return '<div class="sales29-secure-file-actions">' +
-      '<button class="button button--secondary' + cls + '" type="button" ' +
+      '<button class="table-button has-tooltip' + cls + '" type="button" ' +
         'data-sales-file-open="' + escapeHtml(fileId) + '" ' +
         'data-sales-file-sale="' + escapeHtml(idVenta || "") + '" ' +
-        'data-sales-file-name="' + escapeHtml(nombre || "archivo") + '">' +
-        '<span class="material-symbols-rounded">visibility</span>Ver' +
+        'data-sales-file-name="' + escapeHtml(nombre || "archivo") + '" ' +
+        'data-tooltip="Ver" aria-label="Ver" title="Ver">' +
+        '<span class="material-symbols-rounded">visibility</span>' +
       '</button>' +
-      '<button class="button button--ghost' + cls + '" type="button" ' +
+      '<button class="table-button has-tooltip' + cls + '" type="button" ' +
         'data-sales-file-download="' + escapeHtml(fileId) + '" ' +
         'data-sales-file-sale="' + escapeHtml(idVenta || "") + '" ' +
-        'data-sales-file-name="' + escapeHtml(nombre || "archivo") + '">' +
-        '<span class="material-symbols-rounded">download</span>Descargar' +
+        'data-sales-file-name="' + escapeHtml(nombre || "archivo") + '" ' +
+        'data-tooltip="Descargar" aria-label="Descargar" title="Descargar">' +
+        '<span class="material-symbols-rounded">download</span>' +
       '</button>' +
     '</div>';
   }
@@ -4151,12 +4154,11 @@ const SALES_STATE = {
               ''
           ) +
 
-          '<button class="button button--primary button--compact" ' +
+          '<button class="table-button has-tooltip" ' +
             'type="button" data-add-offer="' +
             escapeHtml(x.idDetallePrecio) +
-          '">' +
+          '" data-tooltip="Agregar" aria-label="Agregar" title="Agregar">' +
             '<span class="material-symbols-rounded">add_shopping_cart</span>' +
-            'Agregar' +
           '</button>' +
         '</article>'
       );
@@ -4239,11 +4241,11 @@ const SALES_STATE = {
 
               '<div class="sales29-cart-line-controls">' +
                 '<div class="sales29-qty">' +
-                  '<button type="button" aria-label="Disminuir cantidad" ' +
-                    'data-cart-minus="'+i+'">−</button>' +
+                  '<button type="button" class="has-tooltip" aria-label="Disminuir cantidad" data-tooltip="Disminuir cantidad" title="Disminuir cantidad" ' +
+                    'data-cart-minus="'+i+'"><span class="material-symbols-rounded">remove</span></button>' +
                   '<span>'+Number(x.cantidad||1)+'</span>' +
-                  '<button type="button" aria-label="Aumentar cantidad" ' +
-                    'data-cart-plus="'+i+'">+</button>' +
+                  '<button type="button" class="has-tooltip" aria-label="Aumentar cantidad" data-tooltip="Aumentar cantidad" title="Aumentar cantidad" ' +
+                    'data-cart-plus="'+i+'"><span class="material-symbols-rounded">add</span></button>' +
                 '</div>' +
 
                 '<div class="sales29-line-price">' +
@@ -4253,8 +4255,8 @@ const SALES_STATE = {
                       x.moneda||"PEN"
                     ) +
                   '</span>' +
-                  '<button type="button" class="sales29-remove" ' +
-                    'aria-label="Eliminar producto" ' +
+                  '<button type="button" class="sales29-remove has-tooltip" ' +
+                    'aria-label="Eliminar producto" data-tooltip="Eliminar producto" title="Eliminar producto" ' +
                     'data-cart-remove="'+i+'">' +
                     '<span class="material-symbols-rounded">delete</span>' +
                   '</button>' +
@@ -4921,10 +4923,10 @@ const SALES_STATE = {
 
                   const cancelButton =
                     x.puedeAnularMaterial
-                      ? '<button class="button button--secondary button--compact sales29-cancel-item-btn" type="button" data-sales-cancel-item="' +
+                      ? '<button class="table-button has-tooltip sales29-cancel-item-btn" type="button" data-sales-cancel-item="' +
                           escapeHtml(x.idDetalleVenta || '') +
-                          '">' +
-                          '<span class="material-symbols-rounded">remove_shopping_cart</span>Anular material' +
+                          '" data-tooltip="Anular material" aria-label="Anular material" title="Anular material">' +
+                          '<span class="material-symbols-rounded">remove_shopping_cart</span>' +
                         '</button>'
                       : '';
 
