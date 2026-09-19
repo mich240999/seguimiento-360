@@ -42,35 +42,44 @@
 
 <section id="authView" class="auth-view auth-split" aria-labelledby="authTitle">
   <svg class="auth-mosaic" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-    <g>
-      <polygon points="80,60 200,60 140,160" fill="#00a1de" opacity="0.18"/>
-      <polygon points="220,40 300,40 260,120" fill="#129a6c" opacity="0.20"/>
-      <polygon points="1050,80 1190,80 1120,200" fill="#0a7aa5" opacity="0.18"/>
-      <polygon points="1220,180 1330,180 1275,280" fill="#2ecc71" opacity="0.20"/>
-      <polygon points="60,700 180,700 120,810" fill="#0a7aa5" opacity="0.18"/>
-      <polygon points="200,740 290,740 245,830" fill="#00a1de" opacity="0.20"/>
-      <polygon points="1150,680 1290,680 1220,810" fill="#129a6c" opacity="0.20"/>
-      <polygon points="1300,600 1380,600 1340,680" fill="#00a1de" opacity="0.18"/>
-      <polygon points="600,120 680,120 640,200" fill="#0a7aa5" opacity="0.16"/>
-      <polygon points="700,700 790,700 745,790" fill="#129a6c" opacity="0.16"/>
-      <polygon points="880,120 940,180 820,180" fill="#00a1de" opacity="0.14"/>
-      <polygon points="420,640 500,640 460,720" fill="#2ecc71" opacity="0.16"/>
-      <polygon points="960,420 1030,470 890,470" fill="#0a7aa5" opacity="0.14"/>
-      <polygon points="180,420 250,470 110,470" fill="#129a6c" opacity="0.14"/>
-    </g>
-    <g fill="#00a1de" opacity="0.16">
-      <circle cx="1200" cy="120" r="130"/>
-      <circle cx="150" cy="750" r="150"/>
-    </g>
-    <g fill="#2ecc71" opacity="0.16">
-      <circle cx="1330" cy="760" r="140"/>
-      <circle cx="90" cy="120" r="110"/>
+    <defs>
+      <linearGradient id="facetNavy" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#155a86"/><stop offset="100%" stop-color="#07354d"/>
+      </linearGradient>
+      <linearGradient id="facetSteel" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#3b9fc4"/><stop offset="100%" stop-color="#0e6e97"/>
+      </linearGradient>
+      <linearGradient id="facetCyan" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#5cc6e8"/><stop offset="100%" stop-color="#00a1de"/>
+      </linearGradient>
+      <linearGradient id="facetTeal" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#4cc3a1"/><stop offset="100%" stop-color="#129a6c"/>
+      </linearGradient>
+      <linearGradient id="facetGreen" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#7de3a8"/><stop offset="100%" stop-color="#2ecc71"/>
+      </linearGradient>
+      <linearGradient id="facetPale" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#ffffff"/><stop offset="100%" stop-color="#cfe7ef"/>
+      </linearGradient>
+      <linearGradient id="facetSlate" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#5b7d90"/><stop offset="100%" stop-color="#274b5c"/>
+      </linearGradient>
+      <pattern id="tileMosaic" width="240" height="208" patternUnits="userSpaceOnUse">
+        <polygon points="0,0 120,0 60,104" fill="url(#facetNavy)"/>
+        <polygon points="120,0 240,0 180,104" fill="url(#facetPale)"/>
+        <polygon points="60,104 180,104 120,208" fill="url(#facetSteel)"/>
+        <polygon points="180,104 300,104 240,208" fill="url(#facetSlate)"/>
+        <polygon points="0,104 60,208 0,208" fill="url(#facetTeal)"/>
+        <polygon points="240,104 240,208 180,104" fill="url(#facetGreen)"/>
+        <polygon points="60,104 120,0 120,104" fill="url(#facetCyan)" opacity="0.85"/>
+        <polygon points="180,104 240,0 240,104" fill="url(#facetNavy)" opacity="0.85"/>
+      </pattern>
+    </defs>
+    <rect x="0" y="0" width="1440" height="900" fill="url(#tileMosaic)"/>
+    <g stroke="#06283d" stroke-opacity="0.35" stroke-width="2">
+      <line x1="0" y1="0" x2="0" y2="900"/>
     </g>
   </svg>
-  <div class="auth-topbrand" aria-hidden="true">
-    <img src="img/calidda-logo.png" alt="">
-    <span>Calidda Hogar</span>
-  </div>
   <aside class="auth-brand-panel" aria-hidden="true" hidden>
     <div class="auth-brand-bg"></div>
     <p class="auth-brand-foot">© Cálidda · Plataforma de Seguimiento Comercial</p>
