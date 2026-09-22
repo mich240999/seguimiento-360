@@ -651,8 +651,13 @@ const APP_STORAGE = Object.freeze({
    * Devuelve el permiso efectivo del contexto visible, real o simulado.
    */
   function activePermission(moduleCode, resourceCode) {
-    const permissions = APP_STATE.context && APP_STATE.context.seguridad &&
-      APP_STATE.context.seguridad.permisos;
+    const ctx = APP_STATE.context;
+    // SUPERADMIN tiene acceso global a todo (cualquier módulo/recurso), sin
+    // depender de filas en seg_permisos. Se lee el rol del contexto ACTUAL:
+    // bajo "visualizar como" el rol es el simulado y no aplica el bypass.
+    const contextRole = String(ctx && ctx.usuario ? ctx.usuario.rol || "" : "").toUpperCase();
+    if (contextRole === "SUPERADMIN") return { permitido: true, alcance: "GLOBAL" };
+    const permissions = ctx && ctx.seguridad && ctx.seguridad.permisos;
     const modulePermissions = permissions &&
       permissions[String(moduleCode || "").toUpperCase()];
     return modulePermissions &&

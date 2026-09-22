@@ -412,10 +412,11 @@
         const v = s.ventas.find(x => x.idVenta === idVenta);
         if (v) {
           var demoUsr29A_ = (s.usuarios && s.usuarios[0]) || {};
+          var demoRol29A_ = String(demoUsr29A_.rol || demoUsr29A_.rolUsuario || "").toUpperCase();
           var demoProvU29A_ = String(demoUsr29A_.idProveedor || demoUsr29A_.id_proveedor || "").trim();
           var demoProvsV29A_ = [];
           [v.idProveedor, v.gestionEntrega && v.gestionEntrega.idProveedor].concat(((v.detalles || []).map(function(d) { return d && (d.idProveedorPrecio || d.id_proveedor); }) || [])).forEach(function(p) { var s0 = String(p || "").trim(); if (s0 && demoProvsV29A_.indexOf(s0) === -1) demoProvsV29A_.push(s0); });
-          if (demoProvU29A_ && demoProvsV29A_.length && demoProvsV29A_.indexOf(demoProvU29A_) === -1) return { correcto: false, mensaje: "Solo una cuenta del proveedor de esta venta puede validar el abono." };
+          if (demoRol29A_ !== "SUPERADMIN" && demoProvU29A_ && demoProvsV29A_.length && demoProvsV29A_.indexOf(demoProvU29A_) === -1) return { correcto: false, mensaje: "Solo una cuenta del proveedor de esta venta puede validar el abono." };
           v.estadoAbono = "ABONO_CONFIRMADO";
           v.abonoAprobadoId = (s.usuarios[0] && s.usuarios[0].idUsuario) || "";
           v.abonoAprobadoNombre = (s.usuarios[0] && s.usuarios[0].nombre) || "";
@@ -433,10 +434,11 @@
           return { correcto: false, mensaje: "Confirma el abono de la venta antes de gestionar su entrega." };
         }
         var demoUsr29G_ = (s.usuarios && s.usuarios[0]) || {};
+        var demoRol29G_ = String(demoUsr29G_.rol || demoUsr29G_.rolUsuario || "").toUpperCase();
         var demoProvU29G_ = String(demoUsr29G_.idProveedor || demoUsr29G_.id_proveedor || "").trim();
         var demoProvsV29G_ = [];
         [v.idProveedor, v.gestionEntrega && v.gestionEntrega.idProveedor].concat(((v.detalles || []).map(function(d) { return d && (d.idProveedorPrecio || d.id_proveedor); }) || [])).forEach(function(p) { var s1 = String(p || "").trim(); if (s1 && demoProvsV29G_.indexOf(s1) === -1) demoProvsV29G_.push(s1); });
-        if (demoProvU29G_ && demoProvsV29G_.length && demoProvsV29G_.indexOf(demoProvU29G_) === -1) return { correcto: false, mensaje: "Solo una cuenta del proveedor de esta venta puede gestionar la entrega." };
+        if (demoRol29G_ !== "SUPERADMIN" && demoProvU29G_ && demoProvsV29G_.length && demoProvsV29G_.indexOf(demoProvU29G_) === -1) return { correcto: false, mensaje: "Solo una cuenta del proveedor de esta venta puede gestionar la entrega." };
         {
           v.estadoEntrega = entregaPayload.estadoEntrega || v.estadoEntrega;
           if (String(entregaPayload.estadoEntrega || "").toUpperCase() === "ENTREGADA") v.estadoGeneral = "ENTREGADA";
