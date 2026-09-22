@@ -209,6 +209,15 @@ const PROVIDERS_STATE = {
         }
       },
       {
+        label: "Lista",
+        render: function(row) {
+          var canalLista29P_ = String(row.idCanalOrigen || "").trim().toUpperCase();
+          var etiquetaLista29P_ = (canalLista29P_ === "CANAL-ALO" || canalLista29P_ === "ALO") ? "Aló" : ((canalLista29P_ === "CANAL-IA" || canalLista29P_ === "IA") ? "IA" : "");
+          if (!etiquetaLista29P_) return '<span class="providers-field-hint">—</span>';
+          return '<span class="providers-chip is-soft"><span class="material-symbols-rounded">sell</span>' + escapeHtml(etiquetaLista29P_) + "</span>";
+        }
+      },
+      {
         label: "Grupos derivados",
         render: function(row) {
           return escapeHtml(row.cantidadGrupos || 0);
@@ -553,6 +562,8 @@ const PROVIDERS_STATE = {
       '<div class="providers-office-loading"><span class="spinner" aria-hidden="true"></span>' +
       '<div><strong>Cargando canal y grupos…</strong><small>El formulario ya está disponible mientras se prepara el catálogo.</small></div></div>';
 
+    var canalRaw29P_ = String(data.idCanalOrigen || "").trim().toUpperCase();
+    var canalActual29P_ = (canalRaw29P_ === "CANAL-ALO" || canalRaw29P_ === "ALO") ? "ALO" : ((canalRaw29P_ === "CANAL-IA" || canalRaw29P_ === "IA") ? "IA" : "");
     const body = '<form id="providerModuleForm" class="form-grid" novalidate>' +
       '<label class="field"><span>Razón social</span><input name="razonSocial" maxlength="200" value="' +
         escapeHtml(data.razonSocial || data.nombre || "") +
@@ -569,6 +580,11 @@ const PROVIDERS_STATE = {
       '<label class="field field--full"><span>Descripción</span><textarea name="descripcion" maxlength="1000">' +
         escapeHtml(data.descripcion || "") +
         '</textarea></label>' +
+      '<label class="field"><span>Lista / Canal <small>(opcional)</small></span><select name="idCanalOrigen">' +
+        '<option value="">— Sin lista —</option>' +
+        '<option value="IA"' + (canalActual29P_ === "IA" ? " selected" : "") + '>IA — Instaladores Aliados</option>' +
+        '<option value="ALO"' + (canalActual29P_ === "ALO" ? " selected" : "") + '>Aló Cálidda</option>' +
+        '</select><small class="providers-field-hint">Diferencia de qué lista de precios proviene este proveedor.</small></label>' +
       '<div id="providerAssignmentSelectors" class="providers-assignment-selectors">' + assignments + '</div>' +
       '<label class="field"><span>Estado</span><select name="estado"><option value="ACTIVO" ' +
         (data.estado === "ACTIVO" ? "selected" : "") +
@@ -875,7 +891,8 @@ const PROVIDERS_STATE = {
       descripcion: form.elements.descripcion.value,
       idsOficina: ids,
       idsGrupo: idsGrupo,
-      estado: form.elements.estado.value
+      estado: form.elements.estado.value,
+      idCanalOrigen: form.elements.idCanalOrigen ? form.elements.idCanalOrigen.value : ""
     };
 
     const button = document.getElementById("providerModuleSaveButton");

@@ -271,6 +271,10 @@
         return { correcto: true, idProveedor: idProv, estado: estadoProv, mensaje: "Estado actualizado." };
       }
 
+      case "asegurarTaxonomiaMaterialesModulo": {
+        return { correcto: true, tiposCreados: [], subtiposCreados: [], advertencias: [], mensaje: "Demo: catálogo sin cambios." };
+      }
+
       case "guardarProveedorModulo":
       case "guardarProveedorAdminMotor": {
         const pData = args[0] || {};
@@ -924,6 +928,61 @@
         }));
         return { nombre: "ventas_360.csv", nombreArchivo: "ventas_360.csv", contenido: "﻿" + linesExp.join("\r\n"), mimeType: "text/csv;charset=utf-8", cantidad: (localCache.ventas || []).length };
       }
+      case "asegurarTaxonomiaMaterialesModulo": {
+        var comboTxSb_ = args[0] || {};
+        var itemsTxSb_ = Array.isArray(comboTxSb_.items) ? comboTxSb_.items : [];
+        var usrTxSb_ = ((localCache && localCache.usuarios && localCache.usuarios[0]) || {});
+        var foldTxSb_ = function(s) { try { return String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim(); } catch (_) { return String(s || "").toLowerCase().trim(); } };
+        var slugTxSb_ = function(s, fb) { try { var b = String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/[^A-Z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 40); return b || fb; } catch (_) { return fb; } };
+        var seenTxSb_ = {}, distintosTxSb_ = [];
+        itemsTxSb_.forEach(function(r) {
+          r = r || {};
+          var tTxSb_ = String(r.tipo || "").trim(), sTxSb_ = String(r.subtipo || "").trim(), pTxSb_ = String(r.producto || r.productoPrincipal || "").trim();
+          if (!tTxSb_ && !sTxSb_) return;
+          var kTxSb_ = (pTxSb_ + "|" + tTxSb_ + "|" + sTxSb_).toUpperCase();
+          if (!seenTxSb_[kTxSb_]) { seenTxSb_[kTxSb_] = true; distintosTxSb_.push({ producto: pTxSb_, tipo: tTxSb_, subtipo: sTxSb_ }); }
+        });
+        if (!distintosTxSb_.length) return { correcto: true, tiposCreados: [], subtiposCreados: [], advertencias: [] };
+        var tiposQTxSb_ = await client.from("mae_tipos_material").select("id_tipo_material,codigo_tipo,nombre");
+        if (tiposQTxSb_.error) throw tiposQTxSb_.error;
+        var subtiposQTxSb_ = await client.from("mae_subtipos_material").select("id_subtipo_material,id_tipo_material,id_producto,codigo_subtipo,nombre");
+        if (subtiposQTxSb_.error) throw subtiposQTxSb_.error;
+        var prodsQTxSb_ = await client.from("mae_productos_principales").select("id_producto,nombre");
+        if (prodsQTxSb_.error) throw prodsQTxSb_.error;
+        var tiposTxSb_ = tiposQTxSb_.data || [], subtiposTxSb_ = subtiposQTxSb_.data || [], prodsTxSb_ = prodsQTxSb_.data || [];
+        var creadosTTxSb_ = [], creadosSTxSb_ = [], avisosTxSb_ = [], seqTxSb_ = 0;
+        for (var ciTxSb_ = 0; ciTxSb_ < distintosTxSb_.length; ciTxSb_++) {
+          var comboTxSb2_ = distintosTxSb_[ciTxSb_];
+          var tipoRowTxSb_ = null;
+          if (comboTxSb2_.tipo) {
+            tipoRowTxSb_ = tiposTxSb_.filter(function(t) { return foldTxSb_(t.nombre) === foldTxSb_(comboTxSb2_.tipo); })[0] || null;
+            if (!tipoRowTxSb_) {
+              var slugTTxSb_ = slugTxSb_(comboTxSb2_.tipo, "TIP-AUTO"), nTTxSb_ = 0;
+              while (tiposTxSb_.some(function(t) { return String(t.codigo_tipo || "").toUpperCase() === slugTTxSb_ + (nTTxSb_ ? "-" + nTTxSb_ : ""); })) nTTxSb_++;
+              if (nTTxSb_) slugTTxSb_ += "-" + nTTxSb_;
+              var nuevoTTxSb_ = { id_tipo_material: "TIP-AUTO-" + Date.now() + "-" + (seqTxSb_++), codigo_tipo: slugTTxSb_, nombre: comboTxSb2_.tipo, descripcion: null, estado: "ACTIVO", id_usuario_actualizacion: usrTxSb_.idUsuario || null };
+              var insTTxSb_ = await client.from("mae_tipos_material").insert(nuevoTTxSb_);
+              if (insTTxSb_.error) { avisosTxSb_.push("No se pudo crear el tipo " + comboTxSb2_.tipo + ": " + insTTxSb_.error.message); continue; }
+              tiposTxSb_.push(nuevoTTxSb_);
+              tipoRowTxSb_ = nuevoTTxSb_;
+              creadosTTxSb_.push(comboTxSb2_.tipo);
+            }
+          }
+          var prodRowTxSb_ = comboTxSb2_.producto ? (prodsTxSb_.filter(function(p) { return foldTxSb_(p.nombre) === foldTxSb_(comboTxSb2_.producto); })[0] || null) : null;
+          if (comboTxSb2_.subtipo) {
+            if (!tipoRowTxSb_) { avisosTxSb_.push("Subtipo sin tipo (" + comboTxSb2_.subtipo + "): indica el tipo para crearlo."); continue; }
+            var exSTxSb_ = subtiposTxSb_.filter(function(s) { return String(s.id_tipo_material || "") === String(tipoRowTxSb_.id_tipo_material || "") && foldTxSb_(s.nombre) === foldTxSb_(comboTxSb2_.subtipo); })[0] || null;
+            if (!exSTxSb_) {
+              var nuevoSTxSb_ = { id_subtipo_material: "SUB-AUTO-" + Date.now() + "-" + (seqTxSb_++), id_tipo_material: tipoRowTxSb_.id_tipo_material, id_producto: prodRowTxSb_ ? prodRowTxSb_.id_producto : null, codigo_subtipo: slugTxSb_(comboTxSb2_.subtipo, "SUB-AUTO"), nombre: comboTxSb2_.subtipo, descripcion: null, estado: "ACTIVO", id_usuario_actualizacion: usrTxSb_.idUsuario || null };
+              var insSTxSb_ = await client.from("mae_subtipos_material").insert(nuevoSTxSb_);
+              if (insSTxSb_.error) { avisosTxSb_.push("No se pudo crear el subtipo " + comboTxSb2_.subtipo + ": " + insSTxSb_.error.message); continue; }
+              subtiposTxSb_.push(nuevoSTxSb_);
+              creadosSTxSb_.push(comboTxSb2_.subtipo);
+            }
+          }
+        }
+        return { correcto: true, tiposCreados: creadosTTxSb_, subtiposCreados: creadosSTxSb_, advertencias: avisosTxSb_ };
+      }
       case "actualizarFeeMaterialPrecioModulo": {
         var feeSb_ = args[0] || {};
         var idDetSbFee_ = String(feeSb_.idDetallePrecio || "").trim();
@@ -1149,7 +1208,7 @@
   }
 
   function mapProveedor(r) {
-    return { idProveedor: r.id_proveedor, razonSocial: r.razon_social, nombreComercial: r.nombre_comercial, codigoSap: r.codigo_sap, ruc: r.ruc, alcanceCatalogo: r.alcance_catalogo, estado: r.estado };
+    return { idProveedor: r.id_proveedor, razonSocial: r.razon_social, nombreComercial: r.nombre_comercial, codigoSap: r.codigo_sap, ruc: r.ruc, alcanceCatalogo: r.alcance_catalogo, idCanalOrigen: r.id_canal_origen || "", estado: r.estado };
   }
 
   function mapMaterial(r) {

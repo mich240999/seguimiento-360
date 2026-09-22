@@ -3817,6 +3817,23 @@ const MP_STATE = {
     });
   }
 
+  function mpAsegurarTaxonomiaBulk_(filas) {
+    var vistos = {}, items = [];
+    (filas || []).forEach(function(r) {
+      r = r || {};
+      var p = String(r.productoPrincipal || r.producto || "").trim();
+      var t = String(r.tipo || "").trim();
+      var s = String(r.subtipo || "").trim();
+      if (!t && !s) return;
+      var k = (p + "|" + t + "|" + s).toUpperCase();
+      if (!vistos[k]) { vistos[k] = true; items.push({ producto: p, tipo: t, subtipo: s }); }
+    });
+    if (!items.length) return Promise.resolve(null);
+    return secureRpc("asegurarTaxonomiaMaterialesModulo", [{ items: items }], "MATERIALES_PRECIOS").catch(function(error) {
+      try { console.warn("[SGT360] Taxonomía auto:", error); } catch (_) {}
+      return null;
+    });
+  }
   function submitBulkMaterialForm(form) {
     const input = document.getElementById("mpBulkMaterialFile");
     const file = input && input.files ? input.files[0] : null;
@@ -3857,7 +3874,15 @@ const MP_STATE = {
         parsed = null;
       }
       if (parsed && parsed.filas && parsed.filas.length) {
-        prevalidarMaterialesGsdLocal_(form, data, parsed, resultBox);
+        resultBox.innerHTML = '<div class="mp-inline-loader"><span class="material-symbols-rounded">hourglass_empty</span>Actualizando catálogo (tipos y subtipos)...</div>';
+        mpAsegurarTaxonomiaBulk_(parsed.filas).then(function(asegurado) {
+          if (asegurado && (((asegurado.tiposCreados || []).length) || ((asegurado.subtiposCreados || []).length))) {
+            toast("Catálogo actualizado", "Tipos nuevos: " + (asegurado.tiposCreados || []).length + " · Subtipos nuevos: " + (asegurado.subtiposCreados || []).length + ".");
+          }
+          return loadMaterialsPricesOptions({ force: true, silent: true }).catch(function() {});
+        }).then(function() {
+          prevalidarMaterialesGsdLocal_(form, data, parsed, resultBox);
+        });
         return;
       }
       if (parsed) {
