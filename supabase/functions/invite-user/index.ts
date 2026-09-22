@@ -75,7 +75,7 @@ Deno.serve(async (request) => {
   if (inviteError || !invited.user) return response({ error: inviteError?.message || "No fue posible enviar la invitación." }, 400);
 
   const id = "USR-" + crypto.randomUUID();
-  const { error: profileError } = await admin.from("seg_usuarios").insert({
+  const baseProfile: Record<string, unknown> = {
     id_usuario: id,
     correo: email,
     nombre: name,
@@ -88,7 +88,21 @@ Deno.serve(async (request) => {
     tipo_documento: input.tipoDocumento || null,
     numero_documento: input.numeroDocumento || null,
     id_usuario_actualizacion: caller.id_usuario
-  });
+  };
+  const idEmpresaNueva = String((input as any).idEmpresa || "").trim();
+  let profileError: { message?: string } | null = null;
+  if (idEmpresaNueva) {
+    const withEmpresa = await admin.from("seg_usuarios").insert({ ...baseProfile, id_empresa: idEmpresaNueva });
+    if (withEmpresa.error && String(withEmpresa.error.message || "").indexOf("id_empresa") !== -1) {
+      const fallback = await admin.from("seg_usuarios").insert(baseProfile);
+      profileError = fallback.error;
+    } else {
+      profileError = withEmpresa.error;
+    }
+  } else {
+    const plain = await admin.from("seg_usuarios").insert(baseProfile);
+    profileError = plain.error;
+  }
   if (profileError) {
     await admin.auth.admin.deleteUser(invited.user.id);
     return response({ error: profileError.message }, 400);

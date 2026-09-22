@@ -1199,6 +1199,7 @@
       idProveedor: r.id_proveedor,
       idOficina: r.id_oficina,
       idGrupo: r.id_grupo,
+      idEmpresa: r.id_empresa || "",
       estado: r.estado
     };
   }

@@ -637,6 +637,16 @@ const ADMIN_STATE = {
           return '<strong>' + escapeHtml(nombreVisible) + '</strong>';
         }
       },
+      {
+        key: "nombreEmpresa",
+        label: "Empresa",
+        render: function(row) {
+          if (!row.idEmpresa) return "—";
+          var found = ((ADMIN_STATE.empresas || []).filter(function(e) { return String(e.idEmpresa || e.nombre || "") === String(row.idEmpresa || ""); })[0]) || null;
+          var nombreVisible = (found && found.nombre) || row.nombreEmpresa || row.idEmpresa;
+          return '<strong>' + escapeHtml(nombreVisible) + '</strong>';
+        }
+      },
       { key: "nombreOficina", label: "Oficina" },
       { key: "estado", label: "Estado", render: statusChip },
       {
@@ -1606,6 +1616,11 @@ const ADMIN_STATE = {
         escapeHtml(type.nombre || type.codigo) + "</option>";
     }).join("");
     const providers = buildProviderOptions(user.idProveedor);
+    const empresasOpts29U_ = (ADMIN_STATE.empresas || []).map(function(e) {
+      var eid29U_ = e.idEmpresa || e.nombre || "";
+      var etiqueta29U_ = (e.nombre || eid29U_) + " (" + String(e.tipo || "").toUpperCase() + (e.nombreCanal ? " · " + e.nombreCanal : "") + ")";
+      return '<option value="' + escapeHtml(eid29U_) + '"' + (String(user.idEmpresa || "") === String(eid29U_) ? " selected" : "") + '>' + escapeHtml(etiqueta29U_) + "</option>";
+    }).join("");
 
     openSideSheet({
       eyebrow: user.idUsuario ? "EDITAR USUARIO" : "NUEVO USUARIO",
@@ -1630,6 +1645,8 @@ const ADMIN_STATE = {
         '<label id="userProviderField" class="field"><span>Proveedor principal</span>' +
           '<select id="userProviderSelect" name="idProveedor"><option value="">Sin proveedor</option>' +
             providers + '</select><small class="field-help">Es obligatorio para roles configurables. No otorga acceso por sí solo: los permisos y alcances determinan la visibilidad.</small></label>' +
+        '<label id="userEmpresaField" class="field"><span>Empresa vendedora <small>(ALO / IA)</small></span>' +
+          '<select id="userEmpresaSelect" name="idEmpresa"><option value="">Sin empresa</option>' + empresasOpts29U_ + '</select><small class="field-help">ALO: IBR, ABAI, ESTRATEK. IA: instaladores aliados. Se crean en Estructura → Canales y empresas.</small></label>' +
         '<label id="userOfficeField" class="field"><span>Oficina</span>' +
           '<select id="userOfficeSelect" name="idOficina"><option value="">Selecciona una oficina</option></select></label>' +
         '<label id="userGroupField" class="field"><span>Grupo</span>' +
@@ -3364,6 +3381,16 @@ const ADMIN_STATE = {
       const groupSel = document.getElementById("userGroupSelect");
       refreshUserAssignmentOptions(officeSel ? officeSel.value : "", groupSel ? groupSel.value : "");
       updateUserAssignmentRequirements();
+    });
+    const empresa = document.getElementById("userEmpresaSelect");
+    if (empresa) empresa.addEventListener("change", function() {
+      var found = ((ADMIN_STATE.empresas || []).filter(function(e) { return String(e.idEmpresa || e.nombre || "") === String(empresa.value || ""); })[0]) || null;
+      var provId = found && String(found.idProveedor || "");
+      var provSel = document.getElementById("userProviderSelect");
+      if (provId && provSel) {
+        var existe = Array.prototype.some.call(provSel.options, function(o) { return String(o.value || "") === provId; });
+        if (existe) { provSel.value = provId; provSel.dispatchEvent(new Event("change")); }
+      }
     });
     if (office) office.addEventListener("change", function() {
       const groupSel = document.getElementById("userGroupSelect");
