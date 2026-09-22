@@ -240,6 +240,9 @@ function disp360NormalizeRow(row) {
     oficina: row.nombreOficina || row.idOficina || "",
     idUsuario: row.idUsuario || "",
     nombreUsuario: row.nombreUsuario || "",
+    abonoAprobadoPor: row.abonoAprobadoPor || gestion.abonoAprobadoPor || "",
+    programadoPor: row.programadoPor || gestion.programadoPor || "",
+    entregadoPor: row.entregadoPor || gestion.entregadoPor || "",
     monto: Number(row.montoTotalVenta || row.totalVenta || 0) || 0,
     estadoAbono: String(row.estadoAbono || ""),
     estadoEntrega: String(gestion.estadoEntrega || row.estadoEntrega || row.estado || ""),
@@ -512,6 +515,9 @@ function disp360ShowDetail(idVenta) {
       "<tr><th>Dirección</th><td>" + escapeHtml([row.direccion, row.distrito].filter(Boolean).join(" · ") || "—") + "</td></tr>" +
       "<tr><th>Oficina</th><td>" + escapeHtml(row.oficina || "—") + "</td></tr>" +
       "<tr><th>Vendedor</th><td>" + escapeHtml(row.nombreUsuario || "—") + "</td></tr>" +
+      "<tr><th>Aprobado por</th><td>" + escapeHtml(row.abonoAprobadoPor || "—") + "</td></tr>" +
+      "<tr><th>Programado por</th><td>" + escapeHtml(row.programadoPor || "—") + "</td></tr>" +
+      "<tr><th>Entregado por</th><td>" + escapeHtml(row.entregadoPor || "—") + "</td></tr>" +
       "<tr><th>Fecha programada</th><td>" + escapeHtml(row.fechaProgramada || "—") + "</td></tr>" +
       "<tr><th>Estado de entrega</th><td>" + disp360StatusChip(row.estadoEntrega) + "</td></tr>" +
       "<tr><th>Receptor</th><td>" + escapeHtml(row.receptor || "—") + "</td></tr>" +

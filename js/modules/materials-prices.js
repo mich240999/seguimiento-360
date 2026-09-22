@@ -997,7 +997,7 @@ const MP_STATE = {
     /* AGENTE B: Modificar existe (openIndividualPriceModal); Eliminar usa el
        nuevo RPC eliminarDetalleListaPrecioModulo con confirmacion. */
     var canDeletePrice = mpPermission("EDITAR_LISTA_OFICIAL") || mpPermission("GESTIONAR_PRECIOS");
-    content.innerHTML = '<div class="mp-table-wrap"><table class="mp-table mp-price-table"><thead><tr><th>Proveedor</th><th>Responsable venta</th><th>Negocio</th><th>Alcance</th><th>Código SAP Material</th><th>Nombre corto del material</th><th>Combo</th><th>Precio</th>' + (hideFeeForProvider ? '' : '<th>Fee %</th>') + '<th>Fecha</th><th>Acciones</th></tr></thead><tbody>' + rows.map(function(row) {
+    content.innerHTML = '<div class="mp-table-wrap"><table class="mp-table mp-price-table"><thead><tr><th>Proveedor</th><th>Negocio</th><th>Alcance</th><th>Código SAP Material</th><th>Nombre corto del material</th><th>Combo</th><th>Precio</th>' + (hideFeeForProvider ? '' : '<th>Fee %</th>') + '<th>Fecha</th><th>Acciones</th></tr></thead><tbody>' + rows.map(function(row) {
       const combo = getMpComboDetail(row);
       const rawPrice = resolveMpPriceValue(row);
       const priceText = formatMpMoney(rawPrice, row.moneda || row.MONEDA);
@@ -1005,7 +1005,7 @@ const MP_STATE = {
       const dateStart = row.fechaInicio || row.FECHA_INICIO || "";
       const dateEnd = row.fechaFin || row.FECHA_FIN || "";
       const dateCell = '<div class="mp-vigencia-cell"><div><strong>I:</strong> ' + escapeHtml(dateStart || "—") + '</div><div><strong>F:</strong> ' + escapeHtml(dateEnd || "—") + '</div></div>';
-      return '<tr><td>' + escapeHtml(row.proveedor || "Proveedor no definido") + '</td><td>' + escapeHtml(row.responsableVenta || row.RESPONSABLE_VENTA || "—") + '</td><td>' + escapeHtml(row.negocio || "—") + '</td><td>' + escapeHtml(mpScopeLabel(row)) + '</td><td><strong>' + escapeHtml(row.codigoSap || row.CODIGO_SAP || "—") + '</strong><br><small>' + escapeHtml(row.codigoMaterial || row.CODIGO_MATERIAL || "") + '</small></td><td class="mp-material-name">' + escapeHtml(row.nombreCortoMaterial || row.descripcionMaterial || row.NOMBRE_MATERIAL || "—") + '</td><td>' + (combo ? '<small>' + escapeHtml(combo) + '</small>' : '<span class="sales-muted">—</span>') + '</td><td class="mp-money-cell"><strong>' + escapeHtml(priceText) + '</strong></td>' + (hideFeeForProvider ? '' : '<td>' + escapeHtml(feeText) + '</td>') + '<td>' + dateCell + '</td><td><div class="mp-actions"><button class="table-button has-tooltip" type="button" data-mp-edit-price="' + escapeHtml(row.idDetallePrecio || row.idPrecio || row.ID_DETALLE_PRECIO || "") + '" data-tooltip="Modificar" aria-label="Modificar" title="Modificar"><span class="material-symbols-rounded">edit</span></button>' + (canDeletePrice ? '<button class="table-button has-tooltip" type="button" data-mp-delete-price="' + escapeHtml(row.idDetallePrecio || row.idPrecio || row.ID_DETALLE_PRECIO || "") + '" data-tooltip="Eliminar" aria-label="Eliminar" title="Eliminar"><span class="material-symbols-rounded">delete</span></button>' : '') + '</div></td></tr>';
+      return '<tr><td>' + escapeHtml(row.proveedor || "Proveedor no definido") + '</td><td>' + escapeHtml(row.negocio || "—") + '</td><td>' + escapeHtml(mpScopeLabel(row)) + '</td><td><strong>' + escapeHtml(row.codigoSap || row.CODIGO_SAP || "—") + '</strong><br><small>' + escapeHtml(row.codigoMaterial || row.CODIGO_MATERIAL || "") + '</small></td><td class="mp-material-name">' + escapeHtml(row.nombreCortoMaterial || row.descripcionMaterial || row.NOMBRE_MATERIAL || "—") + '</td><td>' + (combo ? '<small>' + escapeHtml(combo) + '</small>' : '<span class="sales-muted">—</span>') + '</td><td class="mp-money-cell"><strong>' + escapeHtml(priceText) + '</strong></td>' + (hideFeeForProvider ? '' : '<td>' + escapeHtml(feeText) + '</td>') + '<td>' + dateCell + '</td><td><div class="mp-actions"><button class="table-button has-tooltip" type="button" data-mp-edit-price="' + escapeHtml(row.idDetallePrecio || row.idPrecio || row.ID_DETALLE_PRECIO || "") + '" data-tooltip="Modificar" aria-label="Modificar" title="Modificar"><span class="material-symbols-rounded">edit</span></button>' + (canDeletePrice ? '<button class="table-button has-tooltip" type="button" data-mp-delete-price="' + escapeHtml(row.idDetallePrecio || row.idPrecio || row.ID_DETALLE_PRECIO || "") + '" data-tooltip="Eliminar" aria-label="Eliminar" title="Eliminar"><span class="material-symbols-rounded">delete</span></button>' : '') + '</div></td></tr>';
     }).join("") + '</tbody></table></div>' + mpPaginationHtml(result, "prices");
     bindMpPagination("prices", function() { loadOfficialPricesTable(false); });
     document.querySelectorAll("[data-mp-edit-price]").forEach(function(button) {
@@ -1018,7 +1018,7 @@ const MP_STATE = {
       button.addEventListener("click", function() {
         var idDetalle = String(button.getAttribute("data-mp-delete-price") || "");
         var found = (MP_STATE.officialPriceRows || []).filter(function(item) { return String(item.idDetallePrecio || item.idPrecio || "") === idDetalle; })[0] || {};
-        var label = [found.proveedor || "", found.nombreCortoMaterial || found.codigoMaterial || "", found.responsableVenta ? "Resp: " + found.responsableVenta : ""].filter(function(part) { return !!part; }).join(" · ") || idDetalle;
+        var label = [found.proveedor || "", found.nombreCortoMaterial || found.codigoMaterial || ""].filter(function(part) { return !!part; }).join(" · ") || idDetalle;
         if (!window.confirm("¿Eliminar el precio " + label + "? Esta acción no se puede deshacer.")) return;
         button.disabled = true;
         secureRpc("eliminarDetalleListaPrecioModulo", [idDetalle], "MATERIALES_PRECIOS")
@@ -1128,13 +1128,74 @@ const MP_STATE = {
      (b) Proveedor con materiales en la lista elegida,
      (c) Grilla con buscador cliente + fee editable + guardar por fila
          vía actualizarFeeMaterialPrecioModulo({idDetallePrecio, fee}). */
+  /* PESTAÑA FEES con canales dinámicos (2026-09-22): los canales se cargan con
+     listarCanalesAdminMotor (defensivo con fallback IA/ALO si falla) y las
+     listas se agrupan por lista.id_canal → canal. Sin literales IA/ALO. */
+  function mpFeesCanalesFallback_() {
+    return [
+      { idCanal: "CANAL-IA", codigo: "IA", nombre: "Instaladores Aliados" },
+      { idCanal: "CANAL-ALO", codigo: "ALO", nombre: "Aló Cálidda" }
+    ];
+  }
+  function mpFeesNormCanalId_(v) {
+    var t = String(v || "").trim().toUpperCase();
+    if (t === "IA") return "CANAL-IA";
+    if (t === "ALO") return "CANAL-ALO";
+    return t;
+  }
+  function mpFeesCargarCanales_() {
+    if (MP_STATE.feesCanales) return Promise.resolve(MP_STATE.feesCanales);
+    if (MP_STATE.feesCanalesPromise) return MP_STATE.feesCanalesPromise;
+    MP_STATE.feesCanalesPromise = secureRpc("listarCanalesAdminMotor", [], "MATERIALES_PRECIOS")
+      .then(function(res) {
+        var filas = Array.isArray(res) ? res : ((res && (res.registros || res.canales)) || []);
+        var lista = (filas || []).map(function(c) {
+          c = c || {};
+          var id = String(c.idCanal || c.id_canal || c.codigo || "").trim();
+          return { idCanal: id, codigo: String(c.codigo || c.idCanal || c.id_canal || "").trim(), nombre: String(c.nombre || c.codigo || id || "") };
+        }).filter(function(c) { return !!c.idCanal; });
+        if (!lista.length) lista = mpFeesCanalesFallback_();
+        MP_STATE.feesCanales = lista;
+        return lista;
+      })
+      .catch(function() {
+        MP_STATE.feesCanales = mpFeesCanalesFallback_();
+        return MP_STATE.feesCanales;
+      })
+      .finally(function() { MP_STATE.feesCanalesPromise = null; });
+    return MP_STATE.feesCanalesPromise;
+  }
+  function mpFeesCanalEtiqueta_(idCanalNorm) {
+    var norm = mpFeesNormCanalId_(idCanalNorm);
+    var lista = MP_STATE.feesCanales || mpFeesCanalesFallback_();
+    for (var i = 0; i < lista.length; i++) {
+      if (mpFeesNormCanalId_(lista[i].idCanal) === norm) {
+        var nombre = String(lista[i].nombre || "");
+        var codigo = String(lista[i].codigo || "");
+        return nombre + (codigo ? " — " + codigo : "");
+      }
+    }
+    return norm || "Sin canal";
+  }
   function mpFeesCanalOf_(row) {
     row = row || {};
-    var v = String(row.idCanal || row.canal || row.id_canal || row.CANAL || row.ID_CANAL || "").trim().toUpperCase();
-    if (v === "IA" || v === "ALO") return v;
+    var raw = row.idCanal || row.id_canal || row.canal || row.CANAL || row.ID_CANAL || "";
+    var norm = mpFeesNormCanalId_(raw);
+    if (norm) return norm;
+    // Sin id_canal (legacy): inferir por nombre contra los canales cargados.
     var nombre = String(row.nombre || row.nombreLista || row.codigoLista || row.lista || "");
-    if (/\[ALO\]|\bALO\b/i.test(nombre) && !/\bIA\b/i.test(nombre)) return "ALO";
-    if (/\[IA\]|\bIA\b/i.test(nombre)) return "IA";
+    if (!nombre) return "";
+    var lista = MP_STATE.feesCanales || mpFeesCanalesFallback_();
+    for (var j = 0; j < lista.length; j++) {
+      var codigo = String(lista[j].codigo || "").trim();
+      var canalNombre = String(lista[j].nombre || "").trim();
+      if (codigo) {
+        var rx = null;
+        try { rx = new RegExp("\\b" + codigo.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b", "i"); } catch (ignoreRx) { rx = null; }
+        if (rx && rx.test(nombre)) return mpFeesNormCanalId_(lista[j].idCanal);
+      }
+      if (canalNombre && nombre.toLowerCase().indexOf(canalNombre.toLowerCase()) !== -1) return mpFeesNormCanalId_(lista[j].idCanal);
+    }
     return "";
   }
   function mpFeesListaEtiqueta_(grupo) {
@@ -1145,14 +1206,16 @@ const MP_STATE = {
   function renderMpFeesTab(showToast, renderToken) {
     var region = getMpRegionIfCurrent(renderToken, "fees");
     if (!region) return;
-    MP_STATE.fees = MP_STATE.fees || { raw: [], grupos: [], order: [], idLista: "", idProveedor: "", filtro: "" };
+    MP_STATE.fees = MP_STATE.fees || { raw: [], grupos: [], order: [], idCanal: "", idLista: "", idProveedor: "", filtro: "" };
     MP_STATE.fees.filtro = "";
+    MP_STATE.fees.idCanal = "";
     region.innerHTML = '<section class="mp-panel"><div class="mp-section-head"><div class="mp-section-title"><h3>Fees</h3>' +
-      '<p>Selecciona la lista (por canal), luego el proveedor y actualiza el fee por material. El fee es el % que se lleva Cálidda.</p></div></div>' +
+      '<p>Selecciona el canal, luego la lista y el proveedor, y actualiza el fee por material. El fee es el % que se lleva Cálidda.</p></div></div>' +
       '<div class="mp-form-grid">' +
-      '<label>1. Lista<select id="mpFeesLista"><option value="">Cargando listas...</option></select></label>' +
-      '<label>2. Proveedor<select id="mpFeesProveedor" disabled><option value="">Selecciona primero una lista</option></select></label>' +
-      '<label class="search-field" style="align-self:end"><span class="material-symbols-rounded">search</span><input id="mpFeesSearch" type="search" placeholder="3. Buscar material en la grilla"></label>' +
+      '<label>1. Canal<select id="mpFeesCanal"><option value="">Cargando canales...</option></select></label>' +
+      '<label>2. Lista<select id="mpFeesLista"><option value="">Cargando listas...</option></select></label>' +
+      '<label>3. Proveedor<select id="mpFeesProveedor" disabled><option value="">Selecciona primero una lista</option></select></label>' +
+      '<label class="search-field" style="align-self:end"><span class="material-symbols-rounded">search</span><input id="mpFeesSearch" type="search" placeholder="4. Buscar material en la grilla"></label>' +
       '</div></section>' +
       '<div id="mpFeesGrid">' + loadingHtml(4) + '</div>';
     var search = document.getElementById("mpFeesSearch");
@@ -1162,9 +1225,10 @@ const MP_STATE = {
         mpFeesRenderGrid_();
       }, 250));
     }
-    secureRpc("listarListasOficialesPreciosModulo", [{}], "MATERIALES_PRECIOS")
-      .then(function(result) {
+    Promise.all([mpFeesCargarCanales_(), secureRpc("listarListasOficialesPreciosModulo", [{}], "MATERIALES_PRECIOS")])
+      .then(function(respuestas) {
         if (!isMpRenderCurrent(renderToken, "fees")) return;
+        var result = respuestas[1] || {};
         mpFeesCargarListas_((result && result.registros) || []);
         if (showToast) toast("Fees", "Listas cargadas.");
       })
@@ -1178,7 +1242,7 @@ const MP_STATE = {
       });
   }
   function mpFeesCargarListas_(rows) {
-    var fees = MP_STATE.fees || (MP_STATE.fees = { raw: [], grupos: [], order: [], idLista: "", idProveedor: "", filtro: "" });
+    var fees = MP_STATE.fees || (MP_STATE.fees = { raw: [], grupos: [], order: [], idCanal: "", idLista: "", idProveedor: "", filtro: "" });
     fees.raw = (rows || []).slice();
     var groups = {};
     var order = [];
@@ -1204,32 +1268,68 @@ const MP_STATE = {
     });
     fees.grupos = groups;
     fees.order = order;
+    mpFeesPintarCanales_();
+    mpFeesPintarListas_();
+    mpFeesRenderProveedores_();
+    mpFeesRenderGrid_();
+  }
+  function mpFeesPintarCanales_() {
+    var sel = document.getElementById("mpFeesCanal");
+    if (!sel) return;
+    var fees = MP_STATE.fees || {};
+    var lista = MP_STATE.feesCanales || mpFeesCanalesFallback_();
+    sel.innerHTML = '<option value="">Todos los canales</option>' + lista.map(function(c) {
+      var id = mpFeesNormCanalId_(c.idCanal);
+      return '<option value="' + escapeHtml(id) + '"' + (String(fees.idCanal || "") === id ? " selected" : "") + '>' + escapeHtml(mpFeesCanalEtiqueta_(id)) + '</option>';
+    }).join("");
+    sel.onchange = function() {
+      MP_STATE.fees.idCanal = String(sel.value || "");
+      MP_STATE.fees.idLista = "";
+      MP_STATE.fees.idProveedor = "";
+      MP_STATE.fees.filtro = "";
+      var s = document.getElementById("mpFeesSearch");
+      if (s) s.value = "";
+      mpFeesPintarListas_();
+      mpFeesRenderProveedores_();
+      mpFeesRenderGrid_();
+    };
+  }
+  function mpFeesPintarListas_() {
     var sel = document.getElementById("mpFeesLista");
     if (!sel) return;
-    if (!order.length) {
+    var fees = MP_STATE.fees || {};
+    var groups = fees.grupos || {};
+    var filtro = String(fees.idCanal || "");
+    if (!Object.keys(groups).length) {
       sel.innerHTML = '<option value="">Sin listas oficiales</option>';
       var box = document.getElementById("mpFeesGrid");
       if (box) box.innerHTML = mpEmpty("No hay listas oficiales para gestionar fees.");
       return;
     }
-    var enIa = [];
-    var enAlo = [];
-    var sinCanal = [];
-    order.forEach(function(key) {
+    var porCanal = {};
+    var ordenCanales = [];
+    (fees.order || []).forEach(function(key) {
       var g = groups[key];
-      if (g.canal === "IA") enIa.push(g);
-      else if (g.canal === "ALO") enAlo.push(g);
-      else sinCanal.push(g);
+      if (!g) return;
+      var canal = String(g.canal || "");
+      if (filtro && canal !== filtro) return;
+      if (!porCanal[canal]) { porCanal[canal] = []; ordenCanales.push(canal); }
+      porCanal[canal].push(g);
     });
     var opt = function(g) {
       return '<option value="' + escapeHtml(g.idListaPrecio) + '">' + escapeHtml(mpFeesListaEtiqueta_(g)) + '</option>';
     };
-    var html = '<option value="">Seleccionar lista</option>';
-    if (enIa.length) html += '<optgroup label="Canal IA — Instaladores Aliados">' + enIa.map(opt).join("") + '</optgroup>';
-    if (enAlo.length) html += '<optgroup label="Canal ALO — Aló Cálidda">' + enAlo.map(opt).join("") + '</optgroup>';
-    if (sinCanal.length) html += '<optgroup label="Sin canal">' + sinCanal.map(opt).join("") + '</optgroup>';
-    sel.innerHTML = html;
-    sel.addEventListener("change", function() {
+    if (!ordenCanales.length) {
+      sel.innerHTML = '<option value="">Sin listas para el canal seleccionado</option>';
+    } else {
+      var html = '<option value="">Seleccionar lista</option>';
+      ordenCanales.forEach(function(canal) {
+        var etiqueta = canal ? ("Canal " + mpFeesCanalEtiqueta_(canal)) : "Sin canal";
+        html += '<optgroup label="' + escapeHtml(etiqueta) + '">' + porCanal[canal].map(opt).join("") + '</optgroup>';
+      });
+      sel.innerHTML = html;
+    }
+    sel.onchange = function() {
       MP_STATE.fees.idLista = String(sel.value || "");
       MP_STATE.fees.idProveedor = "";
       MP_STATE.fees.filtro = "";
@@ -1237,9 +1337,7 @@ const MP_STATE = {
       if (s) s.value = "";
       mpFeesRenderProveedores_();
       mpFeesRenderGrid_();
-    });
-    mpFeesRenderProveedores_();
-    mpFeesRenderGrid_();
+    };
   }
   function mpFeesProveedoresDeLista_(idLista) {
     var fees = MP_STATE.fees || {};
@@ -3351,8 +3449,18 @@ const MP_STATE = {
       });
   }
 
-  // AGENTE 2: confirmación local GSD de precios. Por cada fila validada crea o
-  // actualiza el material y luego su precio (misma vigencia se actualiza).
+  // Confirmación local GSD de precios en LISTA ÚNICA POR CANAL (2026-09-22).
+  // Los precios bulk con canal (IA/ALO) se consolidan en la lista del canal
+  // ("Lista de precios IA" / "Lista de precios Aló Cálidda", por id_canal,
+  // tolerante a canal NULL legacy por nombre canónico); si no existe se crea
+  // (nombre canónico, id_canal seteado, es_catalogo FALSE + contexto mínimo
+  // exigido por el backend: proveedor/negocio/vigencia de la primera fila).
+  // Upsert de detalles EN ESA lista (match por id_material dentro de la lista
+  // vía guardarDetalleListaPrecioModulo: actualiza precio/fee o inserta).
+  // Cada detalle lleva el idProveedor de la fila. Si una fila trae
+  // NOMBRE_LISTA explícito distinto al canónico, se respeta en una lista
+  // nombrada aparte. Sin copia al catálogo: cada precio se graba UNA sola vez
+  // (en su lista). Se mantienen validaciones previas y progress.
   function confirmarPreciosGsdLocal_(resultBox, tokenPreview, localPending) {
     const items = ((localPending && localPending.pendientes && localPending.pendientes.items) || []);
     var idCanalPrecios = String((localPending && localPending.pendientes && localPending.pendientes.idCanal) || mpBulkCanalValue_("mpBulkPriceCanal") || "IA").toUpperCase();
@@ -3370,92 +3478,163 @@ const MP_STATE = {
     let creados = 0;
     let actualizados = 0;
     let errores = 0;
-    // AGENTE A (2026-09-22): espejo en el catálogo del proveedor. Contadores
-    // propios para no alterar el reporte mensual (creados/actualizados/errores).
-    let catalogOk = 0;
-    let catalogErr = 0;
     const detalle = [];
-    let chain = Promise.resolve();
-    // Caché proveedor -> idListaPrecio del catálogo (o promesa en vuelo).
-    var catalogoCache_ = {};
+    // Caché nombre normalizado -> idListaPrecio de la lista destino (o promesa en vuelo).
+    var listaCanalCache_ = {};
 
-    // Resuelve el catálogo del proveedor por es_catalogo==true; si no existe
-    // lo crea vía guardarListaOficialPrecioModulo ("Catálogo <prov>").
-    var resolverCatalogoProv_ = function(idProveedor, nombreProv) {
-      if (catalogoCache_[idProveedor]) return Promise.resolve(catalogoCache_[idProveedor]);
-      if (catalogoCache_[idProveedor + "__p"]) return catalogoCache_[idProveedor + "__p"];
+    var mpCanalListaNorm_ = function(v) {
+      var t = String(v || "").trim().toUpperCase();
+      if (t === "IA" || t === "CANAL-IA") return "CANAL-IA";
+      if (t === "ALO" || t === "CANAL-ALO") return "CANAL-ALO";
+      return t;
+    };
+    var mpCanalNombreCanonico_ = function(canal) {
+      return String(canal || "").toUpperCase() === "ALO" ? "Lista de precios Aló Cálidda" : "Lista de precios IA";
+    };
+    // NOMBRE_LISTA explícito de la fila (si el formato lo trae); vacío = consolida por canal.
+    var mpPrecioNombreListaFila_ = function(item) {
+      var g = (item && item.gsd) || {};
+      var p = (item && item.precio) || {};
+      return String(g.nombreLista || g.nombre_lista || p.nombreLista || p.nombre_lista || p.NOMBRE_LISTA || "").trim();
+    };
+
+    // Resuelve la lista destino por id_canal (tolerante a canal NULL legacy
+    // por nombre canónico/nombrado, nunca catálogos); si no existe la crea
+    // vía guardarListaOficialPrecioModulo (nombre, idCanal, es_catalogo FALSE
+    // + proveedor/negocio/vigencia de la primera fila que exige el backend).
+    var resolverListaCanalPrecio_ = function(nombreObjetivo, canalClave, contexto) {
+      var claveCache = mpGsdNorm_(nombreObjetivo) + "|" + String(canalClave || "");
+      if (listaCanalCache_[claveCache]) return Promise.resolve(listaCanalCache_[claveCache]);
+      if (listaCanalCache_[claveCache + "__p"]) return listaCanalCache_[claveCache + "__p"];
       var promesa = secureRpc("listarListasOficialesPreciosModulo", [{}], "MATERIALES_PRECIOS")
         .then(function(resp) {
           var filas = (resp && resp.registros) || [];
+          var canalNorm = mpCanalListaNorm_(canalClave);
+          var esCanonico = mpGsdNorm_(nombreObjetivo) === mpGsdNorm_(mpCanalNombreCanonico_(canalClave));
           var hallada = null;
           var porNombre = null;
           filas.forEach(function(r) {
-            if (String(r.idProveedor || "") !== String(idProveedor)) return;
-            if (r.es_catalogo === true || r.esCatalogo === true) { if (!hallada) hallada = r; return; }
-            var nm = String(r.nombre || r.codigoLista || "");
-            if (!porNombre && /^(cat[aá]logo|lista base) /i.test(nm)) porNombre = r;
+            if (r.es_catalogo === true || r.esCatalogo === true) return;
+            var rc = mpCanalListaNorm_(r.idCanal || r.id_canal || r.canal || "");
+            var nm = String(r.nombre || r.nombreLista || r.codigoLista || "");
+            if (canalNorm && rc === canalNorm && (esCanonico || mpGsdNorm_(nm) === mpGsdNorm_(nombreObjetivo))) {
+              if (!hallada) hallada = r;
+              return;
+            }
+            if (!rc && mpGsdNorm_(nm) === mpGsdNorm_(nombreObjetivo)) {
+              if (!porNombre) porNombre = r;
+            }
           });
           var elegida = hallada || porNombre;
           if (elegida && elegida.idListaPrecio) {
-            catalogoCache_[idProveedor] = elegida.idListaPrecio;
+            listaCanalCache_[claveCache] = elegida.idListaPrecio;
             return elegida.idListaPrecio;
           }
-          var nombreCat = "Catálogo " + String(nombreProv || idProveedor).slice(0, 120);
-          return secureRpc("guardarListaOficialPrecioModulo", [{ idProveedor: idProveedor, nombre: nombreCat, es_catalogo: true, esCatalogo: true, idCanal: idCanalPrecios }], "MATERIALES_PRECIOS")
+          var primerPrecio = (contexto && contexto.precio) || {};
+          return secureRpc("guardarListaOficialPrecioModulo", [{
+            nombre: nombreObjetivo,
+            idCanal: canalClave,
+            es_catalogo: false,
+            esCatalogo: false,
+            idProveedor: primerPrecio.idProveedor || "",
+            idNegocio: primerPrecio.idNegocio || "",
+            fechaInicio: primerPrecio.fechaInicio || "",
+            fechaFin: primerPrecio.fechaFin || "",
+            moneda: primerPrecio.moneda || "PEN",
+            origen: "CARGA_MASIVA_CANAL",
+            estado: "ACTIVA"
+          }], "MATERIALES_PRECIOS")
             .then(function(creada) {
-              var idCat = creada && creada.idListaPrecio;
-              if (idCat) catalogoCache_[idProveedor] = idCat;
-              return idCat || null;
+              var idLista = creada && (creada.idListaPrecio || creada.idLista);
+              if (idLista) listaCanalCache_[claveCache] = idLista;
+              return idLista || null;
             });
         })
         .catch(function(err) {
-          if (catalogoCache_[idProveedor + "__p"]) delete catalogoCache_[idProveedor + "__p"];
+          if (listaCanalCache_[claveCache + "__p"]) delete listaCanalCache_[claveCache + "__p"];
           throw err;
         });
-      catalogoCache_[idProveedor + "__p"] = promesa;
+      listaCanalCache_[claveCache + "__p"] = promesa;
       promesa.then(function(id) {
-        if (catalogoCache_[idProveedor + "__p"]) delete catalogoCache_[idProveedor + "__p"];
-        if (id) catalogoCache_[idProveedor] = id;
+        if (listaCanalCache_[claveCache + "__p"]) delete listaCanalCache_[claveCache + "__p"];
+        if (id) listaCanalCache_[claveCache] = id;
       }, function() {
-        if (catalogoCache_[idProveedor + "__p"]) delete catalogoCache_[idProveedor + "__p"];
+        if (listaCanalCache_[claveCache + "__p"]) delete listaCanalCache_[claveCache + "__p"];
       });
       return promesa;
     };
 
+    // Partición por destino: por defecto todos a la lista del canal; las filas
+    // con NOMBRE_LISTA explícito distinto van a su lista nombrada.
+    var canonicoCanal = mpCanalNombreCanonico_(idCanalPrecios);
+    var destinos = {};
+    var ordenDestinos = [];
+    items.forEach(function(item) {
+      var expl = mpPrecioNombreListaFila_(item);
+      var nombreDestino = (!expl || mpGsdNorm_(expl) === mpGsdNorm_(canonicoCanal)) ? canonicoCanal : expl;
+      var clave = mpGsdNorm_(nombreDestino) || "CANAL";
+      if (!destinos[clave]) {
+        destinos[clave] = { nombre: nombreDestino, items: [], contexto: item };
+        ordenDestinos.push(clave);
+      }
+      destinos[clave].items.push(item);
+      item._claveDestino = clave;
+    });
+
+    let chain = Promise.resolve();
+    var listasResueltas = {};
+    // 1) Resuelve (o crea) cada lista destino una sola vez.
+    ordenDestinos.forEach(function(clave) {
+      chain = chain.then(function() {
+        var d = destinos[clave];
+        return resolverListaCanalPrecio_(d.nombre, idCanalPrecios, d.contexto)
+          .then(function(idLista) {
+            if (!idLista) throw new Error("No se pudo resolver la lista.");
+            listasResueltas[clave] = idLista;
+          })
+          .catch(function(error) {
+            (d.items || []).forEach(function(item) {
+              errores += 1;
+              detalle.push({ fila: item.fila, codigoMaterial: item.material.codigoMaterial, accion: "OMITIR", estado: "ERROR", detalle: "Lista no resuelta (" + d.nombre + "): " + errorMessage(error) });
+              stepBulkPre();
+              item._omitir = true;
+            });
+          });
+      });
+    });
+
+    // 2) Por cada fila validada: graba el material y hace upsert del detalle
+    // EN SU LISTA (match por id_material dentro de la lista: actualiza
+    // precio/fee o inserta). Cada precio se guarda UNA sola vez.
     items.forEach(function(item) {
       chain = chain.then(function() {
+        if (item._omitir) return null;
+        var idLista = listasResueltas[item._claveDestino];
+        if (!idLista) {
+          errores += 1;
+          detalle.push({ fila: item.fila, codigoMaterial: item.material.codigoMaterial, accion: "OMITIR", estado: "ERROR", detalle: "Sin lista destino resuelta." });
+          stepBulkPre();
+          return null;
+        }
         return secureRpc("guardarMaterialPrecioModulo", [item.material], "MATERIALES_PRECIOS")
           .then(function(res) {
             var idMat = (res && res.idMaterial) || item.material.idMaterial;
-            const precio = Object.assign({}, item.precio, { idMaterial: idMat, idCanal: idCanalPrecios });
-            return secureRpc("guardarPrecioIndividualMaterialesPreciosModulo", [precio], "MATERIALES_PRECIOS")
-              .then(function() {
-                if (item.precio.idDetallePrecio) actualizados += 1;
+            var idProvFila = String((item.precio && item.precio.idProveedor) || "");
+            if (!idMat) throw new Error("No se pudo resolver el material.");
+            return secureRpc("guardarDetalleListaPrecioModulo", [{
+              idListaPrecio: idLista,
+              idMaterial: idMat,
+              precioBase: item.precio.precioBase,
+              fee: (item.precio.fee === undefined ? "" : item.precio.fee),
+              moneda: item.precio.moneda || "PEN",
+              estado: "ACTIVO",
+              idProveedor: idProvFila
+            }], "MATERIALES_PRECIOS")
+              .then(function(resDet) {
+                if (resDet && resDet.creado === false) actualizados += 1;
                 else creados += 1;
-                detalle.push({ fila: item.fila, codigoMaterial: item.material.codigoMaterial, accion: "GRABADO", estado: "OK", detalle: "OK" });
+                detalle.push({ fila: item.fila, codigoMaterial: item.material.codigoMaterial, accion: "GRABADO", estado: "OK", detalle: "OK · lista " + idLista });
                 stepBulkPre();
-                // Espejo en catálogo: MISMO material+precio+fee.
-                // Sin idDetallePrecio: el RPC de detalle reutiliza la misma
-                // lista+material (no duplica). Fallos no tocan contadores mensuales.
-                var idProvCat = String((item.precio && item.precio.idProveedor) || "");
-                var nombreProvCat = (item.material && item.material.proveedor) || idProvCat;
-                if (!idProvCat || !idMat) return null;
-                return resolverCatalogoProv_(idProvCat, nombreProvCat)
-                  .then(function(idCat) {
-                    if (!idCat) return null;
-                    return secureRpc("guardarDetalleListaPrecioModulo", [{
-                      idListaPrecio: idCat,
-                      idMaterial: idMat,
-                      precioBase: item.precio.precioBase,
-                      fee: (item.precio.fee === undefined ? "" : item.precio.fee),
-                      moneda: item.precio.moneda || "PEN"
-                    }], "MATERIALES_PRECIOS");
-                  })
-                  .then(function() { catalogOk += 1; })
-                  .catch(function(catError) {
-                    catalogErr += 1;
-                    detalle.push({ fila: item.fila, codigoMaterial: item.material.codigoMaterial, accion: "CATALOGO", estado: "ERROR", detalle: errorMessage(catError) });
-                  });
               });
           })
           .catch(function(error) {
@@ -3471,19 +3650,17 @@ const MP_STATE = {
       clearMpTableCache("prices");
       clearMpTableCache("materials");
       clearMpSummaryCache();
-      var mensajeCat = "";
-      if (catalogOk || catalogErr) mensajeCat = " Catálogo: " + catalogOk + " sincronizado(s)" + (catalogErr ? ", " + catalogErr + " con error (ver detalle)." : ".");
       renderBulkPricePreviewPaso28O_(resultBox, {
         totalFilas: items.length,
         creados: creados,
         actualizados: actualizados,
         errores: errores,
-        mensaje: "Carga GSD confirmada. Solo se grabaron las filas validadas." + mensajeCat,
+        mensaje: "Carga GSD confirmada en lista única por canal (" + canonicoCanal + "). Solo se grabaron las filas validadas.",
         detalleValidacion: detalle,
         puedeConfirmar: false,
         tokenPreview: null
       });
-      toast("Carga de precios confirmada", "Creados: " + creados + " · Actualizados: " + actualizados + " · Errores: " + errores + (catalogErr ? " · Catálogo con error: " + catalogErr : ""));
+      toast("Carga de precios confirmada", "Creados: " + creados + " · Actualizados: " + actualizados + " · Errores: " + errores);
     });
   }
 
