@@ -125,6 +125,41 @@ const MP_STATE = {
     if (v !== "IA" && v !== "ALO") v = "IA";
     return v;
   }
+  var mpPendingBulkCanal_ = "";
+  function mpChannelCardsHtml_(tipo, canUpload, canTemplate) {
+    var esLista = String(tipo || "") === "listas";
+    var baseCarga = esLista ? "mpListsBulkButton" : "mpBulkPriceButton";
+    var basePlantilla = esLista ? "mpListsTemplateXlsxButton" : "mpPriceTemplateXlsxButton";
+    var accCarga = esLista ? "Cargar lista" : "Cargar precios";
+    var card = function(canal, titulo, descripcion) {
+      var nombreCorto = canal === "IA" ? "IA" : "Aló";
+      var botones = "";
+      if (canUpload) botones += '<button id="' + baseCarga + canal + '" class="button button--primary" type="button"><span class="material-symbols-rounded">upload_file</span>' + accCarga + " " + nombreCorto + "</button>";
+      if (canTemplate) botones += '<button id="' + basePlantilla + canal + '" class="button button--ghost" type="button"><span class="material-symbols-rounded">download</span>Plantilla ' + nombreCorto + "</button>";
+      if (!botones) return "";
+      return "<div><h4>" + titulo + "</h4><p>" + descripcion + '</p><div class="mp-actions">' + botones + "</div></div>";
+    };
+    var html = card("IA", "Lista IA — Instaladores Aliados", "Carga masiva y plantilla XLSX de la lista de precios IA.") +
+      card("ALO", "Lista Aló Cálidda", "Carga masiva y plantilla XLSX de la lista de precios Aló Cálidda.");
+    if (!html) return "";
+    return '<div class="mp-upload-hero">' + html + "</div>";
+  }
+  function descargarPlantillaPreciosXlsx_(canal) {
+    try {
+      if (!window.XLSX) { toast("Plantilla no disponible", "La librería XLSX no está cargada. Revisa tu conexión e inténtalo de nuevo.", true); return; }
+      var opts = MP_STATE.options || getMpEmptyOptions();
+      if (!opts || !opts.proveedores) { toast("Plantilla no disponible", "Aún no cargan las opciones del módulo. Inténtalo de nuevo.", true); return; }
+      var sufijo = String(canal || "").toUpperCase() === "ALO" ? "ALO" : "IA";
+      var nombre = "Plantilla_Carga_Precios_" + sufijo + ".xlsx";
+      var archivo = mpGsdWorkbookFile_(mpGsdBuildPricesWorkbook_(opts), nombre);
+      var url = archivo.url;
+      var link = document.createElement("a");
+      link.href = url; link.download = nombre; link.target = "_blank"; link.rel = "noopener";
+      document.body.appendChild(link); link.click();
+      window.setTimeout(function() { try { link.remove(); } catch (ignoreRemove) {} try { URL.revokeObjectURL(url); } catch (ignoreRevoke) {} }, 30000);
+      toast("Plantilla descargada", "Se inició la descarga de " + nombre + " (hojas CARGA_PRECIOS y DICCIONARIOS).");
+    } catch (error) { toast("No se pudo generar la plantilla", errorMessage(error), true); }
+  }
 
   function mpCanSeeTab(tab) {
     const rules = {
@@ -904,9 +939,9 @@ const MP_STATE = {
     region.innerHTML = '<section class="mp-panel"><div class="mp-section-head"><div class="mp-section-title"><h3>Precios</h3><p>Consulta precios vigentes por proveedor, negocio, alcance y material. La pestaña muestra precios por material, no cabeceras de lista.</p></div><div class="mp-section-actions">' +
       (canCreatePrice ? '<button id="mpBulkPriceButton" class="button button--secondary" type="button"><span class="material-symbols-rounded">upload_file</span>Carga masiva</button>' : '') +
       (canCreatePrice ? '<button id="mpNewIndividualPrice" class="button button--primary" type="button"><span class="material-symbols-rounded">add</span>Cargar precio individual</button>' : '') +
-      '</div></div><div class="mp-price-filter-bar"><div class="mp-section-search mp-filter-row"><label class="search-field"><span class="material-symbols-rounded">search</span><input id="mpPriceSearch" type="search" placeholder="Buscar proveedor, negocio, material o alcance"></label><label class="mp-filter-control"><span>Estado</span><select id="mpPriceStatus"><option value="ACTIVO">Activos</option><option value="INACTIVO">Inactivos</option><option value="TODOS">Todos</option></select></label></div><button id="mpDownloadPrices" class="button button--secondary" type="button"><span class="material-symbols-rounded">download</span>Descargar precios</button></div></section><div id="mpOfficialListsContent">' + loadingHtml(4) + '</div>';
+      '</div></div>' + mpChannelCardsHtml_("precios", canCreatePrice, canCreatePrice) + '<div class="mp-price-filter-bar"><div class="mp-section-search mp-filter-row"><label class="search-field"><span class="material-symbols-rounded">search</span><input id="mpPriceSearch" type="search" placeholder="Buscar proveedor, negocio, material o alcance"></label><label class="mp-filter-control"><span>Estado</span><select id="mpPriceStatus"><option value="ACTIVO">Activos</option><option value="INACTIVO">Inactivos</option><option value="TODOS">Todos</option></select></label></div><button id="mpDownloadPrices" class="button button--secondary" type="button"><span class="material-symbols-rounded">download</span>Descargar precios</button></div></section><div id="mpOfficialListsContent">' + loadingHtml(4) + '</div>';
     on("mpDownloadPrices", "click", exportOfficialPricesFiltered);
-    on("mpBulkPriceButton", "click", openBulkPriceModal);
+    on("mpBulkPriceButton", "click", openBulkPriceModal);     on("mpBulkPriceButtonIA", "click", function() { openBulkPriceModal("IA"); });     on("mpBulkPriceButtonALO", "click", function() { openBulkPriceModal("ALO"); });     on("mpPriceTemplateXlsxButtonIA", "click", function() { descargarPlantillaPreciosXlsx_("IA"); });     on("mpPriceTemplateXlsxButtonALO", "click", function() { descargarPlantillaPreciosXlsx_("ALO"); });
     on("mpNewIndividualPrice", "click", function() { openIndividualPriceModal(); });
     const search = document.getElementById("mpPriceSearch");
     const status = document.getElementById("mpPriceStatus");
@@ -1016,11 +1051,11 @@ const MP_STATE = {
       (canUpload ? '<button id="mpListsBulkButton" class="button button--secondary" type="button"><span class="material-symbols-rounded">upload_file</span>Carga masiva XLSX</button>' : '') +
       (canTemplate ? '<button id="mpListsTemplateXlsxButton" class="button button--ghost" type="button"><span class="material-symbols-rounded">download</span>Plantilla XLSX (Listas GSD)</button>' : '') +
       (canPending ? '<button id="mpDownloadPending" class="button button--secondary" type="button"><span class="material-symbols-rounded">download</span>Consolidado pendientes</button>' : '') +
-      '</div></div></section><div id="mpRequestsContent">' + loadingHtml(6) + '</div>' +
+      '</div></div></section>' + mpChannelCardsHtml_("listas", canUpload, canTemplate) + '<div id="mpRequestsContent">' + loadingHtml(6) + '</div>' +
       '<section class="mp-panel"><div class="mp-section-head"><div class="mp-section-title"><h3>Listas oficiales</h3><p>Cabeceras creadas por carga masiva o precio individual. Modificar un precio se hace por detalle desde la pestaña Precios; aquí puedes eliminar la lista completa (cabecera + detalles en cascada) con confirmación.</p></div></div><div id="mpOfficialListsSection">' + loadingHtml(3) + '</div></section>';
     on("mpTemplateButton", "click", downloadMaterialsPricesTemplate);
     on("mpUploadListButton", "click", openUploadListModal);
-    on("mpListsBulkButton", "click", openMpListsBulkModal);
+    on("mpListsBulkButton", "click", openMpListsBulkModal);     on("mpListsBulkButtonIA", "click", function() { openMpListsBulkModal("IA"); });     on("mpListsBulkButtonALO", "click", function() { openMpListsBulkModal("ALO"); });     on("mpListsTemplateXlsxButtonIA", "click", function() { descargarPlantillaListasBulkXlsx_("IA"); });     on("mpListsTemplateXlsxButtonALO", "click", function() { descargarPlantillaListasBulkXlsx_("ALO"); });
     on("mpListsTemplateXlsxButton", "click", function() { descargarPlantillaListasBulkXlsx_(); });
     on("mpDownloadPending", "click", function() {
       secureRpc("exportarConsolidadoPendientesPreciosModulo", [{ incluirRechazadas: true }], "MATERIALES_PRECIOS")
@@ -1763,7 +1798,9 @@ const MP_STATE = {
     return wb;
   }
 
-  function descargarPlantillaListasBulkXlsx_() {
+  function descargarPlantillaListasBulkXlsx_(canal) {
+    var sufijoLista = String(canal || "").toUpperCase() === "ALO" ? "ALO" : (String(canal || "").toUpperCase() === "IA" ? "IA" : "GSD");
+    var nombreLista = "Plantilla_Carga_Listas_" + sufijoLista + ".xlsx";
     var XLSXLib = mpListasBulkXlsx_();
     if (!XLSXLib) {
       toast("Plantilla no disponible", "La librería XLSX no está cargada. Revisa tu conexión e inténtalo de nuevo.", true);
@@ -1778,7 +1815,7 @@ const MP_STATE = {
       var url = URL.createObjectURL(blob);
       var link = document.createElement("a");
       link.href = url;
-      link.download = "Plantilla_Carga_Listas_GSD.xlsx";
+      link.download = nombreLista;
       link.target = "_blank";
       link.rel = "noopener";
       document.body.appendChild(link);
@@ -1787,13 +1824,15 @@ const MP_STATE = {
         try { link.remove(); } catch (ignoreRemove) {}
         try { URL.revokeObjectURL(url); } catch (ignoreRevoke) {}
       }, 30000);
-      toast("Plantilla descargada", "Se inició la descarga de Plantilla_Carga_Listas_GSD.xlsx (hojas CARGA_LISTAS y DICCIONARIOS).");
+      toast("Plantilla descargada", "Se inició la descarga de " + nombreLista + " (hojas CARGA_LISTAS y DICCIONARIOS).");
     } catch (error) {
       toast("No se pudo generar la plantilla", errorMessage(error), true);
     }
   }
 
-  function openMpListsBulkModal() {
+  function openMpListsBulkModal(canal) {
+    canal = String(canal || "").toUpperCase();
+    mpPendingBulkCanal_ = (canal === "IA" || canal === "ALO") ? canal : "";
     openMpModal("Carga masiva de listas (XLSX)", "Valida y previsualiza antes de grabar: cada fila es un material dentro de una lista oficial (pre_listas_precios + detalle). Nada se graba hasta confirmar.", '<div class="mp-inline-loader"><span class="material-symbols-rounded">hourglass_empty</span>Cargando opciones...</div>', true);
     ensureMpOptionsForModal(renderMpListsBulkModalBody_);
   }
@@ -1803,7 +1842,7 @@ const MP_STATE = {
     var body = document.getElementById("mpModalBody");
     if (!body) return;
     body.innerHTML = '<form id="mpListsBulkForm" class="mp-modern-form">' +
-      mpBulkCanalFieldHtml_("mpListsBulkCanal", "IA") +
+      mpBulkCanalFieldHtml_("mpListsBulkCanal", mpPendingBulkCanal_ || "IA") +
       '<section class="mp-upload-hero"><div><h4>Carga masiva de listas oficiales</h4>' +
       '<p>Descarga la plantilla XLSX oficial (Plantilla_Carga_Listas_GSD.xlsx), completa la hoja CARGA_LISTAS y valida antes de grabar. Las filas con mismo proveedor, oficina, grupo, negocio, nombre, moneda y vigencia forman UNA lista oficial.</p></div>' +
       '<div class="mp-upload-badges"><span class="mp-badge"><span class="material-symbols-rounded">fact_check</span>Prevalidación</span>' +
@@ -2678,7 +2717,9 @@ const MP_STATE = {
   }
 
 
-  function openBulkPriceModal() {
+  function openBulkPriceModal(canal) {
+    canal = String(canal || "").toUpperCase();
+    mpPendingBulkCanal_ = (canal === "IA" || canal === "ALO") ? canal : "";
     openMpModal(
       "Carga masiva de precios",
       "Carga precios por material, proveedor y alcance utilizando la plantilla XLSX oficial.",
@@ -2698,7 +2739,7 @@ const MP_STATE = {
 
     body.innerHTML =
       '<form id="mpBulkPriceForm" class="mp-modern-form">' +
-        mpBulkCanalFieldHtml_("mpBulkPriceCanal", "IA") +
+        mpBulkCanalFieldHtml_("mpBulkPriceCanal", mpPendingBulkCanal_ || "IA") +
         '<section class="mp-upload-hero">' +
           '<div>' +
             '<h4>Carga masiva de precios</h4>' +
