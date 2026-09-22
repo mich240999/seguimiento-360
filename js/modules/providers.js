@@ -246,10 +246,10 @@ const PROVIDERS_STATE = {
 
   function providerActionsHtml(row) {
     const buttons = [];
-    if (providerPermission("VER_DETALLE")) buttons.push('<button class="icon-button has-tooltip" type="button" data-provider-action="view" data-provider-id="' + escapeHtml(row.idProveedor) + '" data-tooltip="Ver detalle" aria-label="Ver detalle" title="Ver detalle"><span class="material-symbols-rounded">visibility</span></button>');
-    if (providerPermission("EDITAR")) buttons.push('<button class="icon-button has-tooltip" type="button" data-provider-action="edit" data-provider-id="' + escapeHtml(row.idProveedor) + '" data-tooltip="Editar" aria-label="Editar" title="Editar"><span class="material-symbols-rounded">edit</span></button>');
-    if (providerPermission("CAMBIAR_ESTADO")) buttons.push('<button class="icon-button has-tooltip" type="button" data-provider-action="status" data-provider-id="' + escapeHtml(row.idProveedor) + '" data-provider-status="' + (row.estado === "ACTIVO" ? "INACTIVO" : "ACTIVO") + '" data-tooltip="' + (row.estado === "ACTIVO" ? "Inactivar" : "Activar") + '" aria-label="' + (row.estado === "ACTIVO" ? "Inactivar" : "Activar") + '" title="' + (row.estado === "ACTIVO" ? "Inactivar" : "Activar") + '"><span class="material-symbols-rounded">' + (row.estado === "ACTIVO" ? "toggle_off" : "toggle_on") + '</span></button>');
-    return '<div class="providers-row-actions">' + buttons.join("") + '</div>';
+    if (providerPermission("VER_DETALLE")) buttons.push('<button class="table-button has-tooltip" type="button" data-provider-action="view" data-provider-id="' + escapeHtml(row.idProveedor) + '" data-tooltip="Ver detalle" aria-label="Ver detalle" title="Ver detalle"><span class="material-symbols-rounded">visibility</span></button>');
+    if (providerPermission("EDITAR")) buttons.push('<button class="table-button has-tooltip" type="button" data-provider-action="edit" data-provider-id="' + escapeHtml(row.idProveedor) + '" data-tooltip="Editar" aria-label="Editar" title="Editar"><span class="material-symbols-rounded">edit</span></button>');
+    if (providerPermission("CAMBIAR_ESTADO")) buttons.push('<button class="table-button has-tooltip" type="button" data-provider-action="status" data-provider-id="' + escapeHtml(row.idProveedor) + '" data-provider-status="' + (row.estado === "ACTIVO" ? "INACTIVO" : "ACTIVO") + '" data-tooltip="' + (row.estado === "ACTIVO" ? "Inactivar" : "Activar") + '" aria-label="' + (row.estado === "ACTIVO" ? "Inactivar" : "Activar") + '" title="' + (row.estado === "ACTIVO" ? "Inactivar" : "Activar") + '"><span class="material-symbols-rounded">' + (row.estado === "ACTIVO" ? "toggle_off" : "toggle_on") + '</span></button>');
+    return '<div class="providers-row-actions" style="flex-wrap:nowrap;white-space:nowrap">' + buttons.join("") + '</div>';
   }
 
   function renderProvidersPagination(pagination) {
@@ -400,7 +400,7 @@ const PROVIDERS_STATE = {
         '<td>' + escapeHtml(String(item.fechaInicio || "") + " / " + String(item.fechaFin || "")) + '</td></tr>';
     }).join("") || '<tr><td colspan="4">Sin precios para mostrar.</td></tr>';
     box.innerHTML = '<div class="providers-chip-list">' + chips + '</div>' +
-      (filter ? '<p><button class="button button--ghost button--compact has-tooltip" type="button" data-provider-resp-clear data-tooltip="Quitar filtro: ' + escapeHtml(filter) + '" aria-label="Quitar filtro: ' + escapeHtml(filter) + '" title="Quitar filtro: ' + escapeHtml(filter) + '"><span class="material-symbols-rounded">filter_alt_off</span></button></p>' : "") +
+      (filter ? '<p><button class="icon-button has-tooltip" type="button" data-provider-resp-clear data-tooltip="Quitar filtro: ' + escapeHtml(filter) + '" aria-label="Quitar filtro: ' + escapeHtml(filter) + '" title="Quitar filtro: ' + escapeHtml(filter) + '"><span class="material-symbols-rounded">filter_alt_off</span></button></p>' : "") +
       '<div class="sales-card"><h3>Agregar responsable (alta rápida de precio)</h3>' +
       '<p class="providers-field-hint">El responsable nace en el precio: se graba con guardarPrecioIndividualMaterialesPreciosModulo.</p>' +
       '<div class="form-grid">' +
@@ -409,7 +409,7 @@ const PROVIDERS_STATE = {
       '<label class="field"><span>Precio base S/</span><input id="providerRespPrice" type="number" min="0" step="0.01" placeholder="0.00"></label>' +
       '<label class="field"><span>Inicio vigencia</span><input id="providerRespStart" type="date"></label>' +
       '<label class="field"><span>Fin vigencia</span><input id="providerRespEnd" type="date"></label>' +
-      '</div><div class="toolbar toolbar--end"><button class="button button--primary button--compact has-tooltip" type="button" data-provider-resp-add data-tooltip="Agregar responsable" aria-label="Agregar responsable" title="Agregar responsable"><span class="material-symbols-rounded">person_add</span></button></div></div>' +
+      '</div><div class="toolbar toolbar--end"><button class="icon-button has-tooltip" type="button" data-provider-resp-add data-tooltip="Agregar responsable" aria-label="Agregar responsable" title="Agregar responsable"><span class="material-symbols-rounded">person_add</span></button></div></div>' +
       '<div class="mp-table-wrap"><table class="mp-table"><thead><tr><th>Responsable</th><th>Material</th><th>Precio</th><th>Vigencia</th></tr></thead><tbody>' + body + '</tbody></table></div>';
     bindProviderSalesResponsibles_(idProveedor);
     loadProviderRespMaterialOptions_();
@@ -677,7 +677,7 @@ const PROVIDERS_STATE = {
       '</button>' +
       '<div class="providers-combo-panel" data-provider-multiselect-panel="' + escapeHtml(type) + '" hidden>' +
         '<input class="providers-combo-search" type="search" placeholder="' + escapeHtml(placeholder) + '" data-provider-search="' + escapeHtml(type) + '">' +
-        '<div class="providers-combo-actions"><button class="has-tooltip" type="button" data-provider-select-all="' + escapeHtml(type) + '" data-tooltip="Todos" aria-label="Todos" title="Todos"><span class="material-symbols-rounded">done_all</span></button><button class="has-tooltip" type="button" data-provider-clear="' + escapeHtml(type) + '" data-tooltip="Limpiar" aria-label="Limpiar" title="Limpiar"><span class="material-symbols-rounded">clear_all</span></button></div>' +
+        '<div class="providers-combo-actions"><button class="icon-button has-tooltip" type="button" data-provider-select-all="' + escapeHtml(type) + '" data-tooltip="Todos" aria-label="Todos" title="Todos"><span class="material-symbols-rounded">done_all</span></button><button class="icon-button has-tooltip" type="button" data-provider-clear="' + escapeHtml(type) + '" data-tooltip="Limpiar" aria-label="Limpiar" title="Limpiar"><span class="material-symbols-rounded">clear_all</span></button></div>' +
         '<div class="providers-combo-options" data-provider-options="' + escapeHtml(type) + '">' +
           renderProviderMultiOptions(name, items) +
         '</div>' +

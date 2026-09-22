@@ -99,12 +99,40 @@ const MP_STATE = {
     resultBox.innerHTML = mpBulkProgressHtml_(done, total, label);
   }
 
+  /* Canal Lista (IA/ALO) para cargas masivas. Viaja como idCanal en el payload
+     de confirm hacia guardarListaOficialPrecioModulo / confirm de precios. */
+  function mpCanalOptionsHtml_(selected) {
+    var sel = String(selected || "IA").toUpperCase();
+    if (sel !== "IA" && sel !== "ALO") sel = "IA";
+    return '<option value="IA"' + (sel === "IA" ? " selected" : "") + '>IA — Instaladores Aliados</option>' +
+      '<option value="ALO"' + (sel === "ALO" ? " selected" : "") + '>ALO — Aló Cálidda</option>';
+  }
+  function mpBulkCanalFieldHtml_(selectId, selected) {
+    return '<div class="mp-modal-section"><h4>Canal de la lista</h4>' +
+      '<p>Define el canal (id_canal) que se enviará como idCanal al confirmar la carga.</p>' +
+      '<div class="mp-form-grid"><label>Lista / Canal' +
+      '<select id="' + escapeHtml(selectId) + '" name="idCanal" required>' +
+      mpCanalOptionsHtml_(selected) +
+      '</select></label></div></div>';
+  }
+  function mpBulkCanalValue_(selectId) {
+    var el = document.getElementById(selectId || "");
+    var v = el ? String(el.value || "").trim().toUpperCase() : "";
+    if (v !== "IA" && v !== "ALO") {
+      var f = el && el.form ? el.form.elements["idCanal"] : null;
+      v = f ? String(f.value || "").trim().toUpperCase() : "";
+    }
+    if (v !== "IA" && v !== "ALO") v = "IA";
+    return v;
+  }
+
   function mpCanSeeTab(tab) {
     const rules = {
       summary: ["VER_RESUMEN", "VER_MATERIALES", "VER_PRECIOS", "VER_LISTAS_OFICIALES", "VER_MIS_LISTAS_PRECIO", "VER_SOLICITUDES_PRECIO"],
       materials: ["VER_MATERIALES"],
       prices: ["VER_PRECIOS", "VER_LISTAS_OFICIALES", "DESCARGAR_LISTA_OFICIAL"],
-      lists: ["VER_MIS_LISTAS_PRECIO", "VER_OBSERVACIONES_LISTA", "VER_SOLICITUDES_PRECIO", "DESCARGAR_CONSOLIDADO_PENDIENTES", "CARGAR_LISTA_PRECIO", "CARGAR_LISTA_PRECIO_ADMIN"]
+      lists: ["VER_MIS_LISTAS_PRECIO", "VER_OBSERVACIONES_LISTA", "VER_SOLICITUDES_PRECIO", "DESCARGAR_CONSOLIDADO_PENDIENTES", "CARGAR_LISTA_PRECIO", "CARGAR_LISTA_PRECIO_ADMIN"],
+      fees: ["VER_PRECIOS", "VER_LISTAS_OFICIALES", "VER_MIS_LISTAS_PRECIO", "VER_SOLICITUDES_PRECIO", "EDITAR_LISTA_OFICIAL", "GESTIONAR_PRECIOS"]
     };
     return (rules[tab] || []).some(mpPermission);
   }
@@ -112,7 +140,7 @@ const MP_STATE = {
   function renderMaterialsPricesTab(showToast) {
     if (APP_STATE.module !== "MATERIALES_PRECIOS") return;
     if (!mpCanSeeTab(MP_STATE.activeTab)) {
-      MP_STATE.activeTab = ["summary", "materials", "prices", "lists"].find(mpCanSeeTab) || "summary";
+      MP_STATE.activeTab = ["summary", "materials", "prices", "lists", "fees"].find(mpCanSeeTab) || "summary";
     }
     const renderToken = nextMpRenderToken(MP_STATE.activeTab);
     document.querySelectorAll("#mpTabs [data-mp-tab]").forEach(function(button) {
@@ -122,6 +150,7 @@ const MP_STATE = {
     if (MP_STATE.activeTab === "materials") return renderMaterialsPricesMaterials(showToast, renderToken);
     if (MP_STATE.activeTab === "prices") return renderMaterialsPricesPrices(showToast, renderToken);
     if (MP_STATE.activeTab === "lists") return renderMaterialsPricesLists(showToast, renderToken);
+    if (MP_STATE.activeTab === "fees") return renderMpFeesTab(showToast, renderToken);
   }
 
   function nextMpRenderToken(tab) {
@@ -1059,6 +1088,241 @@ const MP_STATE = {
     });
   }
 
+  /* PESTAÑA FEES: flujo en 3 pasos en la misma vista.
+     (a) Lista agrupada por canal IA/ALO (ops existentes de listas),
+     (b) Proveedor con materiales en la lista elegida,
+     (c) Grilla con buscador cliente + fee editable + guardar por fila
+         vía actualizarFeeMaterialPrecioModulo({idDetallePrecio, fee}). */
+  function mpFeesCanalOf_(row) {
+    row = row || {};
+    var v = String(row.idCanal || row.canal || row.id_canal || row.CANAL || row.ID_CANAL || "").trim().toUpperCase();
+    if (v === "IA" || v === "ALO") return v;
+    var nombre = String(row.nombre || row.nombreLista || row.codigoLista || row.lista || "");
+    if (/\[ALO\]|\bALO\b/i.test(nombre) && !/\bIA\b/i.test(nombre)) return "ALO";
+    if (/\[IA\]|\bIA\b/i.test(nombre)) return "IA";
+    return "";
+  }
+  function mpFeesListaEtiqueta_(grupo) {
+    var nombre = grupo.nombre || grupo.idListaPrecio;
+    var extra = [grupo.proveedor, grupo.negocio, grupo.vigencia].filter(function(p) { return p && p !== "—"; }).join(" · ");
+    return nombre + (extra ? " · " + extra : "") + " (" + grupo.items.length + " ítems)";
+  }
+  function renderMpFeesTab(showToast, renderToken) {
+    var region = getMpRegionIfCurrent(renderToken, "fees");
+    if (!region) return;
+    MP_STATE.fees = MP_STATE.fees || { raw: [], grupos: [], order: [], idLista: "", idProveedor: "", filtro: "" };
+    MP_STATE.fees.filtro = "";
+    region.innerHTML = '<section class="mp-panel"><div class="mp-section-head"><div class="mp-section-title"><h3>Fees</h3>' +
+      '<p>Selecciona la lista (por canal), luego el proveedor y actualiza el fee por material. El fee es el % que se lleva Cálidda.</p></div></div>' +
+      '<div class="mp-form-grid">' +
+      '<label>1. Lista<select id="mpFeesLista"><option value="">Cargando listas...</option></select></label>' +
+      '<label>2. Proveedor<select id="mpFeesProveedor" disabled><option value="">Selecciona primero una lista</option></select></label>' +
+      '<label class="search-field" style="align-self:end"><span class="material-symbols-rounded">search</span><input id="mpFeesSearch" type="search" placeholder="3. Buscar material en la grilla"></label>' +
+      '</div></section>' +
+      '<div id="mpFeesGrid">' + loadingHtml(4) + '</div>';
+    var search = document.getElementById("mpFeesSearch");
+    if (search) {
+      search.addEventListener("input", debounce(function() {
+        MP_STATE.fees.filtro = String(search.value || "");
+        mpFeesRenderGrid_();
+      }, 250));
+    }
+    secureRpc("listarListasOficialesPreciosModulo", [{}], "MATERIALES_PRECIOS")
+      .then(function(result) {
+        if (!isMpRenderCurrent(renderToken, "fees")) return;
+        mpFeesCargarListas_((result && result.registros) || []);
+        if (showToast) toast("Fees", "Listas cargadas.");
+      })
+      .catch(function(error) {
+        var current = getMpRegionIfCurrent(renderToken, "fees");
+        if (!current) return;
+        var box = document.getElementById("mpFeesGrid");
+        if (box) box.innerHTML = mpError(error);
+        var sel = document.getElementById("mpFeesLista");
+        if (sel) sel.innerHTML = '<option value="">No se pudieron cargar las listas</option>';
+      });
+  }
+  function mpFeesCargarListas_(rows) {
+    var fees = MP_STATE.fees || (MP_STATE.fees = { raw: [], grupos: [], order: [], idLista: "", idProveedor: "", filtro: "" });
+    fees.raw = (rows || []).slice();
+    var groups = {};
+    var order = [];
+    fees.raw.forEach(function(item) {
+      var key = String(item.idListaPrecio || item.idLista || "SIN_LISTA");
+      if (!groups[key]) {
+        groups[key] = {
+          idListaPrecio: key,
+          nombre: item.nombre || item.nombreLista || item.codigoLista || key,
+          proveedor: item.proveedor || "—",
+          negocio: item.negocio || "—",
+          vigencia: String(item.fechaInicio || "") + " / " + String(item.fechaFin || ""),
+          canal: mpFeesCanalOf_(item),
+          items: []
+        };
+        order.push(key);
+      }
+      groups[key].items.push(item);
+      if (!groups[key].canal) {
+        var c = mpFeesCanalOf_(item);
+        if (c) groups[key].canal = c;
+      }
+    });
+    fees.grupos = groups;
+    fees.order = order;
+    var sel = document.getElementById("mpFeesLista");
+    if (!sel) return;
+    if (!order.length) {
+      sel.innerHTML = '<option value="">Sin listas oficiales</option>';
+      var box = document.getElementById("mpFeesGrid");
+      if (box) box.innerHTML = mpEmpty("No hay listas oficiales para gestionar fees.");
+      return;
+    }
+    var enIa = [];
+    var enAlo = [];
+    var sinCanal = [];
+    order.forEach(function(key) {
+      var g = groups[key];
+      if (g.canal === "IA") enIa.push(g);
+      else if (g.canal === "ALO") enAlo.push(g);
+      else sinCanal.push(g);
+    });
+    var opt = function(g) {
+      return '<option value="' + escapeHtml(g.idListaPrecio) + '">' + escapeHtml(mpFeesListaEtiqueta_(g)) + '</option>';
+    };
+    var html = '<option value="">Seleccionar lista</option>';
+    if (enIa.length) html += '<optgroup label="Canal IA — Instaladores Aliados">' + enIa.map(opt).join("") + '</optgroup>';
+    if (enAlo.length) html += '<optgroup label="Canal ALO — Aló Cálidda">' + enAlo.map(opt).join("") + '</optgroup>';
+    if (sinCanal.length) html += '<optgroup label="Sin canal">' + sinCanal.map(opt).join("") + '</optgroup>';
+    sel.innerHTML = html;
+    sel.addEventListener("change", function() {
+      MP_STATE.fees.idLista = String(sel.value || "");
+      MP_STATE.fees.idProveedor = "";
+      MP_STATE.fees.filtro = "";
+      var s = document.getElementById("mpFeesSearch");
+      if (s) s.value = "";
+      mpFeesRenderProveedores_();
+      mpFeesRenderGrid_();
+    });
+    mpFeesRenderProveedores_();
+    mpFeesRenderGrid_();
+  }
+  function mpFeesProveedoresDeLista_(idLista) {
+    var fees = MP_STATE.fees || {};
+    var grupo = (fees.grupos || {})[String(idLista || "")];
+    if (!grupo) return [];
+    var vistos = {};
+    var lista = [];
+    (grupo.items || []).forEach(function(item) {
+      var id = String(item.idProveedor || item.proveedorId || item.proveedor || "");
+      var nombre = String(item.proveedor || id || "Proveedor no definido");
+      var key = String(item.idProveedor || "") || ("NOMBRE:" + nombre);
+      if (!key || vistos[key]) return;
+      vistos[key] = true;
+      lista.push({ id: String(item.idProveedor || ""), nombre: nombre, clave: key });
+    });
+    return lista;
+  }
+  function mpFeesRenderProveedores_() {
+    var sel = document.getElementById("mpFeesProveedor");
+    if (!sel) return;
+    var fees = MP_STATE.fees || {};
+    var idLista = String(fees.idLista || "");
+    if (!idLista) {
+      sel.innerHTML = '<option value="">Selecciona primero una lista</option>';
+      sel.disabled = true;
+      return;
+    }
+    var provs = mpFeesProveedoresDeLista_(idLista);
+    if (!provs.length) {
+      sel.innerHTML = '<option value="">Sin proveedores en esta lista</option>';
+      sel.disabled = true;
+      return;
+    }
+    sel.disabled = false;
+    sel.innerHTML = '<option value="">Seleccionar proveedor</option>' + provs.map(function(p) {
+      var value = p.id || p.clave;
+      return '<option value="' + escapeHtml(value) + '">' + escapeHtml(p.nombre) + '</option>';
+    }).join("");
+    if (provs.length === 1) {
+      sel.value = provs[0].id || provs[0].clave;
+      MP_STATE.fees.idProveedor = String(sel.value || "");
+    }
+    sel.onchange = function() {
+      MP_STATE.fees.idProveedor = String(sel.value || "");
+      mpFeesRenderGrid_();
+    };
+  }
+  function mpFeesDetallesFiltrados_() {
+    var fees = MP_STATE.fees || {};
+    var idLista = String(fees.idLista || "");
+    var idProv = String(fees.idProveedor || "");
+    if (!idLista || !idProv) return [];
+    var grupo = (fees.grupos || {})[idLista];
+    if (!grupo) return [];
+    var items = (grupo.items || []).filter(function(item) {
+      var key = String(item.idProveedor || "") || ("NOMBRE:" + String(item.proveedor || ""));
+      var nombreKey = "NOMBRE:" + String(item.proveedor || "");
+      return key === idProv || nombreKey === idProv;
+    });
+    var q = String(fees.filtro || "").trim().toLowerCase();
+    if (q) {
+      items = items.filter(function(item) {
+        var texto = [item.nombreCortoMaterial, item.descripcionMaterial, item.NOMBRE_MATERIAL, item.codigoSap, item.CODIGO_SAP, item.codigoMaterial, item.CODIGO_MATERIAL].map(function(v) { return String(v || ""); }).join(" ").toLowerCase();
+        return texto.indexOf(q) !== -1;
+      });
+    }
+    return items;
+  }
+  function mpFeesRenderGrid_() {
+    var box = document.getElementById("mpFeesGrid");
+    if (!box) return;
+    var fees = MP_STATE.fees || {};
+    if (!String(fees.idLista || "")) { box.innerHTML = mpEmpty("Selecciona una lista para ver sus materiales."); return; }
+    if (!String(fees.idProveedor || "")) { box.innerHTML = mpEmpty("Selecciona un proveedor para ver sus materiales en la lista."); return; }
+    var items = mpFeesDetallesFiltrados_();
+    if (!items.length) { box.innerHTML = mpEmpty("No hay materiales del proveedor en esta lista para el filtro actual."); return; }
+    box.innerHTML = '<div class="mp-table-wrap"><table class="mp-table"><thead><tr><th>Material</th><th>Código SAP</th><th>Precio</th><th>Fee %</th><th>Acciones</th></tr></thead><tbody>' +
+      items.map(function(row) {
+        var idDet = String(row.idDetallePrecio || row.idPrecio || row.ID_DETALLE_PRECIO || "");
+        var mat = String(row.nombreCortoMaterial || row.descripcionMaterial || row.NOMBRE_MATERIAL || "—");
+        var sap = String(row.codigoSap || row.CODIGO_SAP || row.codigoMaterial || row.CODIGO_MATERIAL || "—");
+        var precio = formatMpMoney(resolveMpPriceValue(row), row.moneda || row.MONEDA);
+        var feeVal = (row.fee === null || row.fee === undefined) ? "" : String(row.fee);
+        return '<tr><td><strong>' + escapeHtml(mat) + '</strong></td><td>' + escapeHtml(sap) + '</td><td>' + escapeHtml(precio) + '</td>' +
+          '<td><input type="number" min="0" max="100" step="0.01" value="' + escapeHtml(feeVal) + '" data-mp-fee-input="' + escapeHtml(idDet) + '" aria-label="Fee %" style="max-width:110px"></td>' +
+          '<td><div class="mp-actions mp-actions--inline" style="flex-wrap:nowrap;white-space:nowrap"><button class="table-button has-tooltip" type="button" data-mp-fee-save="' + escapeHtml(idDet) + '" data-tooltip="Guardar fee" aria-label="Guardar fee" title="Guardar fee"><span class="material-symbols-rounded">save</span></button></div></td></tr>';
+      }).join("") + '</tbody></table></div>';
+    box.querySelectorAll("[data-mp-fee-save]").forEach(function(button) {
+      button.addEventListener("click", function() {
+        var idDet = String(button.getAttribute("data-mp-fee-save") || "");
+        var input = box.querySelector('[data-mp-fee-input="' + idDet.replace(/"/g, "") + '"]');
+        var raw = input ? String(input.value || "").trim() : "";
+        if (raw === "") { toast("Fee requerido", "Ingresa el fee (%) entre 0 y 100.", true); return; }
+        var fee = Number(raw);
+        if (!Number.isFinite(fee) || fee < 0 || fee > 100) { toast("Fee inválido", "El fee debe ser un porcentaje entre 0 y 100.", true); return; }
+        button.disabled = true;
+        secureRpc("actualizarFeeMaterialPrecioModulo", [{ idDetallePrecio: idDet, fee: fee }], "MATERIALES_PRECIOS")
+          .then(function(result) {
+            toast("Fee actualizado", (result && result.mensaje) || "El fee fue guardado.");
+            var feesState = MP_STATE.fees || {};
+            ((feesState.raw || [])).forEach(function(r) {
+              if (String(r.idDetallePrecio || r.idPrecio || "") === idDet) r.fee = fee;
+            });
+            Object.keys(feesState.grupos || {}).forEach(function(k) {
+              ((feesState.grupos[k] || {}).items || []).forEach(function(r) {
+                if (String(r.idDetallePrecio || r.idPrecio || "") === idDet) r.fee = fee;
+              });
+            });
+            button.disabled = false;
+          })
+          .catch(function(error) {
+            toast("No se pudo guardar el fee", errorMessage(error), true);
+            button.disabled = false;
+          });
+      });
+    });
+  }
+
   function loadRequestsTable(showToast, renderToken) {
     renderToken = renderToken || { value: MP_STATE.renderToken, tab: "lists" };
     secureRpc("listarSolicitudesListaPrecioModulo", [{ texto: "", estado: "TODOS", pagina: MP_STATE.page, tamano: MP_STATE.pageSize }], "MATERIALES_PRECIOS")
@@ -1164,13 +1428,13 @@ const MP_STATE = {
    *   CODIGO_HANA (obligatorio por fila; equivale al código SAP; también se acepta
    *     CODIGO_MATERIAL como clave contra el maestro),
    *   PRECIO (obligatorio, >= 0),
-   *   RESPONSABLE_VENTA y FEE (opcionales; FEE 0-100).
+   *   FEE (opcional; 0-100).
    * RPC usados (existentes, sin tablas nuevas): guardarListaOficialPrecioModulo por
    * cada lista + guardarDetalleListaPrecioModulo por cada detalle.
-   * NOTA DE COLUMNAS (sin migración): NOMBRE_LISTA/FEE/RESPONSABLE_VENTA/MONEDA se
-   * persisten en Supabase (columnas nombre/fee/responsable_venta/moneda existentes);
+   * NOTA DE COLUMNAS (sin migración): NOMBRE_LISTA/FEE/MONEDA se
+   * persisten en Supabase (columnas nombre/fee/moneda existentes);
    * en el backend GAS clásico guardarLista/Detalle ignoran NOMBRE distinto de su
-   * predeterminado y no guardan FEE/RESPONSABLE_VENTA/MONEDA distinta de PEN.
+   * predeterminado y no guardan FEE/MONEDA distinta de PEN.
    */
   function mpListasBulkXlsx_() {
     if (typeof window !== "undefined" && window && window.XLSX) return window.XLSX;
@@ -1194,7 +1458,6 @@ const MP_STATE = {
       else if ((key.indexOf("FECHAFIN") === 0 || key === "FIN" || key === "VIGENCIAFIN" || key === "HASTA") && map.fechaFin == null) map.fechaFin = idx;
       else if ((key === "CODIGOHANA" || key === "CODHANA" || key === "HANA" || key === "CODIGOSAP" || key === "CODSAP" || key === "SAP" || key === "CODIGOMATERIAL" || key === "CODMATERIAL") && map.codigoHana == null) map.codigoHana = idx;
       else if (key.indexOf("PRECIO") === 0 && map.precio == null) map.precio = idx;
-      else if (key.indexOf("RESPONSABLE") !== -1 && key.indexOf("VENTA") !== -1 && map.responsableVenta == null) map.responsableVenta = idx;
       else if (key.indexOf("FEE") === 0 && map.fee == null) map.fee = idx;
     });
     return map;
@@ -1313,7 +1576,6 @@ const MP_STATE = {
         fechaFinRaw: map.fechaFin != null ? row[map.fechaFin] : "",
         codigoHana: codigoHana,
         precioRaw: map.precio != null ? row[map.precio] : "",
-        responsableVenta: mpGsdCell_(row, map.responsableVenta),
         feeRaw: map.fee != null ? row[map.fee] : ""
       });
     }
@@ -1447,7 +1709,6 @@ const MP_STATE = {
           moneda: moneda,
           fechaInicio: inicio,
           fechaFin: fin,
-          responsableVenta: String(f.responsableVenta || "").trim(),
           origen: "CARGA_MASIVA_LISTAS",
           estado: "ACTIVA"
         };
@@ -1455,7 +1716,6 @@ const MP_STATE = {
         grupos.push(gruposPorClave[claveGrupo]);
       } else {
         cabecera = gruposPorClave[claveGrupo].cabecera;
-        if (!cabecera.responsableVenta && String(f.responsableVenta || "").trim()) cabecera.responsableVenta = String(f.responsableVenta || "").trim();
       }
       var item = {
         fila: f.fila,
@@ -1463,8 +1723,7 @@ const MP_STATE = {
           idMaterial: mat.idMaterial,
           precioBase: precio,
           moneda: moneda,
-          fee: fee.valor,
-          responsableVenta: String(f.responsableVenta || "").trim()
+          fee: fee.valor
         }
       };
       gruposPorClave[claveGrupo].items.push(item);
@@ -1478,10 +1737,10 @@ const MP_STATE = {
     var XLSXLib = mpListasBulkXlsx_();
     if (!XLSXLib) throw new Error("Librería XLSX no disponible.");
     opts = opts || {};
-    var headers = ["PROVEEDOR", "OFICINA", "GRUPO", "NEGOCIO", "NOMBRE_LISTA", "MONEDA", "FECHA_INICIO", "FECHA_FIN", "CODIGO_HANA", "PRECIO", "RESPONSABLE_VENTA", "FEE"];
-    var anchos = [24, 20, 20, 20, 24, 10, 14, 14, 20, 12, 22, 10];
+    var headers = ["PROVEEDOR", "OFICINA", "GRUPO", "NEGOCIO", "NOMBRE_LISTA", "MONEDA", "FECHA_INICIO", "FECHA_FIN", "CODIGO_HANA", "PRECIO", "FEE"];
+    var anchos = [24, 20, 20, 20, 24, 10, 14, 14, 20, 12, 10];
     var vigencia = mpGsdMonthRange_();
-    var ejemplo = ["EJEMPLO Proveedor", "", "", "EJEMPLO Negocio", "EJEMPLO Lista General", "PEN", vigencia.inicio, vigencia.fin, "EJEMPLO-BORRAR-ESTA-FILA", 100, "EJEMPLO Responsable", 10];
+    var ejemplo = ["EJEMPLO Proveedor", "", "", "EJEMPLO Negocio", "EJEMPLO Lista General", "PEN", vigencia.inicio, vigencia.fin, "EJEMPLO-BORRAR-ESTA-FILA", 100, 10];
     var wb = XLSXLib.utils.book_new();
     var ws = XLSXLib.utils.aoa_to_sheet([headers, ejemplo]);
     ws["!cols"] = anchos.map(function(wch) { return { wch: wch }; });
@@ -1544,6 +1803,7 @@ const MP_STATE = {
     var body = document.getElementById("mpModalBody");
     if (!body) return;
     body.innerHTML = '<form id="mpListsBulkForm" class="mp-modern-form">' +
+      mpBulkCanalFieldHtml_("mpListsBulkCanal", "IA") +
       '<section class="mp-upload-hero"><div><h4>Carga masiva de listas oficiales</h4>' +
       '<p>Descarga la plantilla XLSX oficial (Plantilla_Carga_Listas_GSD.xlsx), completa la hoja CARGA_LISTAS y valida antes de grabar. Las filas con mismo proveedor, oficina, grupo, negocio, nombre, moneda y vigencia forman UNA lista oficial.</p></div>' +
       '<div class="mp-upload-badges"><span class="mp-badge"><span class="material-symbols-rounded">fact_check</span>Prevalidación</span>' +
@@ -1566,7 +1826,7 @@ const MP_STATE = {
       '<li><strong>FECHA_INICIO / FECHA_FIN</strong> (opcionales): vacías = día 1 → fin del mes de carga.</li>' +
       '<li><strong>CODIGO_HANA</strong> (obligatorio): código SAP; debe existir en Materiales.</li>' +
       '<li><strong>PRECIO</strong> (obligatorio): mayor o igual a 0.</li>' +
-      '<li><strong>RESPONSABLE_VENTA / FEE</strong> (opcionales): FEE 0-100.</li>' +
+      '<li><strong>FEE</strong> (opcional): 0-100.</li>' +
       '<li>La primera acción solo valida; nada se graba hasta confirmar.</li>' +
       '</ul></div></div></div>' +
       '<div id="mpListsBulkResult" class="mp-material-bulk-result"></div>' +
@@ -1649,10 +1909,11 @@ const MP_STATE = {
       .then(function(resp) {
         var opts = MP_STATE.options || getMpEmptyOptions();
         var valid = mpListasBulkValidarFilas_(parsed.filas, opts, (resp && resp.registros) || []);
+        var idCanal = mpBulkCanalValue_("mpListsBulkCanal");
         var tokenPreview = null;
         var puedeConfirmar = false;
         if (valid.okItems.length) {
-          tokenPreview = mpGsdStorePending_("LST", { grupos: valid.grupos });
+          tokenPreview = mpGsdStorePending_("LST", { grupos: valid.grupos, idCanal: idCanal });
           puedeConfirmar = true;
         }
         renderMpListsBulkPreview_(resultBox, {
@@ -1721,6 +1982,8 @@ const MP_STATE = {
       return;
     }
     var grupos = pending.pendientes.grupos || [];
+    var idCanal = String((pending.pendientes && pending.pendientes.idCanal) || mpBulkCanalValue_("mpListsBulkCanal") || "IA").toUpperCase();
+    if (idCanal !== "IA" && idCanal !== "ALO") idCanal = "IA";
     var totalDetalles = grupos.reduce(function(n, g) { return n + ((g.items || []).length); }, 0);
     var doneBulkLst = 0;
     var stepBulkLst = function() {
@@ -1739,7 +2002,8 @@ const MP_STATE = {
     var chain = Promise.resolve();
     grupos.forEach(function(grupo) {
       chain = chain.then(function() {
-        return secureRpc("guardarListaOficialPrecioModulo", [grupo.cabecera], "MATERIALES_PRECIOS")
+        var cabeceraPayload = Object.assign({}, grupo.cabecera, { idCanal: idCanal });
+        return secureRpc("guardarListaOficialPrecioModulo", [cabeceraPayload], "MATERIALES_PRECIOS")
           .then(function(resLista) {
             var idLista = (resLista && (resLista.idListaPrecio || resLista.idLista)) || "";
             if (resLista && resLista.creado === false) listasActualizadas += 1;
@@ -1753,7 +2017,6 @@ const MP_STATE = {
                   precioBase: item.detalle.precioBase,
                   moneda: item.detalle.moneda,
                   fee: item.detalle.fee,
-                  responsableVenta: item.detalle.responsableVenta,
                   estado: "ACTIVO"
                 };
                 return secureRpc("guardarDetalleListaPrecioModulo", [det], "MATERIALES_PRECIOS")
@@ -1948,7 +2211,7 @@ const MP_STATE = {
                 "Responsable venta",
                 "text",
                 (prefill && (prefill.responsableVenta || prefill.RESPONSABLE_VENTA)) || "",
-                "Columna nueva al lado de proveedor en el Excel GSD."
+                "Opcional. Dato informativo del precio individual."
               )
             ) +
             campoPrecioAnchoCompleto_(
@@ -2435,7 +2698,7 @@ const MP_STATE = {
 
     body.innerHTML =
       '<form id="mpBulkPriceForm" class="mp-modern-form">' +
-
+        mpBulkCanalFieldHtml_("mpBulkPriceCanal", "IA") +
         '<section class="mp-upload-hero">' +
           '<div>' +
             '<h4>Carga masiva de precios</h4>' +
@@ -2484,7 +2747,7 @@ const MP_STATE = {
                 '<li>Borra la fila EJEMPLO antes de validar.</li>' +
                 '<li>Identifica el material por CODIGO_HANA (equivale al código SAP) o CODIGO_MATERIAL.</li>' +
                 '<li>Se acepta el Excel GSD de una sola hoja (PROVEEDOR, MARCA, TIPO, SUBTIPO, INCLUYE CONEXIÓN, CODIGO HANA, PRODUCTO_PRINCIPAL, COMBO, COMENTARIOS, FEE, PRECIO). N°, cuotas por plazo y columnas * original se ignoran.</li>' +
-                '<li>Todo precio debe terminar asociado a un proveedor y a un negocio. RESPONSABLE_VENTA va al lado de PROVEEDOR.</li>' +
+                '<li>Todo precio debe terminar asociado a un proveedor y a un negocio.</li>' +
                 '<li>FEE es el % que se lleva Cálidda y está oculto para el rol proveedor.</li>' +
                 '<li>Vigencia mensual: FECHA_INICIO día 1 y FECHA_FIN último día del mes de carga.</li>' +
                 '<li>CODIGO_OFICINA y CODIGO_GRUPO son opcionales.</li>' +
@@ -2696,13 +2959,15 @@ const MP_STATE = {
   }
 
   // AGENTE 2: prevalidación local GSD de precios. Cada fila válida genera su
-  // material (por CODIGO_HANA) y su precio con RESPONSABLE_VENTA, FEE y vigencia
+  // material (por CODIGO_HANA) y su precio con FEE y vigencia
   // mensual (día 1 -> fin de mes). No graba nada; reutiliza el preview existente.
   function prevalidarPreciosGsdLocal_(form, parsed, resultBox, submit) {
     const defaults = formToObject(form);
     const opts = MP_STATE.options || getMpEmptyOptions();
     const idProveedorDefecto = String(defaults.idProveedor || "").trim();
     const idNegocio = String(defaults.idNegocio || "").trim();
+    var idCanal = String(defaults.idCanal || mpBulkCanalValue_("mpBulkPriceCanal") || "IA").toUpperCase();
+    if (idCanal !== "IA" && idCanal !== "ALO") idCanal = "IA";
     const vigencia = mpGsdMonthRange_();
 
     const materialesP = secureRpc("listarMaterialesPrecioModulo", [{}], "MATERIALES_PRECIOS").catch(function() { return { registros: [] }; });
@@ -2761,9 +3026,9 @@ const MP_STATE = {
             idMaterial: material.idMaterial,
             idProveedor: proveedorId,
             idNegocio: idNegocio,
+            idCanal: idCanal,
             precioBase: val.precio,
             fee: val.fee,
-            responsableVenta: g.responsableVenta || "",
             moneda: "PEN",
             fechaInicio: vigencia.inicio,
             fechaFin: vigencia.fin,
@@ -2780,7 +3045,6 @@ const MP_STATE = {
             accion: previo ? "ACTUALIZAR" : "CREAR",
             estado: val.advertencias.length ? "ADVERTENCIA" : "OK",
             detalle: "S/ " + val.precio + " · " + mpGsdMaskFee_(feeTexto) +
-              (g.responsableVenta ? " · Resp: " + g.responsableVenta : "") +
               (val.advertencias.length ? " · " + val.advertencias.join(" ") : "")
           });
         });
@@ -2788,7 +3052,7 @@ const MP_STATE = {
         let tokenPreview = null;
         let puedeConfirmar = false;
         if (pendientes.length) {
-          tokenPreview = mpGsdStorePending_("PRE", { items: pendientes });
+          tokenPreview = mpGsdStorePending_("PRE", { items: pendientes, idCanal: idCanal });
           puedeConfirmar = true;
         }
         renderBulkPricePreviewPaso28O_(resultBox, {
@@ -2973,7 +3237,8 @@ const MP_STATE = {
       "cargarPreciosIndividualesMasivoModulo",
       [{
         modo: "CONFIRMAR",
-        tokenPreview: tokenPreview
+        tokenPreview: tokenPreview,
+        idCanal: mpBulkCanalValue_("mpBulkPriceCanal")
       }],
       "MATERIALES_PRECIOS"
     )
@@ -3049,6 +3314,8 @@ const MP_STATE = {
   // actualiza el material y luego su precio (misma vigencia se actualiza).
   function confirmarPreciosGsdLocal_(resultBox, tokenPreview, localPending) {
     const items = ((localPending && localPending.pendientes && localPending.pendientes.items) || []);
+    var idCanalPrecios = String((localPending && localPending.pendientes && localPending.pendientes.idCanal) || mpBulkCanalValue_("mpBulkPriceCanal") || "IA").toUpperCase();
+    if (idCanalPrecios !== "IA" && idCanalPrecios !== "ALO") idCanalPrecios = "IA";
     var doneBulkPre = 0;
     var stepBulkPre = function() {
       doneBulkPre += 1;
@@ -3093,7 +3360,7 @@ const MP_STATE = {
             return elegida.idListaPrecio;
           }
           var nombreCat = "Catálogo " + String(nombreProv || idProveedor).slice(0, 120);
-          return secureRpc("guardarListaOficialPrecioModulo", [{ idProveedor: idProveedor, nombre: nombreCat, es_catalogo: true, esCatalogo: true }], "MATERIALES_PRECIOS")
+          return secureRpc("guardarListaOficialPrecioModulo", [{ idProveedor: idProveedor, nombre: nombreCat, es_catalogo: true, esCatalogo: true, idCanal: idCanalPrecios }], "MATERIALES_PRECIOS")
             .then(function(creada) {
               var idCat = creada && creada.idListaPrecio;
               if (idCat) catalogoCache_[idProveedor] = idCat;
@@ -3119,14 +3386,14 @@ const MP_STATE = {
         return secureRpc("guardarMaterialPrecioModulo", [item.material], "MATERIALES_PRECIOS")
           .then(function(res) {
             var idMat = (res && res.idMaterial) || item.material.idMaterial;
-            const precio = Object.assign({}, item.precio, { idMaterial: idMat });
+            const precio = Object.assign({}, item.precio, { idMaterial: idMat, idCanal: idCanalPrecios });
             return secureRpc("guardarPrecioIndividualMaterialesPreciosModulo", [precio], "MATERIALES_PRECIOS")
               .then(function() {
                 if (item.precio.idDetallePrecio) actualizados += 1;
                 else creados += 1;
                 detalle.push({ fila: item.fila, codigoMaterial: item.material.codigoMaterial, accion: "GRABADO", estado: "OK", detalle: "OK" });
                 stepBulkPre();
-                // Espejo en catálogo: MISMO material+precio+fee+responsable.
+                // Espejo en catálogo: MISMO material+precio+fee.
                 // Sin idDetallePrecio: el RPC de detalle reutiliza la misma
                 // lista+material (no duplica). Fallos no tocan contadores mensuales.
                 var idProvCat = String((item.precio && item.precio.idProveedor) || "");
@@ -3140,7 +3407,6 @@ const MP_STATE = {
                       idMaterial: idMat,
                       precioBase: item.precio.precioBase,
                       fee: (item.precio.fee === undefined ? "" : item.precio.fee),
-                      responsableVenta: item.precio.responsableVenta || "",
                       moneda: item.precio.moneda || "PEN"
                     }], "MATERIALES_PRECIOS");
                   })
@@ -3344,7 +3610,7 @@ const MP_STATE = {
     liberarDescargaPlantillaPrecios_();
 
     // AGENTE 2: plantilla XLSX generada en el frontend con SheetJS
-    // (CODIGO_HANA, PROVEEDOR, RESPONSABLE_VENTA, PRECIO, FEE + DICCIONARIOS).
+    // (CODIGO_HANA, PROVEEDOR, PRECIO, FEE + DICCIONARIOS).
     // Si SheetJS no está disponible, se usa el CSV del servidor como respaldo.
     const localPre = mpGsdPlantillaPreciosLocal_();
     if (localPre) {
@@ -4436,7 +4702,6 @@ function confirmarBulkMaterialLoad(resultBox, tokenPreview) {
  *   Combo calculado -> mae_materiales.combo (+detalle_combo del precio)
  *   COMENTARIOS -> mae_materiales.comentarios
  *   FEE CLIDA (%) o primer FEE -> pre_lista_precio_detalle.fee (0-100, oculto a PROVEEDOR)
- *   RESPONSABLE_VENTA (solo plantilla precios) -> responsable_venta (detalle y lista)
  *   PRECIO -> pre_lista_precio_detalle.precio_base (vigencia mensual día 1 -> fin de mes)
  * SE IGNORA (y por qué):
  *   N°: correlativo del Excel, sin valor de negocio.
@@ -4467,8 +4732,9 @@ function mpGsdMapColumns_(headers) {
     var key = mpGsdNorm_(raw);
     if (!key) return;
     // AGENTE 2B: tolerancia a variantes de encabezado (orden libre, fila 3,
-    // "PRECIO BASE", "COD HANA", "RESPONSABLE DE VENTA"...). Todo por prefijo
+    // "PRECIO BASE", "COD HANA"...). Todo por prefijo
     // o sinónimos exactos; las cuotas (dígitos) y columnas *ORIGINAL se ignoran.
+    // NOTA: RESPONSABLE_VENTA ya no se mapea (columna sin uso; queda en BD).
     if (key.indexOf("PROVEEDOR") === 0 && map.proveedor == null) map.proveedor = idx;
     else if (key.indexOf("MARCA") === 0 && map.marca == null) map.marca = idx;
     else if ((key === "TIPO" || key === "TIPOMATERIAL") && map.tipo == null) map.tipo = idx;
@@ -4476,7 +4742,6 @@ function mpGsdMapColumns_(headers) {
     else if (key.indexOf("INCLUYE") === 0 && map.incluyeConexion == null) map.incluyeConexion = idx;
     else if ((key === "CODIGOHANA" || key === "CODHANA" || key === "HANA" || key === "CODIGOSAP" || key === "CODSAP" || key === "SAP") && map.codigoHana == null) map.codigoHana = idx;
     else if ((key === "COMENTARIOS" || key === "COMENTARIO" || key === "OBSERVACIONES" || key === "OBSERVACION") && map.comentarios == null) map.comentarios = idx;
-    else if ((key === "RESPONSABLEVENTA" || key === "RESPVENTA" || (key.indexOf("RESPONSABLE") !== -1 && key.indexOf("VENTA") !== -1)) && map.responsableVenta == null) map.responsableVenta = idx;
     else if (key.indexOf("PRECIO") === 0 && map.precio == null) map.precio = idx;
     else if (key === "COMBO") comboExact = comboExact === -1 ? idx : comboExact;
     else if (key.indexOf("COMBO") === 0 && key.indexOf("ORIGINAL") === -1) comboCalc = comboCalc === -1 ? idx : comboCalc;
@@ -4659,7 +4924,6 @@ function mpGsdParseWorkbook_(workbook) {
       productoPrincipal: mpGsdCell_(row, map.productoPrincipal),
       combo: mpGsdCell_(row, map.combo),
       comentarios: mpGsdCell_(row, map.comentarios),
-      responsableVenta: mpGsdCell_(row, map.responsableVenta),
       duplicadoDeFila: dupDe,
       feeRaw: map.fee != null ? row[map.fee] : "",
       precioRaw: map.precio != null ? row[map.precio] : ""
@@ -4845,11 +5109,11 @@ function mpGsdBuildMaterialWorkbook_(opts) {
 }
 
 function mpGsdBuildPricesWorkbook_(opts) {
-  // AGENTE 2C: 7 columnas exactas; RESPONSABLE_VENTA al lado de PROVEEDOR; vigencia mensual como ejemplo.
-  var headers = ["CODIGO_HANA", "PROVEEDOR", "RESPONSABLE_VENTA", "PRECIO", "FEE", "FECHA_INICIO", "FECHA_FIN"];
-  var anchos = [18, 22, 22, 14, 10, 14, 14];
+  // Plantilla de precios: 6 columnas exactas; vigencia mensual como ejemplo.
+  var headers = ["CODIGO_HANA", "PROVEEDOR", "PRECIO", "FEE", "FECHA_INICIO", "FECHA_FIN"];
+  var anchos = [18, 22, 14, 10, 14, 14];
   var vigencia = mpGsdMonthRange_();
-  var ejemplo = ["EJEMPLO-BORRAR-ESTA-FILA", "EJEMPLO Proveedor", "EJEMPLO Responsable", 100, 10, vigencia.inicio, vigencia.fin];
+  var ejemplo = ["EJEMPLO-BORRAR-ESTA-FILA", "EJEMPLO Proveedor", 100, 10, vigencia.inicio, vigencia.fin];
   var wb = window.XLSX.utils.book_new();
   var ws = window.XLSX.utils.aoa_to_sheet([headers, ejemplo]);
   ws["!cols"] = anchos.map(function(wch) { return { wch: wch }; });

@@ -3516,6 +3516,39 @@ const SALES_STATE = {
   }
 
 
+  function salesChannelContext29E_(editVenta) {
+    var appUser = {};
+    try {
+      appUser = (typeof APP_STATE !== "undefined" && APP_STATE && APP_STATE.context && APP_STATE.context.usuario) || {};
+    } catch (e) { appUser = {}; }
+    var salesUser = (SALES_STATE.context && SALES_STATE.context.usuario) || {};
+    var pick = function() {
+      for (var i = 0; i < arguments.length; i += 1) {
+        var value = String(arguments[i] === null || arguments[i] === undefined ? "" : arguments[i]).trim();
+        if (value) return value;
+      }
+      return "";
+    };
+    var edit = editVenta || {};
+    var idEmpresa = pick(edit.idEmpresa, edit.id_empresa, edit.idEmpresaVendedora, salesUser.idEmpresa, salesUser.id_empresa, salesUser.idEmpresaVendedora, appUser.idEmpresa, appUser.id_empresa, appUser.idEmpresaVendedora);
+    var idCanal = pick(edit.idCanal, edit.id_canal, salesUser.idCanal, salesUser.id_canal, appUser.idCanal, appUser.id_canal);
+    var nombreEmpresa = pick(edit.nombreEmpresa, edit.nombre_empresa, edit.empresa, salesUser.nombreEmpresa, salesUser.nombre_empresa, salesUser.empresa, appUser.nombreEmpresa, appUser.nombre_empresa);
+    var nombreCanal = pick(edit.nombreCanal, edit.nombre_canal, edit.canal, salesUser.nombreCanal, salesUser.nombre_canal, salesUser.canal, appUser.nombreCanal, appUser.nombre_canal);
+    var tipo = pick(edit.tipoEmpresa, salesUser.tipoEmpresa, appUser.tipoEmpresa);
+    if (!idEmpresa && !nombreEmpresa) return null;
+    return { idEmpresa: idEmpresa, idCanal: idCanal, nombreEmpresa: nombreEmpresa || idEmpresa, nombreCanal: nombreCanal || idCanal, tipo: tipo };
+  }
+
+  function salesChannelBannerHtml29E_(editVenta) {
+    var channel = salesChannelContext29E_(editVenta);
+    if (!channel) return "";
+    var empresaLabel = channel.nombreEmpresa + (channel.tipo ? " (" + String(channel.tipo).toUpperCase() + ")" : "");
+    var canalLabel = channel.nombreCanal || "Canal no registrado";
+    return '<div class="sales29-info-note span-2"><span class="material-symbols-rounded">storefront</span><span>Estás vendiendo como <strong>' + escapeHtml(empresaLabel) + '</strong> · Canal <strong>' + escapeHtml(canalLabel) + '</strong> <small>(informativo, solo lectura)</small></span></div>' +
+      '<input id="salesEmpresaId" type="hidden" value="' + escapeHtml(channel.idEmpresa || "") + '">' +
+      '<input id="salesCanalId" type="hidden" value="' + escapeHtml(channel.idCanal || "") + '">';
+  }
+
   function renderSaleForm29() {
     const region=document.getElementById("salesModalBody"); if(!region)return;
     const ctx=SALES_STATE.context||{}; const c=ctx.comercial||{}; const edit=SALES_STATE.editing&&SALES_STATE.editing.venta; const negocios=ctx.negociosVenta||[]; const permisos=ctx.permisos||{};
@@ -3554,6 +3587,7 @@ const SALES_STATE = {
       '</section>' +
 
       '<section class="sales-form-section"><div class="sales-form-section-head"><span class="material-symbols-rounded">storefront</span><div><h4>3. Contexto comercial</h4><p>Completa negocio, oficina y grupo antes de revisar las ofertas vigentes.</p></div></div><div class="sales-form-grid">' +
+        salesChannelBannerHtml29E_(edit) +
         '<label class="input-field span-2"><span>Negocio <small>obligatorio</small></span><select id="salesBusinessSelect"><option value="">Selecciona</option>' + negocios.map(function(x){return '<option value="'+escapeHtml(x.codigo)+'">'+escapeHtml(x.nombre)+'</option>';}).join('') + '</select></label>' +
         '<label class="input-field"><span>Oficina de ventas <small>obligatorio</small></span><select id="salesOfficeSelect"></select></label>' +
         '<label class="input-field"><span>Grupo de ventas <small>obligatorio</small></span><select id="salesGroupSelect"></select></label>' +
@@ -4410,12 +4444,17 @@ const SALES_STATE = {
       document.getElementById("salesReceiptInput").files[0];
 
     const build=function(receipt){
+      const channelContext = salesChannelContext29E_(edit);
+      const hiddenEmpresa = valueSales29("salesEmpresaId");
+      const hiddenCanal = valueSales29("salesCanalId");
       const data={
         idVenta:edit?edit.idVenta:"",
         tipoVenta:valueSales29("salesBusinessSelect"),
         idNegocio:valueSales29("salesBusinessSelect"),
         idOficina:valueSales29("salesOfficeSelect"),
         idGrupo:valueSales29("salesGroupSelect"),
+        idEmpresa: hiddenEmpresa || (channelContext && channelContext.idEmpresa) || (edit && (edit.idEmpresa || edit.id_empresa)) || "",
+        idCanal: hiddenCanal || (channelContext && channelContext.idCanal) || (edit && (edit.idCanal || edit.id_canal)) || "",
         tipoRegistro:edit ? (edit.tipoRegistro||"COMERCIAL") : ((SALES_STATE.context&&SALES_STATE.context.permisos&&SALES_STATE.context.permisos.puedeGestionarPruebas) ? (getRadio29("salesRecordType")||"COMERCIAL") : "COMERCIAL"),
 
         esClienteCalidda:getRadio29("salesIsCalidda"),

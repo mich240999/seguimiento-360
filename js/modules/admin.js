@@ -17,6 +17,12 @@ const ADMIN_STATE = {
     offices: [],
     groups: [],
     providerOfficeRelations: [],
+    canales: [],
+    empresas: [],
+    canalesError: "",
+    empresasError: "",
+    userPermissionOverrides: [],
+    userPermissionBaseRole: "",
     documentTypes: [],
     assignmentRules: {},
     assignmentStructureLoaded: false,
@@ -52,6 +58,18 @@ const ADMIN_STATE = {
       etiqueta: "Asignaciones proveedor-oficina",
       archivo: "plantilla_proveedor_oficinas.csv",
       cabeceras: ["ID_PROVEEDOR", "ID_OFICINA", "ESTADO"]
+    }),
+    CANALES: Object.freeze({
+      nombre: "canales",
+      etiqueta: "Canales",
+      archivo: "plantilla_canales.csv",
+      cabeceras: ["CODIGO", "NOMBRE", "DESCRIPCION", "ESTADO"]
+    }),
+    EMPRESAS: Object.freeze({
+      nombre: "empresas vendedoras",
+      etiqueta: "Empresas vendedoras",
+      archivo: "plantilla_empresas.csv",
+      cabeceras: ["NOMBRE", "TIPO", "CANAL", "ID_PROVEEDOR", "ESTADO"]
     })
   });
 
@@ -80,8 +98,8 @@ const ADMIN_STATE = {
     ADMIN_ESTRUCTURA: Object.freeze({
       eyebrow: "ESTRUCTURA COMERCIAL",
       title: "Estructura comercial",
-      description: "Administra proveedores, oficinas, grupos y relaciones proveedor-oficina.",
-      sections: ["providers", "offices-groups"],
+      description: "Administra proveedores, oficinas, grupos, relaciones proveedor-oficina, canales y empresas vendedoras.",
+      sections: ["providers", "offices-groups", "channels-companies"],
       metrics: false
     }),
     ADMIN_CONFIG_APP: Object.freeze({
@@ -113,8 +131,8 @@ const ADMIN_STATE = {
       return Object.assign({}, base, {
         eyebrow: "CENTRO DE GESTIÓN",
         title: "Administración integral",
-        description: "Gestiona desde una sola interfaz usuarios, proveedores, oficinas, grupos, asignaciones, roles, permisos, módulos y recursos visuales.",
-        sections: ["users", "roles", "permissions", "providers", "offices-groups", "modules", "catalogs", "visual-resources", "settings"]
+        description: "Gestiona desde una sola interfaz usuarios, proveedores, oficinas, grupos, asignaciones, canales, empresas, roles, permisos, módulos y recursos visuales.",
+        sections: ["users", "roles", "permissions", "providers", "offices-groups", "channels-companies", "modules", "catalogs", "visual-resources", "settings"]
       });
     }
     return base;
@@ -132,6 +150,12 @@ const ADMIN_STATE = {
     ADMIN_STATE.offices = [];
     ADMIN_STATE.groups = [];
     ADMIN_STATE.providerOfficeRelations = [];
+    ADMIN_STATE.canales = [];
+    ADMIN_STATE.empresas = [];
+    ADMIN_STATE.canalesError = "";
+    ADMIN_STATE.empresasError = "";
+    ADMIN_STATE.userPermissionOverrides = [];
+    ADMIN_STATE.userPermissionBaseRole = "";
     ADMIN_STATE.assignmentStructureLoaded = false;
     ADMIN_STATE.permissionMatrix = null;
     ADMIN_STATE.permissionOriginal = {};
@@ -345,7 +369,7 @@ const ADMIN_STATE = {
     } else if (ADMIN_STATE.activeModule === "ADMIN_PERMISOS") {
       tasks = [loadAdminRoles()];
     } else if (ADMIN_STATE.activeModule === "ADMIN_ESTRUCTURA") {
-      tasks = [loadAdminAssignmentStructure()];
+      tasks = [loadAdminAssignmentStructure(), loadAdminCanales(), loadAdminEmpresas()];
     } else if (ADMIN_STATE.activeModule === "ADMIN_CONFIG_APP") {
       tasks = [
         loadAdminModules(),
@@ -358,6 +382,8 @@ const ADMIN_STATE = {
         tasks.push(loadAdminUsers("", true));
         tasks.push(loadAdminRoles());
         tasks.push(loadAdminAssignmentStructure());
+        tasks.push(loadAdminCanales());
+        tasks.push(loadAdminEmpresas());
       }
     } else if (ADMIN_STATE.activeModule === "ADMIN_AUDITORIA") {
       tasks = [loadAdminSessions(), loadAdminAudit()];
@@ -407,6 +433,12 @@ const ADMIN_STATE = {
     if (action === "import-provider-offices") {
       selectAssignmentImportFile("PROVEEDOR_OFICINAS");
     }
+    if (action === "new-canal") openCanalEditor(null);
+    if (action === "new-empresa") openEmpresaEditor(null);
+    if (action === "template-canales") downloadAssignmentTemplate("CANALES");
+    if (action === "template-empresas") downloadAssignmentTemplate("EMPRESAS");
+    if (action === "import-canales") selectChannelCompanyImportFile("CANALES");
+    if (action === "import-empresas") selectChannelCompanyImportFile("EMPRESAS");
     if (action === "new-role") openRoleEditor(null);
     if (action === "new-module") openModuleEditor(null);
     if (action === "new-catalog") openCatalogEditor(null);
@@ -1536,7 +1568,7 @@ const ADMIN_STATE = {
       body: '<div class="detail-list">' + rows.map(function(row) {
         return '<div><span>' + escapeHtml(row[0]) + '</span><strong>' +
           escapeHtml(row[1]) + "</strong></div>";
-      }).join("") + "</div>",
+      }).join("") + '</div><p class="assignment-note">Los permisos efectivos combinan el rol asignado y los ajustes por usuario. Edita el usuario para revisar la sección Permisos y módulos del usuario (VISUALIZAR_MODULO controla la visibilidad de cada módulo).</p>',
       footer: '<button class="button button--primary" type="button" data-modal-close-button>Cerrar</button>'
     });
     const closeButton = document.querySelector("[data-modal-close-button]");
@@ -1604,6 +1636,7 @@ const ADMIN_STATE = {
           '<select id="userGroupSelect" name="idGrupo"><option value="">Selecciona un grupo</option></select></label>' +
         statusSelect("estado", user.estado || "ACTIVO") +
         '<p class="assignment-note">Para Vendedor y Coordinador de Ventas debes asignar una oficina y un grupo. El grupo siempre pertenece a la oficina seleccionada.</p>' +
+        '<fieldset id="userPermissionsSection" class="field field--full"><legend><strong>Permisos y módulos del usuario</strong></legend><p class="field-help">La matriz del rol se carga como base. Ajusta por usuario solo las diferencias (módulo + recurso + permitido + alcance). VISUALIZAR_MODULO controla si el usuario ve cada módulo.</p><div id="userPermissionsContent"><p class="field-help">Selecciona un rol para cargar su matriz base…</p></div></fieldset>' +
         "</form>",
       footer: '<button class="button button--ghost" type="button" data-sheet-close>Cancelar</button><button id="saveUserButton" class="button button--primary has-tooltip" type="button" data-tooltip="Guardar usuario" aria-label="Guardar usuario" title="Guardar usuario"><span class="material-symbols-rounded">save</span></button>'
     });
@@ -1632,24 +1665,174 @@ const ADMIN_STATE = {
 
     if (!form.reportValidity()) return;
     const data = formDataObject(form);
+    const pendingUserPermissions = collectUserPermissionOverrides();
     setLoader(true, "Guardando usuario…");
     secureRpc("guardarUsuarioAdminMotor", [data], adminRpcModuleCode())
       .then(function(result) {
-        closeSideSheet();
-        setLoader(false);
-        toast(
-          idUsuario ? "Usuario actualizado" : "Invitación enviada",
-          result && result.mensaje || (idUsuario ?
-            "Los datos y asignaciones fueron actualizados." :
-            "El usuario recibirá un correo para definir su contraseña.")
-        );
-        const search = document.getElementById("adminUsersSearch");
-        return loadAdminUsers(search ? search.value : "", true);
+        const savedId = String((result && (result.idUsuario || result.id_usuario)) || idUsuario || "");
+        const afterUsers = function() {
+          const search = document.getElementById("adminUsersSearch");
+          return loadAdminUsers(search ? search.value : "", true);
+        };
+        if (!pendingUserPermissions.length || !savedId) {
+          closeSideSheet();
+          setLoader(false);
+          toast(
+            idUsuario ? "Usuario actualizado" : "Invitación enviada",
+            result && result.mensaje || (idUsuario ?
+              "Los datos y asignaciones fueron actualizados." :
+              "El usuario recibirá un correo para definir su contraseña.")
+          );
+          return afterUsers();
+        }
+        setLoader(true, "Guardando permisos del usuario…");
+        return secureRpc("guardarMatrizPermisosUsuarioMotor", [{ idUsuario: savedId, permisos: pendingUserPermissions }], adminRpcModuleCode())
+          .then(function() {
+            closeSideSheet();
+            setLoader(false);
+            toast(
+              idUsuario ? "Usuario actualizado" : "Invitación enviada",
+              "Datos guardados y permisos por usuario aplicados (" + pendingUserPermissions.length + ")."
+            );
+            return afterUsers();
+          })
+          .catch(function(permissionError) {
+            closeSideSheet();
+            setLoader(false);
+            toast(
+              idUsuario ? "Usuario actualizado" : "Invitación enviada",
+              (result && result.mensaje ? result.mensaje + " " : "") + "Los permisos por usuario no se guardaron: " + errorMessage(permissionError, "el RPC guardarMatrizPermisosUsuarioMotor aún no está disponible."),
+              true
+            );
+            return afterUsers();
+          });
       })
       .catch(function(error) {
         setLoader(false);
         toast("No fue posible guardar", error.message, true);
       });
+  }
+
+  /**
+   * Carga la matriz del rol como base para los ajustes por usuario.
+   * No interrumpe el flujo por rol: ante cualquier fallo muestra un aviso
+   * dentro de la sección y conserva el guardado principal del usuario.
+   */
+  function loadUserPermissionBaseForEditor(idUsuario, roleCode) {
+    const region = document.getElementById("userPermissionsContent");
+    if (!region) return;
+    if (!roleCode) {
+      ADMIN_STATE.userPermissionOverrides = [];
+      ADMIN_STATE.userPermissionBaseRole = "";
+      region.innerHTML = '<p class="field-help">Selecciona un rol para cargar su matriz base…</p>';
+      return;
+    }
+    region.innerHTML = loadingHtml(3);
+    secureRpc("obtenerMatrizPermisosAdminMotor", [roleCode], adminRpcModuleCode())
+      .then(function(matrix) {
+        const base = document.getElementById("userPermissionsContent");
+        if (!base) return;
+        ADMIN_STATE.userPermissionBaseRole = String(roleCode || "");
+        snapshotUserPermissionBase(matrix);
+        if (!idUsuario) {
+          ADMIN_STATE.userPermissionOverrides = [];
+          renderUserPermissionMatrix(matrix, []);
+          return;
+        }
+        secureRpc("obtenerMatrizPermisosUsuarioMotor", [idUsuario], adminRpcModuleCode())
+          .then(function(userMatrix) {
+            const overrides = normalizeUserPermissionOverrides(userMatrix);
+            ADMIN_STATE.userPermissionOverrides = overrides;
+            renderUserPermissionMatrix(matrix, overrides);
+          })
+          .catch(function() {
+            ADMIN_STATE.userPermissionOverrides = [];
+            renderUserPermissionMatrix(matrix, []);
+          });
+      })
+      .catch(function(error) {
+        const target = document.getElementById("userPermissionsContent");
+        if (target) {
+          target.innerHTML = '<p class="field-help">No fue posible cargar la matriz del rol: ' + escapeHtml(errorMessage(error)) + ". El usuario se guardará solo con su rol.</p>";
+        }
+        ADMIN_STATE.userPermissionOverrides = [];
+      });
+  }
+
+  function snapshotUserPermissionBase(matrix) {
+    const snapshot = {};
+    (matrix && matrix.modulos || []).forEach(function(module) {
+      (module.recursos || []).forEach(function(resource) {
+        snapshot[module.codigo + "|" + resource.codigo] = {
+          permitido: resource.permitido === true,
+          alcance: String(resource.alcance || "PROPIO").toUpperCase()
+        };
+      });
+    });
+    ADMIN_STATE.userPermissionBaseSnapshot = snapshot;
+    ADMIN_STATE.userPermissionBaseMatrix = matrix;
+  }
+
+  function normalizeUserPermissionOverrides(userMatrix) {
+    if (Array.isArray(userMatrix)) return userMatrix;
+    if (userMatrix && Array.isArray(userMatrix.permisos)) return userMatrix.permisos;
+    if (userMatrix && Array.isArray(userMatrix.registros)) return userMatrix.registros;
+    return [];
+  }
+
+  function renderUserPermissionMatrix(matrix, overrides) {
+    const region = document.getElementById("userPermissionsContent");
+    if (!region || !matrix) return;
+    const overrideMap = {};
+    (overrides || []).forEach(function(item) {
+      overrideMap[String(item.modulo || "") + "|" + String(item.recurso || "")] = item;
+    });
+    const scopes = matrix.alcancesDisponibles || ["PROPIO", "PROVEEDOR", "GRUPO", "ASIGNADOS", "GLOBAL"];
+    region.innerHTML = '<p class="field-help">Base del rol <strong>' + escapeHtml(ADMIN_STATE.userPermissionBaseRole || "") + '</strong>. Solo se guardan las filas que difieran de la base.</p>' +
+      (matrix.modulos || []).map(function(module) {
+        const resources = (module.recursos || []).slice().sort(function(a, b) {
+          if (a.codigo === "VISUALIZAR_MODULO") return -1;
+          if (b.codigo === "VISUALIZAR_MODULO") return 1;
+          return (a.orden || 0) - (b.orden || 0);
+        });
+        return '<section class="permission-module" data-user-permission-section="' + escapeHtml(module.codigo) + '"><header class="permission-module-header"><span class="material-symbols-rounded">dataset</span><strong>' + escapeHtml(module.codigo) + '</strong></header><div class="permission-list">' +
+          resources.map(function(resource) {
+            const key = module.codigo + "|" + resource.codigo;
+            const override = overrideMap[key];
+            const permitido = override ? override.permitido === true : resource.permitido === true;
+            const alcance = override && override.alcance ? String(override.alcance).toUpperCase() : String(resource.alcance || "PROPIO").toUpperCase();
+            const isModule = resource.codigo === "VISUALIZAR_MODULO";
+            return '<div class="permission-row" data-user-permission-module="' + escapeHtml(module.codigo) + '" data-user-permission-resource="' + escapeHtml(resource.codigo) + '">' +
+              '<div class="permission-resource"><strong>' + escapeHtml(resource.nombre || resource.codigo) + '</strong><small>' + escapeHtml(isModule ? "Módulo visible (VISUALIZAR_MODULO)" : (resource.tipo || "Ajuste por usuario")) + (override ? ' · <strong>Ajuste de usuario</strong>' : ' · Base del rol') + '</small></div>' +
+              '<label class="switch"><input type="checkbox" data-user-permission-enabled ' + (permitido ? "checked" : "") + '><span class="switch-track"></span></label>' +
+              '<select data-user-permission-scope ' + (!permitido ? "disabled" : "") + '>' + scopes.map(function(scope) { return '<option value="' + scope + '" ' + (alcance === scope ? "selected" : "") + '>' + scope + "</option>"; }).join("") + "</select></div>";
+          }).join("") + "</div></section>";
+      }).join("");
+    region.querySelectorAll("[data-user-permission-enabled]").forEach(function(input) {
+      input.addEventListener("change", function() {
+        const row = input.closest(".permission-row");
+        if (row) {
+          const scope = row.querySelector("[data-user-permission-scope]");
+          if (scope) scope.disabled = !input.checked;
+        }
+      });
+    });
+  }
+
+  function collectUserPermissionOverrides() {
+    const region = document.getElementById("userPermissionsContent");
+    if (!region) return [];
+    const base = ADMIN_STATE.userPermissionBaseSnapshot || {};
+    return Array.from(region.querySelectorAll("[data-user-permission-module]")).map(function(row) {
+      const current = {
+        modulo: row.dataset.userPermissionModule,
+        recurso: row.dataset.userPermissionResource,
+        permitido: row.querySelector("[data-user-permission-enabled]").checked,
+        alcance: row.querySelector("[data-user-permission-scope]").value
+      };
+      const original = base[current.modulo + "|" + current.recurso] || { permitido: false, alcance: "PROPIO" };
+      return (original.permitido !== current.permitido || String(original.alcance).toUpperCase() !== String(current.alcance).toUpperCase()) ? current : null;
+    }).filter(Boolean);
   }
 
   /**
@@ -2765,6 +2948,371 @@ const ADMIN_STATE = {
       });
   }
 
+  /**
+   * Canales y empresas vendedoras (tablas ven_canales y ven_empresas).
+   * Si las tablas aún no existen en BD, el programa es defensivo:
+   * muestra un mensaje claro y no rompe la consola.
+   */
+  function loadAdminCanales() {
+    const region = document.getElementById("adminCanalesContent");
+    if (region) region.innerHTML = loadingHtml(3);
+    return secureRpc("listarCanalesAdminMotor", [], adminRpcModuleCode())
+      .then(function(result) {
+        const rows = Array.isArray(result) ? result : (result && Array.isArray(result.registros) ? result.registros : (result && Array.isArray(result.canales) ? result.canales : []));
+        ADMIN_STATE.canales = rows;
+        ADMIN_STATE.canalesError = "";
+        updateAdminCount("channels-companies", (ADMIN_STATE.canales.length || 0) + (ADMIN_STATE.empresas.length || 0));
+        if (region) renderAdminCanales();
+      })
+      .catch(function(error) {
+        ADMIN_STATE.canales = [];
+        ADMIN_STATE.canalesError = errorMessage(error, "No fue posible cargar los canales.");
+        if (region) renderAdminCanales();
+      });
+  }
+
+  function renderAdminCanales() {
+    const region = document.getElementById("adminCanalesContent");
+    if (!region) return;
+    if (ADMIN_STATE.canalesError && !ADMIN_STATE.canales.length) {
+      region.innerHTML = '<div class="empty-state"><span class="material-symbols-rounded">database_alert</span><strong>Canales no disponibles</strong><p>' + escapeHtml(ADMIN_STATE.canalesError) + ' La tabla ven_canales aún no existe en la base de datos o el RPC listarCanalesAdminMotor no está desplegado.</p></div>';
+      return;
+    }
+    region.innerHTML = tableHtml([
+      { key: "codigo", label: "Código" },
+      { key: "nombre", label: "Canal" },
+      { key: "descripcion", label: "Descripción" },
+      { key: "estado", label: "Estado", render: statusChip },
+      { key: "actions", label: "", render: function(row) {
+        const id = row.idCanal || row.codigo;
+        return '<div class="table-actions"><button class="table-button has-tooltip" type="button" data-edit-canal="' + escapeHtml(id) + '" data-tooltip="Editar canal" aria-label="Editar canal" title="Editar canal"><span class="material-symbols-rounded">edit</span></button></div>';
+      } }
+    ], ADMIN_STATE.canales);
+    region.querySelectorAll("[data-edit-canal]").forEach(function(button) {
+      button.addEventListener("click", function() {
+        const found = ADMIN_STATE.canales.find(function(item) {
+          return String(item.idCanal || item.codigo || "") === String(button.dataset.editCanal || "");
+        });
+        openCanalEditor(found || null);
+      });
+    });
+  }
+
+  function loadAdminEmpresas() {
+    const region = document.getElementById("adminEmpresasContent");
+    if (region) region.innerHTML = loadingHtml(3);
+    return secureRpc("listarEmpresasVendedorasAdminMotor", [], adminRpcModuleCode())
+      .then(function(result) {
+        const rows = Array.isArray(result) ? result : (result && Array.isArray(result.registros) ? result.registros : (result && Array.isArray(result.empresas) ? result.empresas : []));
+        ADMIN_STATE.empresas = rows;
+        ADMIN_STATE.empresasError = "";
+        updateAdminCount("channels-companies", (ADMIN_STATE.canales.length || 0) + (ADMIN_STATE.empresas.length || 0));
+        if (region) renderAdminEmpresas();
+      })
+      .catch(function(error) {
+        ADMIN_STATE.empresas = [];
+        ADMIN_STATE.empresasError = errorMessage(error, "No fue posible cargar las empresas.");
+        if (region) renderAdminEmpresas();
+      });
+  }
+
+  function renderAdminEmpresas() {
+    const region = document.getElementById("adminEmpresasContent");
+    if (!region) return;
+    if (ADMIN_STATE.empresasError && !ADMIN_STATE.empresas.length) {
+      region.innerHTML = '<div class="empty-state"><span class="material-symbols-rounded">database_alert</span><strong>Empresas no disponibles</strong><p>' + escapeHtml(ADMIN_STATE.empresasError) + ' La tabla ven_empresas aún no existe en la base de datos o el RPC listarEmpresasVendedorasAdminMotor no está desplegado.</p></div>';
+      return;
+    }
+    region.innerHTML = tableHtml([
+      { key: "nombre", label: "Empresa" },
+      { key: "tipo", label: "Tipo", render: function(row) {
+        return '<span class="chip">' + escapeHtml(String(row.tipo || "—").toUpperCase()) + "</span>";
+      } },
+      { key: "nombreCanal", label: "Canal", render: function(row) {
+        return escapeHtml(row.nombreCanal || row.canal || row.idCanal || "—");
+      } },
+      { key: "nombreProveedor", label: "Proveedor vinculado", render: function(row) {
+        return escapeHtml(row.nombreProveedor || row.idProveedor || "Sin vínculo");
+      } },
+      { key: "estado", label: "Estado", render: statusChip },
+      { key: "actions", label: "", render: function(row) {
+        const id = row.idEmpresa || row.nombre;
+        return '<div class="table-actions"><button class="table-button has-tooltip" type="button" data-edit-empresa="' + escapeHtml(id) + '" data-tooltip="Editar empresa" aria-label="Editar empresa" title="Editar empresa"><span class="material-symbols-rounded">edit</span></button></div>';
+      } }
+    ], ADMIN_STATE.empresas);
+    region.querySelectorAll("[data-edit-empresa]").forEach(function(button) {
+      button.addEventListener("click", function() {
+        const found = ADMIN_STATE.empresas.find(function(item) {
+          return String(item.idEmpresa || item.nombre || "") === String(button.dataset.editEmpresa || "");
+        });
+        openEmpresaEditor(found || null);
+      });
+    });
+  }
+
+  function buildCanalOptions(selected) {
+    const normalized = String(selected || "").trim();
+    return (ADMIN_STATE.canales || []).map(function(item) {
+      const code = String(item.codigo || item.idCanal || "").trim();
+      if (!code) return "";
+      return '<option value="' + escapeHtml(code) + '" ' + (code === normalized ? "selected" : "") + '>' + escapeHtml((item.nombre || code) + " · " + code) + "</option>";
+    }).join("");
+  }
+
+  function openCanalEditor(canal) {
+    canal = canal || {};
+    if (!ensureWritableAdministrationView()) return;
+    openSideSheet({
+      eyebrow: canal.idCanal || canal.codigo ? "EDITAR CANAL" : "NUEVO CANAL",
+      title: canal.nombre || "Registrar canal",
+      body: '<form id="canalEditorForm" class="form-grid">' + hiddenInput("idCanal", canal.idCanal || "") +
+        fieldInput("codigo", "Código", canal.codigo || "", true) +
+        fieldInput("nombre", "Nombre", canal.nombre || "", true) +
+        '<label class="field field--full"><span>Descripción</span><textarea name="descripcion">' + escapeHtml(canal.descripcion || "") + "</textarea></label>" +
+        statusSelect("estado", canal.estado || "ACTIVO") + "</form>",
+      footer: '<button class="button button--ghost" type="button" data-sheet-close>Cancelar</button><button id="saveCanalButton" class="button button--primary has-tooltip" type="button" data-tooltip="Guardar canal" aria-label="Guardar canal" title="Guardar canal"><span class="material-symbols-rounded">save</span></button>'
+    });
+    bindSideSheetCloseButtons();
+    on("saveCanalButton", "click", function() {
+      const form = document.getElementById("canalEditorForm");
+      if (!form || !form.reportValidity()) return;
+      const data = formDataObject(form);
+      data.codigo = String(data.codigo || "").trim().toUpperCase();
+      if (!data.codigo) { toast("Código requerido", "Ingresa el código del canal.", true); return; }
+      setLoader(true, "Guardando canal…");
+      secureRpc("guardarCanalAdminMotor", [data], adminRpcModuleCode())
+        .then(function() { closeSideSheet(); setLoader(false); toast("Canal guardado", "La tabla ven_canales fue actualizada."); return loadAdminCanales(); })
+        .catch(function(error) { setLoader(false); toast("No fue posible guardar", errorMessage(error) + " Si la tabla ven_canales aún no existe, solicítala al backend.", true); });
+    });
+  }
+
+  function openEmpresaEditor(empresa) {
+    empresa = empresa || {};
+    if (!ensureWritableAdministrationView()) return;
+    const canalValue = String(empresa.idCanal || empresa.canal || "");
+    const providerOptions = buildProviderOptions(empresa.idProveedor);
+    openSideSheet({
+      eyebrow: empresa.idEmpresa ? "EDITAR EMPRESA" : "NUEVA EMPRESA",
+      title: empresa.nombre || "Registrar empresa vendedora",
+      body: '<form id="empresaEditorForm" class="form-grid">' + hiddenInput("idEmpresa", empresa.idEmpresa || "") +
+        fieldInput("nombre", "Nombre", empresa.nombre || "", true) +
+        '<label class="field is-required"><span>Tipo</span><select name="tipo" required><option value="">Selecciona</option><option value="ALO" ' + (String(empresa.tipo || "").toUpperCase() === "ALO" ? "selected" : "") + '>ALO</option><option value="IA" ' + (String(empresa.tipo || "").toUpperCase() === "IA" ? "selected" : "") + '>IA</option></select></label>' +
+        '<label class="field is-required"><span>Canal</span><select name="idCanal" required><option value="">Selecciona</option>' + buildCanalOptions(canalValue) + '</select><small class="field-help">Si la lista está vacía, primero registra el canal en la tarjeta Canales.</small></label>' +
+        '<label class="field"><span>Proveedor vinculado (opcional)</span><select name="idProveedor"><option value="">Sin vínculo</option>' + providerOptions + '</select></label>' +
+        statusSelect("estado", empresa.estado || "ACTIVO") + "</form>",
+      footer: '<button class="button button--ghost" type="button" data-sheet-close>Cancelar</button><button id="saveEmpresaButton" class="button button--primary has-tooltip" type="button" data-tooltip="Guardar empresa" aria-label="Guardar empresa" title="Guardar empresa"><span class="material-symbols-rounded">save</span></button>'
+    });
+    bindSideSheetCloseButtons();
+    on("saveEmpresaButton", "click", function() {
+      const form = document.getElementById("empresaEditorForm");
+      if (!form || !form.reportValidity()) return;
+      const data = formDataObject(form);
+      data.tipo = String(data.tipo || "").trim().toUpperCase();
+      if (data.tipo !== "ALO" && data.tipo !== "IA") { toast("Tipo inválido", "El tipo debe ser ALO o IA.", true); return; }
+      if (!String(data.idCanal || "").trim()) { toast("Canal requerido", "Selecciona el canal de la empresa.", true); return; }
+      setLoader(true, "Guardando empresa…");
+      secureRpc("guardarEmpresaVendedoraAdminMotor", [data], adminRpcModuleCode())
+        .then(function() { closeSideSheet(); setLoader(false); toast("Empresa guardada", "La tabla ven_empresas fue actualizada."); return loadAdminEmpresas(); })
+        .catch(function(error) { setLoader(false); toast("No fue posible guardar", errorMessage(error) + " Si la tabla ven_empresas aún no existe, solicítala al backend.", true); });
+    });
+  }
+
+  function normalizeBulkHeaderAdmin(value) {
+    return String(value || "").trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+  }
+
+  function detectBulkDelimiterAdmin(line) {
+    const counts = [{ key: ";", count: (line.match(/;/g) || []).length }, { key: ",", count: (line.match(/,/g) || []).length }, { key: "\t", count: (line.match(/\t/g) || []).length }];
+    counts.sort(function(a, b) { return b.count - a.count; });
+    return counts[0].count > 0 ? counts[0].key : ";";
+  }
+
+  function splitBulkLineAdmin(line, delimiter) {
+    const out = [];
+    let current = "";
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i += 1) {
+      const ch = line[i];
+      if (ch === '"') {
+        if (inQuotes && line[i + 1] === '"') { current += '"'; i += 1; }
+        else { inQuotes = !inQuotes; }
+      } else if (ch === delimiter && !inQuotes) {
+        out.push(current);
+        current = "";
+      } else {
+        current += ch;
+      }
+    }
+    out.push(current);
+    return out.map(function(cell) {
+      let value = String(cell || "").trim();
+      if (value.length >= 2 && value.charAt(0) === '"' && value.charAt(value.length - 1) === '"') {
+        value = value.slice(1, -1).replace(/""/g, '"').trim();
+      }
+      return value;
+    });
+  }
+
+  function normalizeEstadoBulkAdmin(value) {
+    const normalized = String(value || "").trim().toUpperCase();
+    if (!normalized) return "ACTIVO";
+    if (["ACTIVO", "ACTIVE", "ACTIVA", "1", "SI", "TRUE", "VIGENTE"].indexOf(normalized) !== -1) return "ACTIVO";
+    if (["INACTIVO", "INACTIVE", "INACTIVA", "0", "NO", "FALSE", "BLOQUEADO"].indexOf(normalized) !== -1) return "INACTIVO";
+    return normalized === "INACTIVO" ? "INACTIVO" : "ACTIVO";
+  }
+
+  function parseBulkCsvTolerantAdmin(content, mapConfig, fallbackOrder) {
+    const text = String(content || "").replace(/^\uFEFF/, "").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+    const lines = text.split("\n").filter(function(line) { return String(line || "").trim() !== ""; });
+    if (!lines.length) return { headers: [], rows: [] };
+    const delimiter = detectBulkDelimiterAdmin(lines[0]);
+    const rawHeaders = splitBulkLineAdmin(lines[0], delimiter).map(normalizeBulkHeaderAdmin);
+    let headerMap = {};
+    let hasHeader = false;
+    rawHeaders.forEach(function(header, index) {
+      Object.keys(mapConfig).forEach(function(field) {
+        if (mapConfig[field].indexOf(header) !== -1) {
+          headerMap[field] = index;
+          hasHeader = true;
+        }
+      });
+    });
+    let start = 0;
+    if (!hasHeader) {
+      fallbackOrder.forEach(function(field, index) { headerMap[field] = index; });
+    } else {
+      start = 1;
+    }
+    const rows = [];
+    for (let i = start; i < lines.length; i += 1) {
+      const cells = splitBulkLineAdmin(lines[i], delimiter);
+      if (!cells.some(function(cell) { return String(cell || "").trim() !== ""; })) continue;
+      const record = { __linea: i + 1 };
+      Object.keys(headerMap).forEach(function(field) {
+        const index = headerMap[field];
+        record[field] = index !== undefined && index < cells.length ? String(cells[index] || "").trim() : "";
+      });
+      rows.push(record);
+    }
+    return { headers: rawHeaders, rows: rows, delimiter: delimiter, hasHeader: hasHeader };
+  }
+
+  function selectChannelCompanyImportFile(type) {
+    if (!ensureWritableAdministrationView()) return;
+    const config = ASSIGNMENT_IMPORT_CONFIG[type];
+    if (!config) return;
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".csv,text/csv";
+    input.addEventListener("change", function() {
+      const file = input.files && input.files[0];
+      if (!file) return;
+      if (file.size > 5 * 1024 * 1024) {
+        toast("Archivo demasiado grande", "El límite para estos maestros es 5 MB.", true);
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = function() {
+        openChannelCompanyImportPreview(type, file, String(reader.result || ""));
+      };
+      reader.onerror = function() {
+        toast("No fue posible leer el archivo", "Selecciona nuevamente el CSV.", true);
+      };
+      reader.readAsText(file, "UTF-8");
+    });
+    input.click();
+  }
+
+  function openChannelCompanyImportPreview(type, file, content) {
+    const isCanales = type === "CANALES";
+    const mapConfig = isCanales ? {
+      codigo: ["CODIGO", "CODE", "ID", "ID_CANAL", "CODIGO_CANAL"],
+      nombre: ["NOMBRE", "NAME", "CANAL", "NOMBRE_CANAL"],
+      descripcion: ["DESCRIPCION", "DESCRIPTION", "DESC", "OBSERVACION", "DETALLE"],
+      estado: ["ESTADO", "STATUS", "STATE"]
+    } : {
+      nombre: ["NOMBRE", "NAME", "EMPRESA", "NOMBRE_EMPRESA", "RAZON_SOCIAL"],
+      tipo: ["TIPO", "TYPE", "TIPO_EMPRESA"],
+      canal: ["CANAL", "ID_CANAL", "CODIGO_CANAL", "NOMBRE_CANAL"],
+      proveedor: ["ID_PROVEEDOR", "PROVEEDOR", "CODIGO_PROVEEDOR", "IDPROVEEDOR"],
+      estado: ["ESTADO", "STATUS", "STATE"]
+    };
+    const fallbackOrder = isCanales ? ["codigo", "nombre", "descripcion", "estado"] : ["nombre", "tipo", "canal", "proveedor", "estado"];
+    const parsed = parseBulkCsvTolerantAdmin(content, mapConfig, fallbackOrder);
+    const valid = [];
+    const invalid = [];
+    parsed.rows.forEach(function(row) {
+      const errors = [];
+      if (isCanales) {
+        row.codigo = String(row.codigo || "").trim().toUpperCase();
+        row.nombre = String(row.nombre || "").trim();
+        row.descripcion = String(row.descripcion || "").trim();
+        row.estado = normalizeEstadoBulkAdmin(row.estado);
+        if (!row.codigo) errors.push("Falta el código del canal.");
+        if (!row.nombre) errors.push("Falta el nombre del canal.");
+      } else {
+        row.nombre = String(row.nombre || "").trim();
+        row.tipo = String(row.tipo || "").trim().toUpperCase();
+        row.canal = String(row.canal || "").trim();
+        row.proveedor = String(row.proveedor || "").trim();
+        row.estado = normalizeEstadoBulkAdmin(row.estado);
+        if (!row.nombre) errors.push("Falta el nombre de la empresa.");
+        if (row.tipo !== "ALO" && row.tipo !== "IA") errors.push("El tipo debe ser ALO o IA.");
+        if (!row.canal) errors.push("Falta el canal de la empresa.");
+      }
+      if (errors.length) { row.__errores = errors; invalid.push(row); }
+      else { valid.push(row); }
+    });
+    const etiqueta = isCanales ? "canales" : "empresas vendedoras";
+    openModal({
+      eyebrow: "CARGA MASIVA",
+      title: "Previsualizar " + etiqueta,
+      wide: true,
+      body: '<div class="mass-import-file"><span class="material-symbols-rounded">description</span><div><strong>' + escapeHtml(file.name || "Archivo CSV") + '</strong><small>' + valid.length + ' válidas · ' + invalid.length + ' con errores · sin RUC</small></div></div>' +
+        (invalid.length ? '<div class="mass-import-approval-note is-error"><span class="material-symbols-rounded">block</span><div><strong>Filas con error (' + invalid.length + ')</strong><p>Corrige el archivo y vuelve a cargarlo. Solo se aplicarán las filas válidas si decides continuar.</p><ul>' + invalid.slice(0, 8).map(function(row) { return "<li>Línea " + row.__linea + ": " + escapeHtml(row.__errores.join(" ")); }).join("") + (invalid.length > 8 ? "<li>Y " + (invalid.length - 8) + " filas adicionales.</li>" : "") + "</ul></div></div>" : "") +
+        '<div class="mp-table-wrap"><table class="mp-table"><thead><tr><th>Línea</th><th>' + (isCanales ? "Código" : "Empresa") + '</th><th>' + (isCanales ? "Nombre" : "Tipo / Canal") + '</th><th>Estado</th></tr></thead><tbody>' +
+        valid.slice(0, 25).map(function(row) {
+          return "<tr><td>" + row.__linea + "</td><td><strong>" + escapeHtml(isCanales ? row.codigo : row.nombre) + "</strong></td><td>" + escapeHtml(isCanales ? row.nombre : (row.tipo + " · " + row.canal)) + "</td><td>" + escapeHtml(row.estado) + "</td></tr>";
+        }).join("") + (valid.length ? "" : '<tr><td colspan="4">Sin filas válidas para aplicar.</td></tr>') + "</tbody></table></div>" +
+        (valid.length > 25 ? "<p class=\"field-help\">Se muestran las primeras 25 filas válidas de " + valid.length + ".</p>" : ""),
+      footer: '<button class="button button--ghost" type="button" data-modal-close>Cancelar</button>' +
+        '<button id="channelBulkApplyButton" class="button button--primary" type="button" ' + (valid.length ? "" : "disabled") + '>Aplicar ' + valid.length + ' filas</button>'
+    });
+    bindModalCloseButtons();
+    on("channelBulkApplyButton", "click", function() {
+      applyChannelCompanyBulkRows(type, valid);
+    });
+  }
+
+  function applyChannelCompanyBulkRows(type, rows) {
+    const isCanales = type === "CANALES";
+    const operation = isCanales ? "guardarCanalAdminMotor" : "guardarEmpresaVendedoraAdminMotor";
+    const button = document.getElementById("channelBulkApplyButton");
+    if (button) { button.disabled = true; button.textContent = "Aplicando…"; }
+    let applied = 0;
+    let failed = 0;
+    const errors = [];
+    const next = function(index) {
+      if (index >= rows.length) {
+        closeModal();
+        toast("Carga masiva terminada", applied + " aplicadas · " + failed + " con error." + (failed ? " " + errors.slice(0, 2).join(" ") : ""), failed > 0);
+        if (isCanales) { loadAdminCanales(); } else { loadAdminEmpresas(); }
+        return;
+      }
+      const row = rows[index];
+      const payload = isCanales ? { codigo: row.codigo, nombre: row.nombre, descripcion: row.descripcion, estado: row.estado } :
+        { nombre: row.nombre, tipo: row.tipo, idCanal: row.canal, canal: row.canal, idProveedor: row.proveedor, estado: row.estado };
+      secureRpc(operation, [payload], adminRpcModuleCode())
+        .then(function() { applied += 1; next(index + 1); })
+        .catch(function(error) {
+          failed += 1;
+          if (errors.length < 3) errors.push("Línea " + row.__linea + ": " + errorMessage(error));
+          next(index + 1);
+        });
+    };
+    next(0);
+  }
+
   function buildProviderOptions(selectedId) {
     return ADMIN_STATE.providers.filter(function(provider) {
       return provider.estado === "ACTIVO" ||
@@ -2830,11 +3378,15 @@ const ADMIN_STATE = {
       const officeSel = document.getElementById("userOfficeSelect");
       const groupSel = document.getElementById("userGroupSelect");
       refreshUserAssignmentOptions(officeSel ? officeSel.value : "", groupSel ? groupSel.value : "");
+      const formForRole = document.getElementById("userEditorForm");
+      const idForRole = formForRole && formForRole.elements.idUsuario ? String(formForRole.elements.idUsuario.value || "") : String(user.idUsuario || "");
+      loadUserPermissionBaseForEditor(idForRole, role.value);
     });
 
     configureUserDocumentField();
     refreshUserAssignmentOptions(user.idOficina || "", user.idGrupo || "");
     updateUserAssignmentRequirements();
+    loadUserPermissionBaseForEditor(String(user.idUsuario || ""), String(user.rol || ""));
   }
 
   /** Ajusta formato, longitud, ejemplo y ayuda según el documento elegido. */

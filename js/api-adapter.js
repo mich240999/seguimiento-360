@@ -392,6 +392,8 @@
           estadoGeneral: "EN_PROCESO",
           detalles: vPayload.detalles || []
         }, vPayload);
+        try { if (!nuevaVenta.idCanal) nuevaVenta.idCanal = vPayload.idCanal || vPayload.canal || null; } catch (_) {}
+        try { if (!nuevaVenta.idEmpresaVendedora) nuevaVenta.idEmpresaVendedora = vPayload.idEmpresaVendedora || vPayload.idEmpresa || null; } catch (_) {}
         if (nuevaVenta.comprobante && nuevaVenta.comprobante.base64) {
           const mimeDemo = String(nuevaVenta.comprobante.mimeType || "application/octet-stream");
           nuevaVenta.urlComprobante = "data:" + mimeDemo + ";base64," + String(nuevaVenta.comprobante.base64).replace(/\s/g, "");
@@ -516,6 +518,132 @@
       case "listarSesionesAuditoriaAdminMotor":
         return { correcto: true, sesiones: [] };
 
+      case "actualizarFeeMaterialPrecioModulo": {
+        var feeDemo_ = args[0] || {};
+        var idDetDemo_ = String(feeDemo_.idDetallePrecio || "").trim();
+        if (!idDetDemo_) return { correcto: false, mensaje: "Indica el detalle de precio." };
+        var feeNumDemo_ = Number(feeDemo_.fee);
+        if (!Number.isFinite(feeNumDemo_) || feeNumDemo_ < 0 || feeNumDemo_ > 100) return { correcto: false, mensaje: "El fee debe ser un porcentaje entre 0 y 100." };
+        var usrFeeDemo_ = (s.usuarios && s.usuarios[0]) || {};
+        var rolFeeDemo_ = String(usrFeeDemo_.rol || "").toUpperCase();
+        if (rolFeeDemo_ !== "SUPERADMIN") return { correcto: false, mensaje: "No tienes permiso para editar el fee (MATERIALES_PRECIOS/EDITAR_FEE). Modo demo sin matriz de permisos." };
+        return { correcto: true, idDetallePrecio: idDetDemo_, fee: feeNumDemo_, mensaje: "Fee actualizado (demo). Sin detalle local que persistir." };
+      }
+
+      case "guardarMatrizPermisosUsuarioMotor": {
+        var matDemo_ = args[0] || {};
+        var usrOpDemo_ = (s.usuarios && s.usuarios[0]) || {};
+        var rolOpDemo_ = String(usrOpDemo_.rol || "").toUpperCase();
+        if (["SUPERADMIN", "ADMIN"].indexOf(rolOpDemo_) === -1) return { correcto: false, mensaje: "Solo un administrador puede asignar permisos a usuarios." };
+        var idUsuDemo_ = String(matDemo_.idUsuario || "").trim();
+        if (!idUsuDemo_) return { correcto: false, mensaje: "Indica el usuario." };
+        try {
+          s.permisosUsuario = s.permisosUsuario || [];
+          var cambiosDemo_ = matDemo_.permisos || [];
+          for (var iDemo_ = 0; iDemo_ < cambiosDemo_.length; iDemo_++) {
+            var xDemo_ = cambiosDemo_[iDemo_] || {};
+            if (!xDemo_.modulo || !xDemo_.recurso) continue;
+            var existeDemo_ = null;
+            for (var jDemo_ = 0; jDemo_ < s.permisosUsuario.length; jDemo_++) {
+              var rDemo_ = s.permisosUsuario[jDemo_];
+              if (String(rDemo_.idUsuario || "") === idUsuDemo_ && String(rDemo_.modulo || "") === String(xDemo_.modulo) && String(rDemo_.recurso || "") === String(xDemo_.recurso)) { existeDemo_ = rDemo_; break; }
+            }
+            if (existeDemo_) { existeDemo_.permitido = !!xDemo_.permitido; existeDemo_.alcance = xDemo_.alcance || "PROPIO"; }
+            else s.permisosUsuario.push({ idUsuario: idUsuDemo_, modulo: xDemo_.modulo, recurso: xDemo_.recurso, permitido: !!xDemo_.permitido, alcance: xDemo_.alcance || "PROPIO" });
+          }
+          saveStore();
+        } catch (_) {}
+        return { correcto: true, idUsuario: idUsuDemo_, mensaje: "Permisos del usuario actualizados (demo, best-effort en tienda local)." };
+      }
+
+      case "obtenerMatrizPermisosUsuarioMotor": {
+        var idUsuGetDemo_ = String((args[0] && args[0].idUsuario) || args[0] || "").trim();
+        if (!idUsuGetDemo_) return { correcto: false, mensaje: "Indica el usuario.", permisos: [] };
+        var permsGetDemo_ = ((s.permisosUsuario || []).filter(function(r) { return String(r.idUsuario || "") === idUsuGetDemo_; }) || []).map(function(r) { return { modulo: r.modulo, recurso: r.recurso, permitido: !!r.permitido, alcance: r.alcance || "PROPIO" }; });
+        return { correcto: true, idUsuario: idUsuGetDemo_, permisos: permsGetDemo_ };
+      }
+
+      case "listarCanalesAdminMotor": {
+        s.canales = s.canales || [
+          { idCanal: "CANAL-IA", codigo: "IA", nombre: "Instaladores Aliados", descripcion: "Canal de instaladores aliados / gasodomésticos", estado: "ACTIVO" },
+          { idCanal: "CANAL-ALO", codigo: "ALO", nombre: "Aló Cálidda", descripcion: "Canal de televentas Aló Cálidda", estado: "ACTIVO" }
+        ];
+        return { correcto: true, registros: s.canales, canales: s.canales };
+      }
+
+      case "guardarCanalAdminMotor": {
+        var dCanalDemo_ = args[0] || {};
+        var codCanalDemo_ = String(dCanalDemo_.codigo || "").trim().toUpperCase();
+        if (!codCanalDemo_) return { correcto: false, mensaje: "Ingresa el código del canal." };
+        s.canales = s.canales || [];
+        var idCanalDemo_ = String(dCanalDemo_.idCanal || dCanalDemo_.id_canal || "").trim() || ("CANAL-" + codCanalDemo_);
+        var idxCanalDemo_ = -1;
+        for (var kCanalDemo_ = 0; kCanalDemo_ < s.canales.length; kCanalDemo_++) {
+          if (String(s.canales[kCanalDemo_].idCanal || "") === idCanalDemo_ || String(s.canales[kCanalDemo_].codigo || "").toUpperCase() === codCanalDemo_) { idxCanalDemo_ = kCanalDemo_; break; }
+        }
+        var rowCanalDemo_ = { idCanal: idCanalDemo_, codigo: codCanalDemo_, nombre: String(dCanalDemo_.nombre || codCanalDemo_).trim() || codCanalDemo_, descripcion: String(dCanalDemo_.descripcion || ""), estado: String(dCanalDemo_.estado || "ACTIVO") };
+        if (idxCanalDemo_ >= 0) s.canales[idxCanalDemo_] = Object.assign({}, s.canales[idxCanalDemo_], rowCanalDemo_);
+        else s.canales.push(rowCanalDemo_);
+        try { saveStore(); } catch (_) {}
+        return { correcto: true, idCanal: rowCanalDemo_.idCanal, codigo: rowCanalDemo_.codigo, mensaje: "Canal guardado (demo, best-effort en tienda local)." };
+      }
+
+      case "listarEmpresasVendedorasAdminMotor": {
+        s.empresas = s.empresas || [
+          { idEmpresa: "EMP-IBR", nombre: "IBR LATAM", tipo: "ALO", idCanal: "CANAL-ALO", nombreCanal: "Aló Cálidda", idProveedor: "", nombreProveedor: "", estado: "ACTIVO" },
+          { idEmpresa: "EMP-ABAI", nombre: "ABAI", tipo: "ALO", idCanal: "CANAL-ALO", nombreCanal: "Aló Cálidda", idProveedor: "", nombreProveedor: "", estado: "ACTIVO" },
+          { idEmpresa: "EMP-ESTRATEK", nombre: "ESTRATEK", tipo: "ALO", idCanal: "CANAL-ALO", nombreCanal: "Aló Cálidda", idProveedor: "", nombreProveedor: "", estado: "ACTIVO" }
+        ];
+        return { correcto: true, registros: s.empresas, empresas: s.empresas };
+      }
+
+      case "guardarEmpresaVendedoraAdminMotor": {
+        var dEmpDemo_ = args[0] || {};
+        var nomEmpDemo_ = String(dEmpDemo_.nombre || "").trim();
+        if (!nomEmpDemo_) return { correcto: false, mensaje: "Ingresa el nombre de la empresa." };
+        var tipoEmpDemo_ = String(dEmpDemo_.tipo || "").trim().toUpperCase();
+        if (tipoEmpDemo_ !== "ALO" && tipoEmpDemo_ !== "IA") return { correcto: false, mensaje: "El tipo debe ser ALO o IA." };
+        var canalEmpDemo_ = String(dEmpDemo_.idCanal || dEmpDemo_.canal || "").trim().toUpperCase();
+        if (canalEmpDemo_ === "IA") canalEmpDemo_ = "CANAL-IA";
+        else if (canalEmpDemo_ === "ALO") canalEmpDemo_ = "CANAL-ALO";
+        if (!canalEmpDemo_) return { correcto: false, mensaje: "Selecciona el canal de la empresa." };
+        s.empresas = s.empresas || [];
+        var idEmpDemo_ = String(dEmpDemo_.idEmpresa || "").trim() || ("EMP-" + Date.now().toString(36).toUpperCase());
+        var idxEmpDemo_ = -1;
+        for (var kEmpDemo_ = 0; kEmpDemo_ < s.empresas.length; kEmpDemo_++) { if (String(s.empresas[kEmpDemo_].idEmpresa || "") === idEmpDemo_) { idxEmpDemo_ = kEmpDemo_; break; } }
+        var rowEmpDemo_ = { idEmpresa: idEmpDemo_, nombre: nomEmpDemo_, tipo: tipoEmpDemo_, idCanal: canalEmpDemo_, canal: canalEmpDemo_, nombreCanal: canalEmpDemo_, idProveedor: String(dEmpDemo_.idProveedor || ""), estado: String(dEmpDemo_.estado || "ACTIVO") };
+        if (idxEmpDemo_ >= 0) s.empresas[idxEmpDemo_] = Object.assign({}, s.empresas[idxEmpDemo_], rowEmpDemo_);
+        else s.empresas.push(rowEmpDemo_);
+        try { saveStore(); } catch (_) {}
+        return { correcto: true, idEmpresa: idEmpDemo_, mensaje: "Empresa guardada (demo, best-effort en tienda local)." };
+      }
+
+      case "listarListasOficialesPreciosModulo": {
+        var rowsListDemo_ = (s.materiales || []).map(function(m, i) {
+          return { idDetallePrecio: "DPR-DEMO-" + (i + 1), idListaPrecio: "LPR-DEMO-1", proveedor: "Demo", negocio: "", idProveedor: (m.idProveedor || ""), idNegocio: "", idOficina: "", idGrupo: "", idCanal: "", id_canal: "", canal: "", codigoSap: m.codigoSap || "", codigoMaterial: m.codigoMaterial || "", idMaterial: m.idMaterial || "", nombreCortoMaterial: m.nombreMaterial || "", descripcionMaterial: m.descripcionMaterial || "", precioBase: m.precioBase || 0, fee: null, responsableVenta: "", moneda: "PEN", fechaInicio: "", fechaFin: "", detalleCombo: "", estado: "ACTIVO", es_catalogo: false };
+        });
+        return { correcto: true, registros: rowsListDemo_, paginacion: { pagina: 1, totalPaginas: 1, total: rowsListDemo_.length } };
+      }
+
+      case "listarMaterialesFeePorListaProveedorModulo": {
+        var fFeeDemo_ = args[0] || {};
+        if (typeof fFeeDemo_ === "string") fFeeDemo_ = { idListaPrecio: fFeeDemo_ };
+        var idListaFeeDemo_ = String(fFeeDemo_.idListaPrecio || fFeeDemo_.idLista || "").trim();
+        if (!idListaFeeDemo_) return { correcto: false, mensaje: "Indica la lista de precios.", registros: [] };
+        return { correcto: true, idListaPrecio: idListaFeeDemo_, registros: [], paginacion: { pagina: 1, totalPaginas: 1, total: 0 }, mensaje: "Demo sin listas persistidas: sin materiales para la lista indicada." };
+      }
+
+      case "guardarListaOficialPrecioModulo": {
+        var lDemo_ = args[0] || {};
+        var idProvLDemo_ = String(lDemo_.idProveedor || "").trim();
+        if (!idProvLDemo_) return { correcto: false, mensaje: "Selecciona el proveedor.", idListaPrecio: "" };
+        var canalLDemo_ = String(lDemo_.idCanal || lDemo_.canal || lDemo_.id_canal || "").trim().toUpperCase();
+        if (canalLDemo_ === "IA") canalLDemo_ = "CANAL-IA";
+        else if (canalLDemo_ === "ALO") canalLDemo_ = "CANAL-ALO";
+        var idListaLDemo_ = String(lDemo_.idListaPrecio || "").trim() || ("LPR-" + Date.now());
+        return { correcto: true, idListaPrecio: idListaLDemo_, creado: true, idCanal: canalLDemo_ || null, mensaje: "Lista oficial guardada (demo, sin persistencia de cabecera en tienda local)." };
+      }
+
       default:
         console.warn(`[RPC] Operación ${operation} resuelta de manera genérica.`);
         return { correcto: true, datos: [] };
@@ -588,6 +716,29 @@
           telefono_receptor: payload.telefonoReceptor || null,
           parentesco_receptor: payload.relacionReceptor || null
         };
+        try {
+          var detSb0_ = (payload.detalles || [])[0] || {};
+          var canalSb_ = String(payload.idCanal || payload.canal || "").trim();
+          if (canalSb_.toUpperCase() === "IA") canalSb_ = "CANAL-IA";
+          else if (canalSb_.toUpperCase() === "ALO") canalSb_ = "CANAL-ALO";
+          var idDetSb_ = String(detSb0_.idDetallePrecio || detSb0_.idOferta || "").trim();
+          var idListaSb_ = String(detSb0_.idListaPrecio || "").trim();
+          if (idListaSb_) {
+            try { var lqSb2_ = await client.from("pre_listas_precios").select("id_canal").eq("id_lista_precio", idListaSb_).maybeSingle(); if (!lqSb2_.error && lqSb2_.data && String(lqSb2_.data.id_canal || "").trim()) canalSb_ = String(lqSb2_.data.id_canal).trim(); } catch (_) {}
+          } else if (idDetSb_) {
+            try { var dqSb_ = await client.from("pre_lista_precio_detalle").select("id_lista_precio").eq("id_detalle_precio", idDetSb_).maybeSingle(); if (!dqSb_.error && dqSb_.data && dqSb_.data.id_lista_precio) { var lqSb_ = await client.from("pre_listas_precios").select("id_canal").eq("id_lista_precio", dqSb_.data.id_lista_precio).maybeSingle(); if (!lqSb_.error && lqSb_.data && String(lqSb_.data.id_canal || "").trim()) canalSb_ = String(lqSb_.data.id_canal).trim(); } } catch (_) {}
+          }
+          if (canalSb_) row.id_canal = canalSb_;
+        } catch (_) {}
+        try {
+          var expEmpSb_ = String(payload.idEmpresaVendedora || payload.idEmpresa || payload.id_empresa_vendedora || "").trim();
+          if (expEmpSb_) row.id_empresa_vendedora = expEmpSb_;
+          else {
+            var usrSb_ = ((localCache && localCache.usuarios && localCache.usuarios[0]) || {});
+            var idUsrSb_ = String(payload.idUsuario || usrSb_.idUsuario || "").trim();
+            if (idUsrSb_) { var uqSb_ = await client.from("seg_usuarios").select("id_empresa").eq("id_usuario", idUsrSb_).maybeSingle(); if (!uqSb_.error && uqSb_.data && String(uqSb_.data.id_empresa || "").trim()) row.id_empresa_vendedora = String(uqSb_.data.id_empresa).trim(); }
+          }
+        } catch (_) {}
         const comprobante = payload.comprobante || null;
         if (comprobante && comprobante.base64) {
           const mimeRecibo = String(comprobante.mimeType || "application/octet-stream").toLowerCase();
@@ -603,8 +754,15 @@
           row.mime_comprobante = mimeRecibo;
           row.estado_comprobante = "CARGADO";
         }
-        const { error } = await client.from("vta_ventas_contado").upsert(row);
-        if (error) throw error;
+        var upSb_ = await client.from("vta_ventas_contado").upsert(row);
+        if (upSb_.error) {
+          var msgSb_ = String((upSb_.error && upSb_.error.message) || "");
+          if (msgSb_.indexOf("id_canal") !== -1 || msgSb_.indexOf("id_empresa_vendedora") !== -1) {
+            try { delete row.id_canal; delete row.id_empresa_vendedora; } catch (_) {}
+            upSb_ = await client.from("vta_ventas_contado").upsert(row);
+          }
+        }
+        if (upSb_.error) throw upSb_.error;
 
         // Insertar detalles si vienen
         if (payload.detalles && payload.detalles.length > 0) {
@@ -765,6 +923,206 @@
           return [v.codigoVenta || "", String(v.fechaRegistro || "").split("T")[0], cliExp(v), v.numeroDocumentoCliente || "", provNameExp(v.idProveedor), v.nombreOficina || "", Number(v.montoTotalVenta || 0), String(v.estadoAbono || "").replace(/_/g, " "), String(v.estadoEntrega || "").replace(/_/g, " "), userNameExp(v.idUsuario) || cliExp(v), v.abonoAprobadoNombre || "", v.programadoNombre || "", v.entregadoNombre || "", v.observacionEntrega || "", 0].map(cellExp).join(",");
         }));
         return { nombre: "ventas_360.csv", nombreArchivo: "ventas_360.csv", contenido: "﻿" + linesExp.join("\r\n"), mimeType: "text/csv;charset=utf-8", cantidad: (localCache.ventas || []).length };
+      }
+      case "actualizarFeeMaterialPrecioModulo": {
+        var feeSb_ = args[0] || {};
+        var idDetSbFee_ = String(feeSb_.idDetallePrecio || "").trim();
+        if (!idDetSbFee_) throw new Error("Indica el detalle de precio.");
+        var feeNumSb_ = Number(feeSb_.fee);
+        if (!Number.isFinite(feeNumSb_) || feeNumSb_ < 0 || feeNumSb_ > 100) throw new Error("El fee debe ser un porcentaje entre 0 y 100.");
+        var usrSbFee_ = ((localCache && localCache.usuarios && localCache.usuarios[0]) || {});
+        var rolSbFee_ = String(usrSbFee_.rol || "").toUpperCase();
+        var idUsrSbFee_ = String(usrSbFee_.idUsuario || "");
+        if (rolSbFee_ !== "SUPERADMIN") {
+          var qFee_ = await client.from("seg_permisos").select("id_sujeto,recurso,permitido,alcance").eq("estado", "ACTIVO").eq("modulo", "MATERIALES_PRECIOS").eq("recurso", "EDITAR_FEE").in("id_sujeto", [idUsrSbFee_, rolSbFee_]);
+          if (qFee_.error) throw qFee_.error;
+          var rowsSbFee_ = (qFee_.data || []).filter(function(r) { return r.permitido === true; });
+          var mineSbFee_ = rowsSbFee_.filter(function(r) { return String(r.id_sujeto || "") === String(idUsrSbFee_ || ""); })[0] || rowsSbFee_.filter(function(r) { return String(r.id_sujeto || "").toUpperCase() === rolSbFee_; })[0] || null;
+          if (!mineSbFee_) throw new Error("No tienes permiso para editar el fee (MATERIALES_PRECIOS/EDITAR_FEE).");
+          var alcSbFee_ = String(mineSbFee_.alcance || "").toUpperCase();
+          if (alcSbFee_ === "GLOBAL" || alcSbFee_ === "TOTAL") {}
+          else if (alcSbFee_ === "PROVEEDOR" || alcSbFee_ === "ASIGNADOS") {
+            var provSbFee_ = String(usrSbFee_.idProveedor || usrSbFee_.id_proveedor || "").trim();
+            if (!provSbFee_) throw new Error("No tienes proveedor asignado para editar el fee.");
+            var detSbFee_ = await client.from("pre_lista_precio_detalle").select("id_detalle_precio,id_lista_precio").eq("id_detalle_precio", idDetSbFee_).maybeSingle();
+            if (detSbFee_.error) throw detSbFee_.error;
+            if (!detSbFee_.data) throw new Error("No se encontro el detalle de precio.");
+            var listSbFee_ = await client.from("pre_listas_precios").select("id_proveedor").eq("id_lista_precio", detSbFee_.data.id_lista_precio).maybeSingle();
+            if (listSbFee_.error) throw listSbFee_.error;
+            if (!listSbFee_.data || String(listSbFee_.data.id_proveedor || "").trim() !== provSbFee_) throw new Error("Solo una cuenta del proveedor de esta lista puede editar el fee (alcance " + alcSbFee_ + ").");
+          } else throw new Error("No tienes acceso para editar el fee con tu alcance actual (" + alcSbFee_ + ").");
+        }
+        var updSbFee_ = await client.from("pre_lista_precio_detalle").update({ fee: feeNumSb_ }).eq("id_detalle_precio", idDetSbFee_);
+        if (updSbFee_.error) throw updSbFee_.error;
+        return { correcto: true, idDetallePrecio: idDetSbFee_, fee: feeNumSb_, mensaje: "Fee actualizado correctamente." };
+      }
+      case "guardarMatrizPermisosUsuarioMotor": {
+        var matSb_ = args[0] || {};
+        var usrOpSb_ = ((localCache && localCache.usuarios && localCache.usuarios[0]) || {});
+        var rolOpSb_ = String(usrOpSb_.rol || "").toUpperCase();
+        if (["SUPERADMIN", "ADMIN"].indexOf(rolOpSb_) === -1) throw new Error("Solo un administrador puede asignar permisos a usuarios.");
+        var idUsuSb_ = String(matSb_.idUsuario || "").trim();
+        if (!idUsuSb_) throw new Error("Indica el usuario.");
+        var cambiosSb_ = matSb_.permisos || [];
+        var pidSb_ = function(value) { var h = 5381, t = String(value || ""); for (var k = 0; k < t.length; k++) h = ((h << 5) + h) ^ t.charCodeAt(k); return "PERM-" + (h >>> 0).toString(36); };
+        for (var iSb_ = 0; iSb_ < cambiosSb_.length; iSb_++) {
+          var xSb_ = cambiosSb_[iSb_] || {};
+          if (!xSb_.modulo || !xSb_.recurso) throw new Error("Cada permiso debe indicar modulo y recurso.");
+          var rowSb_ = { id_permiso: pidSb_([idUsuSb_, xSb_.modulo, xSb_.recurso].join("|")), tipo_sujeto: "USUARIO", id_sujeto: idUsuSb_, modulo: xSb_.modulo, recurso: xSb_.recurso, permitido: !!xSb_.permitido, alcance: xSb_.alcance || "PROPIO", estado: "ACTIVO" };
+          var svSb_ = await client.from("seg_permisos").upsert(rowSb_);
+          if (svSb_.error) throw svSb_.error;
+        }
+        return { correcto: true, idUsuario: idUsuSb_, mensaje: "Permisos del usuario actualizados." };
+      }
+      case "obtenerMatrizPermisosUsuarioMotor": {
+        var idUsuGetSb_ = String((args[0] && args[0].idUsuario) || args[0] || "").trim();
+        if (!idUsuGetSb_) throw new Error("Indica el usuario.");
+        try {
+          var qGetSb_ = await client.from("seg_permisos").select("modulo,recurso,permitido,alcance").eq("tipo_sujeto", "USUARIO").eq("id_sujeto", idUsuGetSb_).eq("estado", "ACTIVO");
+          if (qGetSb_.error) throw qGetSb_.error;
+          var permsGetSb_ = (qGetSb_.data || []).map(function(r) { return { modulo: r.modulo, recurso: r.recurso, permitido: r.permitido === true, alcance: r.alcance || "PROPIO" }; });
+          return { correcto: true, idUsuario: idUsuGetSb_, permisos: permsGetSb_ };
+        } catch (e) { throw new Error("No se pudo leer la matriz del usuario: " + String((e && e.message) || e)); }
+      }
+      case "listarCanalesAdminMotor": {
+        try {
+          var qCanSb_ = await client.from("ven_canales").select("*").order("codigo", { ascending: true });
+          if (qCanSb_.error) throw qCanSb_.error;
+          var recCanSb_ = (qCanSb_.data || []).map(function(r) { return { idCanal: r.id_canal, codigo: r.codigo, nombre: r.nombre, descripcion: r.descripcion, estado: r.estado, id_canal: r.id_canal }; });
+          return { correcto: true, registros: recCanSb_, canales: recCanSb_ };
+        } catch (e) { throw new Error("No se pudieron listar los canales (ven_canales): " + String((e && e.message) || e)); }
+      }
+      case "guardarCanalAdminMotor": {
+        try {
+          var dCanSb_ = args[0] || {};
+          var codCanSb_ = String(dCanSb_.codigo || "").trim().toUpperCase();
+          if (!codCanSb_) throw new Error("Ingresa el código del canal.");
+          var idCanSb_ = String(dCanSb_.idCanal || dCanSb_.id_canal || "").trim();
+          if (!idCanSb_) {
+            var byCodCanSb_ = await client.from("ven_canales").select("id_canal").eq("codigo", codCanSb_).maybeSingle();
+            if (!byCodCanSb_.error && byCodCanSb_.data && byCodCanSb_.data.id_canal) idCanSb_ = String(byCodCanSb_.data.id_canal).trim();
+          }
+          if (!idCanSb_) idCanSb_ = "CANAL-" + codCanSb_;
+          var rowCanSb_ = { id_canal: idCanSb_, codigo: codCanSb_, nombre: String(dCanSb_.nombre || codCanSb_).trim() || codCanSb_, descripcion: String(dCanSb_.descripcion || "") || null, estado: String(dCanSb_.estado || "ACTIVO").trim() || "ACTIVO" };
+          var svCanSb_ = await client.from("ven_canales").upsert(rowCanSb_, { onConflict: "id_canal" });
+          if (svCanSb_.error) throw svCanSb_.error;
+          return { correcto: true, idCanal: idCanSb_, codigo: codCanSb_, mensaje: "Canal guardado." };
+        } catch (e) { throw new Error("No se pudo guardar el canal (ven_canales): " + String((e && e.message) || e)); }
+      }
+      case "listarEmpresasVendedorasAdminMotor": {
+        try {
+          var qEmpSb_ = await client.from("ven_empresas").select("*").order("nombre", { ascending: true });
+          if (qEmpSb_.error) throw qEmpSb_.error;
+          var qChSb_ = await client.from("ven_canales").select("id_canal,codigo,nombre");
+          var mapChSb_ = {};
+          if (!qChSb_.error) (qChSb_.data || []).forEach(function(c) { mapChSb_[String(c.id_canal || "")] = c; });
+          var qPvSb_ = await client.from("mae_proveedores").select("id_proveedor,razon_social,nombre_comercial");
+          var mapPvSb_ = {};
+          if (!qPvSb_.error) (qPvSb_.data || []).forEach(function(p) { mapPvSb_[String(p.id_proveedor || "")] = p; });
+          var recEmpSb_ = (qEmpSb_.data || []).map(function(r) {
+            var ch = mapChSb_[String(r.id_canal || "")] || {};
+            var pv = mapPvSb_[String(r.id_proveedor || "")] || {};
+            return { idEmpresa: r.id_empresa, nombre: r.nombre, tipo: r.tipo, idCanal: r.id_canal, canal: r.id_canal, codigoCanal: ch.codigo || "", nombreCanal: ch.nombre || ch.codigo || r.id_canal || "", idProveedor: r.id_proveedor, nombreProveedor: pv.nombre_comercial || pv.razon_social || "", estado: r.estado, id_empresa: r.id_empresa, id_canal: r.id_canal };
+          });
+          return { correcto: true, registros: recEmpSb_, empresas: recEmpSb_ };
+        } catch (e) { throw new Error("No se pudieron listar las empresas (ven_empresas): " + String((e && e.message) || e)); }
+      }
+      case "guardarEmpresaVendedoraAdminMotor": {
+        try {
+          var dEmpSb_ = args[0] || {};
+          var nomEmpSb_ = String(dEmpSb_.nombre || "").trim();
+          if (!nomEmpSb_) throw new Error("Ingresa el nombre de la empresa.");
+          var tipoEmpSb_ = String(dEmpSb_.tipo || "").trim().toUpperCase();
+          if (tipoEmpSb_ !== "ALO" && tipoEmpSb_ !== "IA") throw new Error("El tipo debe ser ALO o IA.");
+          var canalInSb_ = String(dEmpSb_.idCanal || dEmpSb_.canal || dEmpSb_.id_canal || "").trim().toUpperCase();
+          var idCanalEmpSb_ = canalInSb_;
+          if (idCanalEmpSb_ === "IA") idCanalEmpSb_ = "CANAL-IA";
+          else if (idCanalEmpSb_ === "ALO") idCanalEmpSb_ = "CANAL-ALO";
+          if (idCanalEmpSb_ && idCanalEmpSb_.indexOf("CANAL-") !== 0) {
+            var chEmpSb_ = await client.from("ven_canales").select("id_canal").or("codigo.eq." + idCanalEmpSb_ + ",id_canal.eq." + idCanalEmpSb_).maybeSingle();
+            if (!chEmpSb_.error && chEmpSb_.data && chEmpSb_.data.id_canal) idCanalEmpSb_ = String(chEmpSb_.data.id_canal).trim();
+          }
+          if (!idCanalEmpSb_) throw new Error("Selecciona el canal de la empresa.");
+          var vexEmpSb_ = await client.from("ven_canales").select("id_canal").eq("id_canal", idCanalEmpSb_).maybeSingle();
+          if (vexEmpSb_.error) throw vexEmpSb_.error;
+          if (!vexEmpSb_.data) throw new Error("El canal indicado no existe. Regístralo primero en la tarjeta Canales.");
+          var idProvEmpSb_ = String(dEmpSb_.idProveedor || dEmpSb_.id_proveedor || "").trim() || null;
+          if (idProvEmpSb_) {
+            var pvEmpSb_ = await client.from("mae_proveedores").select("id_proveedor").eq("id_proveedor", idProvEmpSb_).maybeSingle();
+            if (pvEmpSb_.error) throw pvEmpSb_.error;
+            if (!pvEmpSb_.data) throw new Error("El proveedor vinculado no existe.");
+          }
+          var idEmpSb_ = String(dEmpSb_.idEmpresa || dEmpSb_.id_empresa || "").trim() || ("EMP-" + Date.now().toString(36).toUpperCase());
+          var rowEmpSb_ = { id_empresa: idEmpSb_, nombre: nomEmpSb_, tipo: tipoEmpSb_, id_canal: idCanalEmpSb_, id_proveedor: idProvEmpSb_, estado: String(dEmpSb_.estado || "ACTIVO").trim() || "ACTIVO" };
+          var svEmpSb_ = await client.from("ven_empresas").upsert(rowEmpSb_, { onConflict: "id_empresa" });
+          if (svEmpSb_.error) throw svEmpSb_.error;
+          return { correcto: true, idEmpresa: idEmpSb_, mensaje: "Empresa guardada." };
+        } catch (e) { throw new Error("No se pudo guardar la empresa (ven_empresas): " + String((e && e.message) || e)); }
+      }
+      case "listarListasOficialesPreciosModulo": {
+        try {
+          var detLSb_ = await client.from("pre_lista_precio_detalle").select("*");
+          if (detLSb_.error) throw detLSb_.error;
+          var cabLSb_ = await client.from("pre_listas_precios").select("*");
+          if (cabLSb_.error) throw cabLSb_.error;
+          var matLSb_ = await client.from("mae_materiales").select("id_material,codigo_material,codigo_sap,nombre_material,descripcion_material");
+          var mapMatLSb_ = {};
+          if (!matLSb_.error) (matLSb_.data || []).forEach(function(m) { mapMatLSb_[String(m.id_material || "")] = m; });
+          var provLSb_ = await client.from("mae_proveedores").select("id_proveedor,razon_social,nombre_comercial");
+          var mapProvLSb_ = {};
+          if (!provLSb_.error) (provLSb_.data || []).forEach(function(p) { mapProvLSb_[String(p.id_proveedor || "")] = p; });
+          var negLSb_ = await client.from("mae_negocios").select("id_negocio,nombre");
+          var mapNegLSb_ = {};
+          if (!negLSb_.error) (negLSb_.data || []).forEach(function(n) { mapNegLSb_[String(n.id_negocio || "")] = n; });
+          var usrListSb_ = ((localCache && localCache.usuarios && localCache.usuarios[0]) || {});
+          var hideFeeSb_ = String(usrListSb_.rol || "").toUpperCase() === "PROVEEDOR";
+          var recListSb_ = (detLSb_.data || []).map(function(d) {
+            var list = (cabLSb_.data || []).filter(function(x) { return String(x.id_lista_precio || "") === String(d.id_lista_precio || ""); })[0] || {};
+            var mat = mapMatLSb_[String(d.id_material || "")] || {};
+            var prov = mapProvLSb_[String(list.id_proveedor || "")] || {};
+            var neg = mapNegLSb_[String(list.id_negocio || "")] || {};
+            return { idDetallePrecio: d.id_detalle_precio, idListaPrecio: d.id_lista_precio, proveedor: prov.nombre_comercial || prov.razon_social || "", negocio: neg.nombre || "", idProveedor: list.id_proveedor, idNegocio: list.id_negocio, idOficina: list.id_oficina, idGrupo: list.id_grupo, idCanal: list.id_canal, id_canal: list.id_canal, canal: list.id_canal, nombre: list.nombre, nombreLista: list.nombre, codigoLista: list.codigo_lista, codigoSap: mat.codigo_sap, codigoMaterial: mat.codigo_material, idMaterial: d.id_material, nombreCortoMaterial: mat.nombre_material, descripcionMaterial: mat.descripcion_material, precioBase: d.precio_base, fee: (hideFeeSb_ ? null : d.fee), responsableVenta: d.responsable_venta || list.responsable_venta || "", moneda: d.moneda || list.moneda, fechaInicio: list.fecha_inicio, fechaFin: list.fecha_fin, detalleCombo: d.detalle_combo, estado: d.estado, es_catalogo: !!(list && list.es_catalogo) };
+          });
+          return { correcto: true, registros: recListSb_, paginacion: { pagina: 1, totalPaginas: 1, total: recListSb_.length } };
+        } catch (e) { throw e; }
+      }
+      case "listarMaterialesFeePorListaProveedorModulo": {
+        var fFeeSb_ = args[0] || {};
+        if (typeof fFeeSb_ === "string") fFeeSb_ = { idListaPrecio: fFeeSb_ };
+        var idListaFeeSb_ = String(fFeeSb_.idListaPrecio || fFeeSb_.idLista || "").trim();
+        if (!idListaFeeSb_) throw new Error("Indica la lista de precios.");
+        var baseFeeSb_ = await dispatchSupabase(client, "listarListasOficialesPreciosModulo", [{}], moduleCode, localCache);
+        var rowsFeeSb_ = (baseFeeSb_.registros || []).filter(function(r) {
+          if (String(r.idListaPrecio || "") !== idListaFeeSb_) return false;
+          var wantProvFeeSb_ = String(fFeeSb_.idProveedor || "").trim();
+          if (wantProvFeeSb_ && String(r.idProveedor || "") !== wantProvFeeSb_) return false;
+          return true;
+        });
+        return { correcto: true, idListaPrecio: idListaFeeSb_, registros: rowsFeeSb_, paginacion: { pagina: 1, totalPaginas: 1, total: rowsFeeSb_.length } };
+      }
+      case "guardarListaOficialPrecioModulo": {
+        try {
+          var lSb_ = args[0] || {};
+          var idProvLSb_ = String(lSb_.idProveedor || "").trim();
+          if (!idProvLSb_) throw new Error("Selecciona el proveedor.");
+          var canalLSb_ = String(lSb_.idCanal || lSb_.canal || lSb_.id_canal || "").trim().toUpperCase();
+          if (canalLSb_ === "IA") canalLSb_ = "CANAL-IA";
+          else if (canalLSb_ === "ALO") canalLSb_ = "CANAL-ALO";
+          var idListaLSb_ = String(lSb_.idListaPrecio || "").trim() || ("LPR-" + Date.now());
+          var payloadLSb_ = { id_lista_precio: idListaLSb_, codigo_lista: String(lSb_.codigoLista || idListaLSb_).trim() || idListaLSb_, nombre: String(lSb_.nombre || "Lista de precios").trim() || "Lista de precios", id_proveedor: idProvLSb_, id_negocio: String(lSb_.idNegocio || "") || null, id_oficina: String(lSb_.idOficina || "") || null, id_grupo: String(lSb_.idGrupo || "") || null, fecha_inicio: String(lSb_.fechaInicio || "").slice(0, 10) || new Date().toISOString().slice(0, 8) + "01", fecha_fin: String(lSb_.fechaFin || "").slice(0, 10) || null, moneda: String(lSb_.moneda || "PEN"), estado: String(lSb_.estado || "ACTIVA") };
+          try { if (canalLSb_) payloadLSb_.id_canal = canalLSb_; } catch (_) {}
+          try { if (lSb_.es_catalogo === true || lSb_.esCatalogo === true) payloadLSb_.es_catalogo = true; } catch (_) {}
+          var svListSb_ = await client.from("pre_listas_precios").upsert(payloadLSb_, { onConflict: "id_lista_precio" });
+          if (svListSb_.error) {
+            var msgListSb_ = String((svListSb_.error && svListSb_.error.message) || "");
+            var retryLSb_ = false;
+            if (msgListSb_.indexOf("es_catalogo") !== -1) { try { delete payloadLSb_.es_catalogo; } catch (_) {} retryLSb_ = true; }
+            if (msgListSb_.indexOf("id_canal") !== -1) { try { delete payloadLSb_.id_canal; } catch (_) {} retryLSb_ = true; }
+            if (retryLSb_) svListSb_ = await client.from("pre_listas_precios").upsert(payloadLSb_, { onConflict: "id_lista_precio" });
+          }
+          if (svListSb_.error) throw svListSb_.error;
+          return { correcto: true, idListaPrecio: idListaLSb_, creado: true, mensaje: "Lista oficial guardada." };
+        } catch (e) { throw new Error("No se pudo guardar la lista oficial: " + String((e && e.message) || e)); }
       }
       default:
         return undefined; // Despacho a local fallback
