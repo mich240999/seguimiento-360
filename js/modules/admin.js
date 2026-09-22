@@ -2704,16 +2704,6 @@ const ADMIN_STATE = {
           }
         },
         {
-          key: "oficinas",
-          label: "Canal de ventas",
-          render: function(row) {
-            const names = (row.oficinas || []).map(function(item) {
-              return item.nombre;
-            });
-            return escapeHtml(names.join(", ") || "Sin canal de ventas");
-          }
-        },
-        {
           key: "alcanceCatalogo",
           label: "Catálogo",
           render: function(row) {
@@ -2796,11 +2786,6 @@ const ADMIN_STATE = {
   /** Abre el editor del maestro de proveedores. */
   function openProviderEditor(provider) {
     provider = provider || {};
-    const activeOffices = ADMIN_STATE.offices.filter(function(item) {
-      return item.estado === "ACTIVO" ||
-        (provider.idsOficina || []).indexOf(item.idOficina) !== -1;
-    });
-
 
     const idField = provider.idProveedor ?
       hiddenInput("idProveedor", provider.idProveedor) +
@@ -2808,13 +2793,6 @@ const ADMIN_STATE = {
           escapeHtml(provider.idProveedor) +
           '" readonly><small class="field-help">Este valor identifica las asignaciones y no puede modificarse.</small></label>' :
       '<div class="field"><span>Código interno</span><strong>Se generará automáticamente</strong><small class="field-help">Las relaciones de usuarios y oficinas se guardan con este código, nunca con el nombre.</small></div>';
-
-    const selected = provider.idsOficina || [];
-    const officeOptions = activeOffices.map(function(office) {
-      return '<option value="' + escapeHtml(office.idOficina) + '" ' +
-        (selected.indexOf(office.idOficina) !== -1 ? "selected" : "") + '>' +
-        escapeHtml(office.nombre + " · " + office.idOficina) + "</option>";
-    }).join("");
 
     const title = provider.nombreMostrar || provider.nombreComercial ||
       provider.razonSocial || "Registrar proveedor";
@@ -2849,10 +2827,6 @@ const ADMIN_STATE = {
             'TODOS_PROVEEDORES se usa para canales multimarca como IBR.' +
           '</small>' +
         '</label>' +
-        '<label class="field field--full"><span>Canal de ventas / oficinas (opcional)</span>' +
-          '<select id="providerOfficeSelect" name="idsOficina" multiple size="6">' +
-            officeOptions +
-          '</select><small class="field-help">Selecciona oficinas solo si este proveedor también vende; si solo provee, déjalo sin selección. Usa Ctrl o Cmd para selección múltiple.</small></label>' +
         '<label class="field field--full"><span>Descripción</span><textarea name="descripcion" maxlength="1000">' +
           escapeHtml(provider.descripcion || "") + "</textarea></label>" +
         statusSelect("estado", provider.estado || "ACTIVO") +
@@ -2867,7 +2841,6 @@ const ADMIN_STATE = {
 
   function saveProviderEditor() {
     const form = document.getElementById("providerEditorForm");
-    const officeSelect = document.getElementById("providerOfficeSelect");
     if (!form || !form.reportValidity()) return;
 
     const data = formDataObject(form);

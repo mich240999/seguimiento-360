@@ -1422,7 +1422,7 @@ const MP_STATE = {
         var precio = formatMpMoney(resolveMpPriceValue(row), row.moneda || row.MONEDA);
         var feeVal = (row.fee === null || row.fee === undefined) ? "" : String(row.fee);
         return '<tr><td><strong>' + escapeHtml(mat) + '</strong></td><td>' + escapeHtml(sap) + '</td><td>' + escapeHtml(precio) + '</td>' +
-          '<td><input type="number" min="0" max="100" step="0.01" value="' + escapeHtml(feeVal) + '" data-mp-fee-input="' + escapeHtml(idDet) + '" aria-label="Fee %" style="max-width:110px"></td>' +
+          '<td><input type="number" min="0" max="100" step="0.001" value="' + escapeHtml(feeVal) + '" data-mp-fee-input="' + escapeHtml(idDet) + '" aria-label="Fee %" style="max-width:110px"></td>' +
           '<td><div class="mp-actions mp-actions--inline" style="flex-wrap:nowrap;white-space:nowrap"><button class="table-button has-tooltip" type="button" data-mp-fee-save="' + escapeHtml(idDet) + '" data-tooltip="Guardar fee" aria-label="Guardar fee" title="Guardar fee"><span class="material-symbols-rounded">save</span></button></div></td></tr>';
       }).join("") + '</tbody></table></div>';
     box.querySelectorAll("[data-mp-fee-save]").forEach(function(button) {
@@ -3144,10 +3144,14 @@ const MP_STATE = {
           const existente = existentes[dupKey] || vistos[dupKey] || null;
           const material = mpGsdMaterialPayload_(g, val, existente);
           vistos[dupKey] = { idMaterial: material.idMaterial, codigoMaterial: material.codigoMaterial, codigoSap: g.codigoHana };
-          const proveedorId = (val.proveedor && (val.proveedor.id || val.proveedor.idProveedor)) || idProveedorDefecto;
+          // Proveedor: usar el del catálogo, o el texto de la fila (auto-crear al confirmar),
+          // o el del material existente, o el predeterminado del formulario.
+          const proveedorId = (val.proveedor && (val.proveedor.id || val.proveedor.idProveedor)) ||
+            val.proveedorTexto ||
+            (existente && (existente.idProveedor || existente.proveedor)) ||
+            idProveedorDefecto;
           const motivos = val.errores.slice();
           if (!idNegocio) motivos.push("Falta el negocio predeterminado.");
-          if (!proveedorId) motivos.push("Falta el proveedor (por fila o predeterminado).");
 
           if (motivos.length) {
             errores += 1;
@@ -3164,6 +3168,9 @@ const MP_STATE = {
           const precioPayload = {
             idMaterial: material.idMaterial,
             idProveedor: proveedorId,
+            // Si proveedorId es un nombre de texto (no un ID existente en catálogo),
+            // se envía también como proveedorTexto para que el backend lo auto-cree.
+            proveedorTexto: val.proveedorTexto || (val.proveedor ? "" : (g.proveedor || "")),
             idNegocio: idNegocio,
             idCanal: idCanal,
             precioBase: val.precio,
@@ -3620,6 +3627,7 @@ const MP_STATE = {
           .then(function(res) {
             var idMat = (res && res.idMaterial) || item.material.idMaterial;
             var idProvFila = String((item.precio && item.precio.idProveedor) || "");
+            var provTextoFila = String((item.precio && item.precio.proveedorTexto) || "");
             if (!idMat) throw new Error("No se pudo resolver el material.");
             return secureRpc("guardarDetalleListaPrecioModulo", [{
               idListaPrecio: idLista,
@@ -3628,7 +3636,8 @@ const MP_STATE = {
               fee: (item.precio.fee === undefined ? "" : item.precio.fee),
               moneda: item.precio.moneda || "PEN",
               estado: "ACTIVO",
-              idProveedor: idProvFila
+              idProveedor: idProvFila,
+              proveedorTexto: provTextoFila
             }], "MATERIALES_PRECIOS")
               .then(function(resDet) {
                 if (resDet && resDet.creado === false) actualizados += 1;
@@ -5073,7 +5082,9 @@ function mpGsdParseNumber_(value) {
     // AGENTE 2B: un solo separador con grupos de miles ("1,500", "1.500",
     // "1,500,250", "1.234.567") vale como miles; si el último grupo no tiene
     // 3 dígitos ("12.5", "899.00") es decimal.
-    var soloMiles = partes.length > 1 && partes.every(function(p, i) {
+    // Excepción: si el primer grupo empieza con "0" (ej. "0.125", "0,125")
+    // NUNCA es miles (nadie escribe 0 mil 125).
+    var soloMiles = partes.length > 1 && partes[0] !== "0" && partes.every(function(p, i) {
       if (!/^\d+$/.test(p)) return false;
       if (i === 0) return p.length >= 1 && p.length <= 3;
       return p.length === 3;
@@ -5090,15 +5101,17 @@ function mpGsdParseNumber_(value) {
 function mpGsdParseFee_(value) {
   var text = String(value == null ? "" : value).trim();
   if (!text) return { valor: null, error: "" };
-  // AGENTE 2B: con "%" explícito ("0.5%") el número ya está en porcentaje y
-  // NO se convierte; sin "%", "0.1" es tanto por uno y vale 10.
+  // AGENTE 2B: con "%" explícito ("0.5%", "3.125%") el número ya está en
+  // porcentaje y NO se convierte; sin "%", si el valor es >= 1 se toma
+  // directamente como porcentaje (ej. "3.125" → 3.125 %). Si el valor es
+  // < 1 con cero inicial explícito ("0.125") también se toma directo —
+  // ya NO se multiplica por 100 para evitar confundir 0.125 % con 12.5 %.
   var tienePorciento = text.indexOf("%") !== -1;
   var num = mpGsdParseNumber_(text);
   if (num == null) return { valor: null, error: "FEE no numérico (" + text + ")." };
-  // Tolerancia: "0.12" como 12 % si viene en tanto por uno con decimales pequeños.
-  if (!tienePorciento && num > 0 && num < 1 && /^\s*0[.,]/.test(text)) num = Math.round(num * 10000) / 100;
   if (num < 0 || num > 100) return { valor: null, error: "FEE fuera de rango 0-100 (" + text + ")." };
-  return { valor: Math.round(num * 100) / 100, error: "" };
+  // Redondear a 3 decimales (soporta fees como 3.125, 0.125, 12.500).
+  return { valor: Math.round(num * 1000) / 1000, error: "" };
 }
 
 function mpGsdParseWorkbook_(workbook) {
@@ -5267,12 +5280,17 @@ function mpGsdValidarFila_(g, opts, ctx) {
   var producto = g.productoPrincipal ? mpGsdResolverPorNombre_(opts.productos, g.productoPrincipal) : null;
   if (g.productoPrincipal && !producto) advertencias.push("PRODUCTO PRINCIPAL sin catálogo: se guarda como texto.");
   var proveedor = g.proveedor ? mpGsdResolverPorNombre_(opts.proveedores, g.proveedor) : null;
-  if (ctx.exigeProveedor && !proveedor && !ctx.idProveedorDefecto) {
-    errores.push("PROVEEDOR no reconocido y sin predeterminado (" + (g.proveedor || "vacío") + ").");
+  // AGENTE 2B: si el proveedor no está en catálogo pero viene como texto,
+  // NO es un error — el backend lo auto-crea al confirmar. Solo falla si
+  // exigeProveedor=true Y la fila no trae ningún texto de proveedor Y no
+  // hay proveedor predeterminado.
+  if (ctx.exigeProveedor && !proveedor && !g.proveedor && !ctx.idProveedorDefecto) {
+    errores.push("PROVEEDOR requerido: agrega la columna PROVEEDOR en el archivo o selecciona un proveedor predeterminado.");
   } else if (g.proveedor && !proveedor) {
-    advertencias.push("PROVEEDOR sin catálogo: se usa el predeterminado y se guarda el texto.");
+    // Proveedor textual no en catálogo: se pasa como texto para auto-crear.
+    advertencias.push("PROVEEDOR sin catálogo previo: se creará/buscará al confirmar (" + g.proveedor + ").");
   }
-  return { errores: errores, advertencias: advertencias, fee: fee.valor, precio: precio, marca: marca, tipo: tipo, subtipo: subtipo, producto: producto, proveedor: proveedor };
+  return { errores: errores, advertencias: advertencias, fee: fee.valor, precio: precio, marca: marca, tipo: tipo, subtipo: subtipo, producto: producto, proveedor: proveedor, proveedorTexto: g.proveedor || "" };
 }
 
 function mpGsdMaterialPayload_(g, val, existente) {

@@ -53,7 +53,6 @@ const PROVIDERS_STATE = {
     on("providersImportInput", "change", handleProvidersImportFile);
     on("providersExportButton", "click", exportProvidersModule);
     on("providersTemplateButton", "click", downloadProvidersTemplate);
-    ensureProvidersChannelBulkUI();
   }
 
   function providerPermission(resource) {
@@ -199,31 +198,6 @@ const PROVIDERS_STATE = {
         }
       },
       {
-        label: "Canal de ventas",
-        render: function(row) {
-          if (row.tieneCanalVentas) {
-            return '<span class="providers-chip is-soft"><span class="material-symbols-rounded">storefront</span>' +
-              escapeHtml((row.cantidadOficinas || 0) + " oficina(s)") + '</span>';
-          }
-          return '<span class="providers-field-hint">No asignado</span>';
-        }
-      },
-      {
-        label: "Lista",
-        render: function(row) {
-          var canalLista29P_ = String(row.idCanalOrigen || "").trim().toUpperCase();
-          var etiquetaLista29P_ = (canalLista29P_ === "CANAL-ALO" || canalLista29P_ === "ALO") ? "Aló" : ((canalLista29P_ === "CANAL-IA" || canalLista29P_ === "IA") ? "IA" : "");
-          if (!etiquetaLista29P_) return '<span class="providers-field-hint">—</span>';
-          return '<span class="providers-chip is-soft"><span class="material-symbols-rounded">sell</span>' + escapeHtml(etiquetaLista29P_) + "</span>";
-        }
-      },
-      {
-        label: "Grupos derivados",
-        render: function(row) {
-          return escapeHtml(row.cantidadGrupos || 0);
-        }
-      },
-      {
         label: "Estado",
         render: function(row) {
           return '<span class="status-chip ' +
@@ -342,14 +316,7 @@ const PROVIDERS_STATE = {
       }).join("") +
       '</div><div class="providers-detail-section"><h3>Descripción</h3><p>' +
       escapeHtml(provider.descripcion || "Sin descripción.") +
-      '</p></div><div class="providers-detail-section"><h3>Canal de ventas / oficinas (' +
-      escapeHtml(provider.cantidadOficinas || 0) +
-      ')</h3><div class="providers-chip-list">' +
-      offices +
-      '</div></div><div class="providers-detail-section"><h3>Grupos derivados (' +
-      escapeHtml(provider.cantidadGrupos || 0) +
-      ')</h3><div class="providers-chip-list">' +
-      groups + '</div></div>' +
+      '</p></div>' +
       '<div class="providers-detail-section sales-card" id="providerResponsiblesSection"><h3>Responsables de venta</h3>' +
       '<p class="providers-field-hint">Nacen en los precios del proveedor (columna responsable_venta). Agregar crea un precio con ese responsable; quitar solo limpia el filtro visual, no borra datos.</p>' +
       '<div id="providerResponsiblesContent"><p class="providers-field-hint">Cargando responsables…</p></div></div>';
@@ -555,15 +522,6 @@ const PROVIDERS_STATE = {
       '<label class="field"><span>Última modificación</span><input value="' +
         escapeHtml(formatProviderDate(data.fechaModificacion)) +
         '" readonly></label>';
-
-    const cachedOptions = PROVIDERS_STATE.options;
-    const assignments = cachedOptions ?
-      renderProviderAssignmentSelectors(cachedOptions, selectedOffices, selectedGroups) :
-      '<div class="providers-office-loading"><span class="spinner" aria-hidden="true"></span>' +
-      '<div><strong>Cargando canal y grupos…</strong><small>El formulario ya está disponible mientras se prepara el catálogo.</small></div></div>';
-
-    var canalRaw29P_ = String(data.idCanalOrigen || "").trim().toUpperCase();
-    var canalActual29P_ = (canalRaw29P_ === "CANAL-ALO" || canalRaw29P_ === "ALO") ? "ALO" : ((canalRaw29P_ === "CANAL-IA" || canalRaw29P_ === "IA") ? "IA" : "");
     const body = '<form id="providerModuleForm" class="form-grid" novalidate>' +
       '<label class="field"><span>Razón social</span><input name="razonSocial" maxlength="200" value="' +
         escapeHtml(data.razonSocial || data.nombre || "") +
@@ -580,19 +538,12 @@ const PROVIDERS_STATE = {
       '<label class="field field--full"><span>Descripción</span><textarea name="descripcion" maxlength="1000">' +
         escapeHtml(data.descripcion || "") +
         '</textarea></label>' +
-      '<label class="field"><span>Lista / Canal <small>(opcional)</small></span><select name="idCanalOrigen">' +
-        '<option value="">— Sin lista —</option>' +
-        '<option value="IA"' + (canalActual29P_ === "IA" ? " selected" : "") + '>IA — Instaladores Aliados</option>' +
-        '<option value="ALO"' + (canalActual29P_ === "ALO" ? " selected" : "") + '>Aló Cálidda</option>' +
-        '</select><small class="providers-field-hint">Diferencia de qué lista de precios proviene este proveedor.</small></label>' +
-      '<div id="providerAssignmentSelectors" class="providers-assignment-selectors">' + assignments + '</div>' +
       '<label class="field"><span>Estado</span><select name="estado"><option value="ACTIVO" ' +
         (data.estado === "ACTIVO" ? "selected" : "") +
         '>ACTIVO</option><option value="INACTIVO" ' +
         (data.estado === "INACTIVO" ? "selected" : "") +
         '>INACTIVO</option></select></label>' +
       metadata +
-      '<p class="providers-import-note">Las asignaciones se guardan por código interno. Si no seleccionas grupos, el proveedor tendrá acceso a todos los grupos de las oficinas elegidas.</p>' +
       '</form>';
 
     openSideSheet({
@@ -606,8 +557,7 @@ const PROVIDERS_STATE = {
         ),
       body: body,
       footer: '<button class="button button--ghost" type="button" data-sheet-close>Cancelar</button>' +
-        '<button id="providerModuleSaveButton" class="button button--primary has-tooltip" type="button" data-tooltip="Guardar" aria-label="Guardar" title="Guardar" ' +
-        (cachedOptions ? "" : "disabled") + '><span class="material-symbols-rounded">save</span></button>'
+        '<button id="providerModuleSaveButton" class="button button--primary has-tooltip" type="button" data-tooltip="Guardar" aria-label="Guardar" title="Guardar"><span class="material-symbols-rounded">save</span></button>'
     });
 
     bindProviderSheetClose();
@@ -658,7 +608,7 @@ const PROVIDERS_STATE = {
   function renderProviderAssignmentSelectors(options, selectedOffices, selectedGroups) {
     const offices = options && options.oficinas || [];
     const groups = options && options.grupos || [];
-    return '<div class="providers-multi-field"><span class="field-label">Canal de venta <small>(oficinas)</small></span>' +
+    return '<div class="providers-multi-field" hidden><span class="field-label">Canal de venta <small>(oficinas)</small></span>' +
       renderProviderMultiChecklist("office", "Buscar oficina…", "idsOficina", offices.map(function(office) {
         return {
           value: office.idOficina,
@@ -668,7 +618,7 @@ const PROVIDERS_STATE = {
         };
       }), "Sin canal asignado") +
       '<small class="providers-field-hint">Opcional. Si no seleccionas canal, el proveedor quedará solo como abastecedor.</small></div>' +
-      '<div class="providers-multi-field"><span class="field-label">Grupo de vendedores <small>(opcional)</small></span>' +
+      '<div class="providers-multi-field" hidden><span class="field-label">Grupo de vendedores <small>(opcional)</small></span>' +
       renderProviderMultiChecklist("group", "Buscar grupo…", "idsGrupo", groups.map(function(group) {
         return {
           value: group.idGrupo,
@@ -877,22 +827,17 @@ const PROVIDERS_STATE = {
       return;
     }
 
-    const ids = getProviderSelectedValues("idsOficina");
-    const idsGrupo = getProviderSelectedValues("idsGrupo");
-
-
     const payload = {
       idProveedor: form.elements.idProveedor ?
         form.elements.idProveedor.value : "",
-      razonSocial: form.elements.razonSocial.value,
-      nombreComercial: form.elements.nombreComercial.value,
+      razonSocial: form.elements.razonSocial.value.trim(),
+      nombreComercial: (form.elements.nombreComercial ? form.elements.nombreComercial.value : "").trim(),
       codigoSap: codigoSap,
       ruc: ruc,
-      descripcion: form.elements.descripcion.value,
-      idsOficina: ids,
-      idsGrupo: idsGrupo,
-      estado: form.elements.estado.value,
-      idCanalOrigen: form.elements.idCanalOrigen ? form.elements.idCanalOrigen.value : ""
+      descripcion: form.elements.descripcion ? form.elements.descripcion.value : "",
+      idsOficina: [],
+      idsGrupo: [],
+      estado: form.elements.estado.value
     };
 
     const button = document.getElementById("providerModuleSaveButton");
@@ -907,7 +852,7 @@ const PROVIDERS_STATE = {
       closeSideSheet();
       toast("Proveedor guardado", "El proveedor fue registrado correctamente.");
       refreshProvidersWorkspace(true);
-      showProviderSavedConfirmation(saved, ids.length, idsGrupo.length);
+      showProviderSavedConfirmation(saved);
     }).catch(function(error) {
       toast(
         "No fue posible guardar",
@@ -922,22 +867,18 @@ const PROVIDERS_STATE = {
     });
   }
 
-  function showProviderSavedConfirmation(saved, officesCount, groupsCount) {
+  function showProviderSavedConfirmation(saved) {
     saved = saved || {};
     const id = saved.idProveedor || saved.ID_PROVEEDOR || "";
     const name = saved.nombreMostrar || saved.nombreComercial || saved.razonSocial || "Proveedor";
-    const groupText = groupsCount ?
-      groupsCount + " grupo(s) seleccionado(s)" :
-      (officesCount ? "Todos los grupos de las oficinas seleccionadas" : "Sin canal de venta");
     openModal({
       eyebrow: "PROVEEDOR GUARDADO",
       title: "Registro confirmado",
       body: '<div class="providers-save-confirmation"><span class="material-symbols-rounded">check_circle</span>' +
         '<div><strong>' + escapeHtml(name) + '</strong>' +
-        '<p>El proveedor fue cargado correctamente.</p>' +
+        '<p>El proveedor fue guardado correctamente.</p>' +
         '<ul><li>Código interno: <code>' + escapeHtml(id || "Generado") + '</code></li>' +
-        '<li>Canal de venta: ' + escapeHtml(officesCount ? officesCount + " oficina(s)" : "No asignado") + '</li>' +
-        '<li>Grupos: ' + escapeHtml(groupText) + '</li></ul></div></div>',
+        '<li>Estado: ' + escapeHtml(saved.estado || "ACTIVO") + '</li></ul></div></div>',
       footer: '<button class="button button--ghost" type="button" data-modal-close>Cerrar</button>' +
         (id ? '<button id="providerSavedViewButton" class="button button--primary has-tooltip" type="button" data-tooltip="Ver detalle" aria-label="Ver detalle" title="Ver detalle"><span class="material-symbols-rounded">visibility</span></button>' : '')
     });
@@ -1027,7 +968,7 @@ const PROVIDERS_STATE = {
 
   function downloadProvidersTemplate() {
     secureRpc("obtenerPlantillaProveedoresModulo", [], "PROVEEDORES")
-      .then(function(file) { downloadProviderTextFile(file.nombre, file.contenido, "text/csv;charset=utf-8"); toast("Plantilla lista", "No incluye ID_PROVEEDOR ni ESTADO. Usa | para separar varios canales o grupos."); })
+      .then(function(file) { downloadProviderTextFile(file.nombre, file.contenido, "text/csv;charset=utf-8"); toast("Plantilla lista", "Plantilla CSV con columnas: RAZON_SOCIAL, NOMBRE_COMERCIAL, CODIGO_SAP, RUC, DESCRIPCION."); })
       .catch(function(error) { toast("No fue posible descargar la plantilla", errorMessage(error), true); });
   }
 
@@ -1073,34 +1014,13 @@ const PROVIDERS_STATE = {
   var PROVIDERS_CHANNEL_BULK_STATE = { fileName: "", rows: [], busy: false };
 
   function ensureProvidersChannelBulkUI() {
-    if (document.getElementById("providersChannelBulkButton")) {
-      applyProvidersChannelBulkVisibility();
-      return;
-    }
-    const bar = document.querySelector(".providers-workspace .providers-actions");
-    if (!bar) return;
-    const button = document.createElement("button");
-    button.id = "providersChannelBulkButton";
-    button.className = "button button--secondary";
-    button.type = "button";
-    button.innerHTML = '<span class="material-symbols-rounded">storefront</span> Actualizar canal/grupos';
-    button.addEventListener("click", openProvidersChannelBulkIntro_);
-    const importButton = document.getElementById("providersImportButton");
-    if (importButton && importButton.parentNode === bar) bar.insertBefore(button, importButton.nextSibling);
-    else bar.appendChild(button);
-    const input = document.createElement("input");
-    input.id = "providersChannelBulkInput";
-    input.type = "file";
-    input.accept = ".csv,.xlsx,.xls,text/csv";
-    input.hidden = true;
-    input.addEventListener("change", handleProvidersChannelBulkFile);
-    bar.appendChild(input);
-    applyProvidersChannelBulkVisibility();
+    const button = document.getElementById("providersChannelBulkButton");
+    if (button && button.parentNode) button.parentNode.removeChild(button);
   }
 
   function applyProvidersChannelBulkVisibility() {
     const button = document.getElementById("providersChannelBulkButton");
-    if (button) button.hidden = !(providerPermission("IMPORTAR") || providerPermission("EDITAR"));
+    if (button) button.hidden = true;
   }
 
   function openProvidersChannelBulkIntro_() {

@@ -11,8 +11,10 @@
 -- Nombres de tabla verificados contra supabase/schema.sql (SECCIÓN 4 y 5).
 -- NO toca: seg_roles, app_modulos, seg_permisos, sys_parametros,
 -- filas de seg_usuarios, mae_negocios, mae_productos_principales,
--- mae_tipos_material, mae_subtipos_material, mae_marcas,
--- mae_oficinas, mae_grupos, mae_proveedores.
+-- mae_marcas, mae_oficinas, mae_grupos, mae_proveedores.
+-- 2026-09-23 extension: SI vacia taxonomia de flujo mae_subtipos_material
+-- y mae_tipos_material (PASO 3 al final); productos/negocios/marcas/oficinas
+-- siguen protegidos.
 -- Tampoco toca ven_canales / ven_empresas (creadas por
 -- 20260923_01_canales_flujo.sql): el reset preserva el catálogo de canales
 -- en re-ejecuciones posteriores a 01.
@@ -61,3 +63,12 @@ TRUNCATE TABLE
     rel_proveedor_oficinas,
     mae_materiales
 RESTART IDENTITY;
+
+-- PASO 3 (2026-09-23): vaciado de taxonomia de flujo para carga limpia.
+-- Orden FK-seguro: hija primero (subtipos referencia a tipos y a productos),
+-- luego padre (tipos). mae_materiales ya fue truncada en PASO 2, por lo que
+-- no quedan referencias desde materiales. Idempotente: DELETE re-ejecutable.
+-- NO toca: mae_productos_principales, mae_negocios, mae_marcas,
+-- mae_oficinas, mae_grupos, mae_proveedores.
+DELETE FROM mae_subtipos_material;
+DELETE FROM mae_tipos_material;
