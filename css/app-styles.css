@@ -1815,3 +1815,257 @@
     body .auth-view.auth-split #authTitle { font-size: 22px; }
     body .auth-view.auth-split .auth-actions { margin-top: 24px; }
   }
+
+  /* ============ MODO OSCURO COMPLETO (todas las superficies) ============ */
+  /* Cubre fondos claros fijos de app, providers, MP, sales/sales29, dashboard,
+     calendario y despacho, más los !important del glass de config.js. */
+  body.dark-mode .app-shell { background: #0a141b; }
+  body.dark-mode .app-main { background: transparent; }
+  body.dark-mode .app-sidebar {
+    background: linear-gradient(180deg, #0b2b3c 0%, #08202d 60%, #061722 100%);
+    border-right-color: rgba(255,255,255,.08);
+  }
+  body.dark-mode .topbar {
+    background: rgba(16,30,39,.92) !important;
+    border-bottom-color: var(--border);
+    backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+  }
+  body.dark-mode .eyebrow { color: var(--primary-300); }
+  body.dark-mode .sync-indicator { background: var(--surface-soft); border-color: var(--border); color: var(--muted); }
+  body.dark-mode .icon-button { color: var(--muted); }
+  body.dark-mode .icon-button:hover { color: var(--primary-300); background: rgba(0,161,222,.12); }
+  body.dark-mode select option { background: #101e27; color: #e9f4f8; }
+
+  /* Tarjetas, paneles, acordeones, modales y contenedores */
+  body.dark-mode .app-main .metric-card,
+  body.dark-mode .app-main .module-card,
+  body.dark-mode .app-main .accordion-item,
+  body.dark-mode .app-main .builder-card,
+  body.dark-mode .app-main .setting-card,
+  body.dark-mode .app-main .organization-card,
+  body.dark-mode .app-main .providers-panel,
+  body.dark-mode .app-main .providers-summary-card,
+  body.dark-mode .app-main .visual-resource-dictionary,
+  body.dark-mode .app-main .preview-module-item,
+  body.dark-mode .app-main .role-preview-banner,
+  body.dark-mode .app-main .assignment-import-note,
+  body.dark-mode .app-main .mp-card,
+  body.dark-mode .app-main .mp-panel,
+  body.dark-mode .app-main .mp-modal,
+  body.dark-mode .app-main .mp-modal-section,
+  body.dark-mode .app-main .mp-note,
+  body.dark-mode .app-main .mp-observation,
+  body.dark-mode .app-main .mp-upload-summary div,
+  body.dark-mode .app-main .mp-scope-card,
+  body.dark-mode .app-main .mp-help-card,
+  body.dark-mode .app-main .mp-upload-hero,
+  body.dark-mode .app-main .mp-combo-help,
+  body.dark-mode .app-main .mp-badge,
+  body.dark-mode .app-main .sales-card,
+  body.dark-mode .app-main .sales-radio-row label,
+  body.dark-mode .app-main .sales-type-card,
+  body.dark-mode .app-main .sales-validation-box,
+  body.dark-mode .app-main .sales-detail-grid,
+  body.dark-mode .app-main .sales29-info-note,
+  body.dark-mode .app-main .sales29-items-table-wrap,
+  body.dark-mode .app-main .sales29-financial-grid > div,
+  body.dark-mode .app-main .sales29-tab,
+  body.dark-mode .app-main .sales29-progress,
+  body.dark-mode .app-main .sales29-cart,
+  body.dark-mode .app-main .sales29-catalog-gate,
+  body.dark-mode .app-main .sales29-offer-card,
+  body.dark-mode .app-main .sales29-cart-line,
+  body.dark-mode .app-main .sales29-combo,
+  body.dark-mode .app-main .sales29-delivery-summary > div,
+  body.dark-mode .app-main .sales29-modal-section,
+  body.dark-mode .app-main .sales29-modal-summary > div,
+  body.dark-mode .app-main .sales29-provider-inline,
+  body.dark-mode .app-main .sales29-delivery-client > div,
+  body.dark-mode .app-main .sales29-delivery-product-card,
+  body.dark-mode .app-main .sales29-product-combo,
+  body.dark-mode .app-main .sales29-cart-combo,
+  body.dark-mode .app-main .sales29-qty button,
+  body.dark-mode .app-main .sales29-static-field,
+  body.dark-mode .app-main .sales29-radio-field,
+  body.dark-mode .app-main .sales-radio-field label,
+  body.dark-mode .app-main .sales-price-box,
+  body.dark-mode .app-main .sales29-test-banner,
+  body.dark-mode .app-main .sales29-reclassify-warning,
+  body.dark-mode .app-main .sales29-delivery-current,
+  body.dark-mode .app-main .sales29-item-row-cancelled,
+  body.dark-mode .app-main .sales-form-grid,
+  body.dark-mode .app-main .sales-form-section,
+  body.dark-mode .app-main .sales-modal-heading,
+  body.dark-mode .app-main .sales-step-intro--modern,
+  body.dark-mode .app-main .sales-type-card--modern,
+  body.dark-mode .app-main .sales-detail-shell .sales-items-table,
+  body.dark-mode .app-main .modal-card:has(.sales-modal-shell),
+  body.dark-mode .app-main .detail-row,
+  body.dark-mode .app-main .detail-list > div,
+  body.dark-mode .app-main .preview-role-metric,
+  body.dark-mode .app-main .providers-detail-item,
+  body.dark-mode .app-main .providers-office-option,
+  body.dark-mode .app-main .providers-combo-trigger,
+  body.dark-mode .app-main .providers-combo-search,
+  body.dark-mode .app-main .providers-combo-actions button,
+  body.dark-mode .app-main .providers-check-option,
+  body.dark-mode .app-main .providers-office-loading,
+  body.dark-mode .app-main .providers-office-load-error,
+  body.dark-mode .app-main .mass-import-file,
+  body.dark-mode .app-main .mass-import-summary-card,
+  body.dark-mode .app-main .mass-import-filter,
+  body.dark-mode .app-main .mass-import-table,
+  body.dark-mode .app-main .mass-import-generated,
+  body.dark-mode .app-main .dc360-day,
+  body.dark-mode .app-main .dc360-delivery,
+  body.dark-mode .app-main .sd360-kpi,
+  body.dark-mode .app-main .sd360-panel,
+  body.dark-mode .app-main .sd360-chart-card,
+  body.dark-mode .app-main .empty-state {
+    background: var(--surface) !important;
+    background-color: var(--surface) !important;
+    border-color: var(--border) !important;
+    color: var(--ink);
+  }
+  body.dark-mode .app-main .sales-form-grid,
+  body.dark-mode .app-main .sales-form-section,
+  body.dark-mode .app-main .sales-type-card--modern,
+  body.dark-mode .app-main .sales-step-intro--modern,
+  body.dark-mode .app-main .modal-card:has(.sales-modal-shell),
+  body.dark-mode .app-main .mp-upload-hero {
+    background: var(--surface) !important;
+  }
+
+  /* Tablas */
+  body.dark-mode .app-main .data-table th,
+  body.dark-mode .app-main .mp-table th,
+  body.dark-mode .app-main .sales-items-table th,
+  body.dark-mode .app-main table thead,
+  body.dark-mode .app-main .table-header,
+  body.dark-mode .app-main .card-header,
+  body.dark-mode .app-main .panel-header {
+    background: var(--surface-soft) !important;
+    color: var(--muted) !important;
+    border-color: var(--border) !important;
+  }
+  body.dark-mode .app-main .data-table td,
+  body.dark-mode .app-main .mp-table td,
+  body.dark-mode .app-main .sales-items-table td {
+    background: var(--surface) !important;
+    border-color: var(--border) !important;
+    color: var(--ink);
+  }
+  body.dark-mode .app-main .data-table tbody tr:hover td,
+  body.dark-mode .app-main .mp-table tbody tr:hover td { background: var(--surface-soft) !important; }
+  body.dark-mode .app-main .mp-status,
+  body.dark-mode .app-main .sales-badge,
+  body.dark-mode .app-main .status-pill,
+  body.dark-mode .app-main .chip,
+  body.dark-mode .app-main .use-chip,
+  body.dark-mode .app-main .providers-chip,
+  body.dark-mode .app-main .mass-import-badge,
+  body.dark-mode .app-main .dc360-chip { border: 1px solid var(--border); }
+  body.dark-mode .app-main .accordion-trigger { background: var(--surface) !important; color: var(--ink); }
+  body.dark-mode .app-main .accordion-trigger:hover,
+  body.dark-mode .app-main .accordion-trigger[aria-expanded="true"] { background: var(--surface-soft) !important; }
+
+  /* Formularios */
+  body.dark-mode .app-main input,
+  body.dark-mode .app-main select,
+  body.dark-mode .app-main textarea {
+    background: var(--surface-soft) !important;
+    border-color: var(--border) !important;
+    color: var(--ink) !important;
+  }
+  body.dark-mode .app-main input::placeholder,
+  body.dark-mode .app-main textarea::placeholder { color: #64748b; }
+  body.dark-mode .app-main input:disabled,
+  body.dark-mode .app-main select:disabled,
+  body.dark-mode .app-main textarea:disabled { background: #0c161e !important; color: #64748b !important; }
+  body.dark-mode .app-main .file-selector-button {
+    background: rgba(0,161,222,.16) !important;
+    color: var(--primary-300) !important;
+    border-color: rgba(0,161,222,.35) !important;
+  }
+  body.dark-mode .app-main .search-field { background: var(--surface-soft) !important; border-color: var(--border) !important; }
+  body.dark-mode .app-main .button--secondary {
+    background: rgba(0,161,222,.14) !important;
+    border-color: rgba(0,161,222,.35) !important;
+    color: var(--primary-300) !important;
+  }
+  body.dark-mode .app-main .button--ghost { color: var(--muted) !important; border-color: var(--border) !important; }
+
+  /* Textos fijos que quedaban invisibles */
+  body.dark-mode .app-main h1,
+  body.dark-mode .app-main h2,
+  body.dark-mode .app-main h3,
+  body.dark-mode .app-main h4,
+  body.dark-mode .app-main h5,
+  body.dark-mode .app-main strong { color: var(--ink); }
+  body.dark-mode .app-main .sales29-price,
+  body.dark-mode .app-main .line-price,
+  body.dark-mode .app-main .cart-total strong,
+  body.dark-mode .app-main .sales29-price-box strong,
+  body.dark-mode .app-main .mp-card strong,
+  body.dark-mode .app-main .metric-card strong { color: #ffffff; }
+  body.dark-mode .app-main small,
+  body.dark-mode .app-main .sales-muted,
+  body.dark-mode .app-main .cart-empty,
+  body.dark-mode .app-main .sales-form-section p,
+  body.dark-mode .app-main .sales-modal-heading p,
+  body.dark-mode .app-main .sales29-offer-card p,
+  body.dark-mode .app-main .sales29-offer-card small,
+  body.dark-mode .app-main .cart-head small,
+  body.dark-mode .app-main .sales29-catalog-gate small,
+  body.dark-mode .app-main .sales29-cart-total span,
+  body.dark-mode .app-main .mp-card small,
+  body.dark-mode .app-main .mp-panel small,
+  body.dark-mode .app-main .mp-modal-section p,
+  body.dark-mode .app-main .mp-combo-help,
+  body.dark-mode .app-main .sd360-kpi small,
+  body.dark-mode .app-main .sd360-kpi span,
+  body.dark-mode .app-main .dc360-day .daynum,
+  body.dark-mode .app-main .dc360-more,
+  body.dark-mode .app-main .field-help { color: var(--muted) !important; }
+
+  /* Banners de estado: versión oscura translúcida */
+  body.dark-mode .app-main .sales29-financial-alert,
+  body.dark-mode .app-main .sales29-reclassify-warning,
+  body.dark-mode .app-main .sales29-provider-empty,
+  body.dark-mode .app-main .mp-price-alert,
+  body.dark-mode .app-main .providers-import-note { background: rgba(201,130,18,.14) !important; border-color: rgba(201,130,18,.4) !important; color: #f0c979 !important; }
+  body.dark-mode .app-main .sales29-test-banner,
+  body.dark-mode .app-main .sales29-info-note,
+  body.dark-mode .app-main .sales29-combo,
+  body.dark-mode .app-main .sales29-cart-combo,
+  body.dark-mode .app-main .sales29-product-combo,
+  body.dark-mode .app-main .sales29-context-ready { background: rgba(0,161,222,.12) !important; border-color: rgba(0,161,222,.35) !important; color: #7fd8f2 !important; }
+  body.dark-mode .app-main .sales29-item-row-cancelled,
+  body.dark-mode .app-main .sales29-delivery-item-cancelled,
+  body.dark-mode .app-main .sales29-cancel-warning,
+  body.dark-mode .app-main .sales29-remove,
+  body.dark-mode .app-main .catalog-values-error,
+  body.dark-mode .app-main .mass-import-fatal { background: rgba(196,61,75,.14) !important; border-color: rgba(196,61,75,.4) !important; color: #f2a3ab !important; }
+  body.dark-mode .app-main .mass-import-success { background: rgba(21,128,92,.16) !important; border-color: rgba(21,128,92,.4) !important; color: #7fd8b2 !important; }
+  body.dark-mode .app-main .sales29-is-archived { background: var(--surface-soft) !important; border-color: var(--border) !important; color: var(--muted) !important; }
+
+  /* Tabs MP,labels fijas, progress y controles menores */
+  body.dark-mode .app-main .mp-tabs button {
+    background: var(--surface-soft) !important;
+    border-color: var(--border) !important;
+    color: var(--muted) !important;
+  }
+  body.dark-mode .app-main .mp-modal-close { background: var(--surface-soft) !important; color: var(--ink) !important; }
+  body.dark-mode .app-main .mp-progress-track { background: #0c161e !important; }
+  body.dark-mode .app-main .mp-filter-control,
+  body.dark-mode .app-main .mp-form-grid label,
+  body.dark-mode .app-main .sales-workspace .input-field > span,
+  body.dark-mode .app-main label.input-field > span { color: var(--muted) !important; }
+
+  /* Loader y diálogos del sistema */
+  body.dark-mode .global-loader .loader-panel {
+    background: rgba(16,30,39,.92) !important;
+    border-color: var(--border) !important;
+    color: var(--ink);
+  }
+  body.dark-mode .app-loader-card { background: rgba(16,30,39,.94) !important; border-color: var(--border) !important; }
