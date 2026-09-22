@@ -215,6 +215,7 @@ function fillDeliveryCalendarFilterOptions() {
     if (d.estadoEntrega) estados[d.estadoEntrega] = true;
     if (d.oficina) oficinas[d.oficina] = true;
   });
+  ["REGISTRADA", "POR_ENTREGAR", "PROGRAMADA", "EN_RUTA", "ENTREGADA", "ANULADA"].forEach(function(s) { estados[s] = true; });
   dc360FillSelect("dc360EstadoFilter", Object.keys(estados).sort(), DC360_STATE.filters.estadoEntrega);
   dc360FillSelect("dc360OficinaFilter", Object.keys(oficinas).sort(), DC360_STATE.filters.oficina);
 }

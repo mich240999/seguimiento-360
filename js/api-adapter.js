@@ -351,6 +351,14 @@
             { codigo: "ABONO_CONFIRMADO", nombre: "Aprobado" },
             { codigo: "ABONO_OBSERVADO", nombre: "Observado" }
           ],
+          estados: [
+            { codigo: "REGISTRADA", nombre: "Registrada" },
+            { codigo: "POR_ENTREGAR", nombre: "Por entregar" },
+            { codigo: "PROGRAMADA", nombre: "Programada" },
+            { codigo: "EN_RUTA", nombre: "En ruta" },
+            { codigo: "ENTREGADA", nombre: "Entregada" },
+            { codigo: "ANULADA", nombre: "Anulada" }
+          ],
           estadosEntrega: [
             { codigo: "REGISTRADA", nombre: "Registrada" },
             { codigo: "PROGRAMADA", nombre: "Programada" },

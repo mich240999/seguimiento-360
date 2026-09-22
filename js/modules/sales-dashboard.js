@@ -202,6 +202,8 @@ function fillSalesDashboardFilterOptions() {
     var office = row.nombreOficina || row.idOficina || "";
     if (office) oficinas[office] = true;
   });
+  ["PENDIENTE_CONFIRMACION", "ABONO_CONFIRMADO", "ABONO_OBSERVADO"].forEach(function(s) { abonos[s] = true; });
+  ["REGISTRADA", "POR_ENTREGAR", "PROGRAMADA", "EN_RUTA", "ENTREGADA", "ANULADA"].forEach(function(s) { entregas[s] = true; });
   fillSalesDashboardSelect("sd360AbonoFilter", Object.keys(abonos).sort(), SD360_STATE.filters.estadoAbono);
   fillSalesDashboardSelect("sd360EntregaFilter", Object.keys(entregas).sort(), SD360_STATE.filters.estadoEntrega);
   fillSalesDashboardSelect("sd360OficinaFilter", Object.keys(oficinas).sort(), SD360_STATE.filters.oficina);
