@@ -890,14 +890,14 @@ const ADMIN_STATE = {
             '<span class="accordion-count">' + group.items.length + '</span>' +
             '<span class="material-symbols-rounded accordion-chevron">expand_more</span></button>' +
             '<div class="accordion-panel" hidden><div class="mp-table-wrap"><table class="mp-table"><thead><tr>' +
-            '<th>Material</th><th>Lista</th><th>Precio</th><th>Responsable</th><th>Fee %</th>' +
+            '<th>Material</th><th>Lista</th><th>Canal</th><th>Precio</th><th>Fee %</th>' +
             '</tr></thead><tbody>' + group.items.map(function(item) {
               return '<tr><td><strong>' + escapeHtml(item.nombreCortoMaterial || item.descripcionMaterial || item.codigoMaterial || "—") + '</strong>' +
                 '<br><small>' + escapeHtml(item.codigoSap || item.codigoMaterial || "") + '</small></td>' +
                 '<td>' + escapeHtml(item.nombre || item.codigoLista || "—") +
                 '<br><small>' + escapeHtml(((item.fechaInicio || "") + " / " + (item.fechaFin || "")).replace(/^\s*\/\s*$/, "")) + '</small></td>' +
+                '<td><span class="mp-badge">' + escapeHtml((function(c){ c=String(c||"").trim().toUpperCase(); return (c==="CANAL-ALO"||c==="ALO")?"Aló":((c==="CANAL-IA"||c==="IA")?"IA":"—"); })(item.idCanal || item.id_canal || item.canal)) + '</span></td>' +
                 '<td><strong>' + escapeHtml("S/ " + Number(item.precioBase || 0).toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })) + '</strong></td>' +
-                '<td>' + escapeHtml(item.responsableVenta || "—") + '</td>' +
                 '<td>' + escapeHtml((item.fee === null || item.fee === undefined || String(item.fee) === "") ? "—" : String(item.fee) + " %") + '</td></tr>';
             }).join("") + '</tbody></table></div></div></section>';
         }).join("") + '</div>';

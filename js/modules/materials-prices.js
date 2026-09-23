@@ -1089,16 +1089,22 @@ const MP_STATE = {
     (rows || []).forEach(function(item) {
       var key = String(item.idListaPrecio || "SIN_LISTA");
       if (!groups[key]) {
-        groups[key] = { idListaPrecio: key, proveedor: item.proveedor || "—", negocio: item.negocio || "—", vigencia: String(item.fechaInicio || "") + " / " + String(item.fechaFin || ""), items: [] };
+        groups[key] = { idListaPrecio: key, proveedor: item.proveedor || "—", negocio: item.negocio || "—", vigencia: String(item.fechaInicio || "") + " / " + String(item.fechaFin || ""), canal: item.idCanal || item.id_canal || item.canal || "", items: [] };
         order.push(key);
       }
       groups[key].items.push(item);
     });
     if (!order.length) { box.innerHTML = mpEmpty("No hay listas oficiales para mostrar."); return; }
-    box.innerHTML = '<div class="mp-table-wrap"><table class="mp-table"><thead><tr><th>Lista</th><th>Proveedor</th><th>Negocio</th><th>Vigencia</th><th>Detalles</th>' + (canDelete ? '<th>Acciones</th>' : '') + '</tr></thead><tbody>' +
+    box.innerHTML = '<div class="mp-table-wrap"><table class="mp-table"><thead><tr><th>Lista</th><th>Canal</th><th>Proveedor</th><th>Negocio</th><th>Vigencia</th><th>Detalles</th>' + (canDelete ? '<th>Acciones</th>' : '') + '</tr></thead><tbody>' +
       order.map(function(key) {
         var group = groups[key];
-        return '<tr><td><strong>' + escapeHtml(key) + '</strong></td><td>' + escapeHtml(group.proveedor) + '</td><td>' + escapeHtml(group.negocio) + '</td><td>' + escapeHtml(group.vigencia) + '</td><td>' + group.items.length + '</td>' +
+        var provs29L_ = {};
+        group.items.forEach(function(it) { var pn29L_ = String(it.proveedor || "").trim(); if (pn29L_ && pn29L_ !== "—") provs29L_[pn29L_] = true; });
+        var provKeys29L_ = Object.keys(provs29L_);
+        var provTxt29L_ = !provKeys29L_.length ? "—" : (provKeys29L_.length === 1 ? provKeys29L_[0] : "Varios (" + provKeys29L_.length + ")");
+        var canal29L_ = String(group.canal || "").trim().toUpperCase();
+        var canalTxt29L_ = (canal29L_ === "CANAL-ALO" || canal29L_ === "ALO") ? "Aló" : ((canal29L_ === "CANAL-IA" || canal29L_ === "IA") ? "IA" : "—");
+        return '<tr><td><strong>' + escapeHtml(key) + '</strong></td><td><span class="mp-badge">' + escapeHtml(canalTxt29L_) + '</span></td><td>' + escapeHtml(provTxt29L_) + '</td><td>' + escapeHtml(group.negocio) + '</td><td>' + escapeHtml(group.vigencia) + '</td><td>' + group.items.length + '</td>' +
           (canDelete ? '<td><div class="mp-actions"><button class="table-button has-tooltip" type="button" data-mp-delete-list="' + escapeHtml(key) + '" data-tooltip="Eliminar" aria-label="Eliminar" title="Eliminar"><span class="material-symbols-rounded">delete</span></button></div></td>' : '') + '</tr>';
       }).join("") + '</tbody></table></div>';
     box.querySelectorAll("[data-mp-delete-list]").forEach(function(button) {
@@ -3543,7 +3549,7 @@ const MP_STATE = {
             idCanal: canalClave,
             es_catalogo: false,
             esCatalogo: false,
-            idProveedor: primerPrecio.idProveedor || "",
+            idProveedor: esCanonico ? "" : (primerPrecio.idProveedor || ""),
             idNegocio: primerPrecio.idNegocio || "",
             fechaInicio: primerPrecio.fechaInicio || "",
             fechaFin: primerPrecio.fechaFin || "",
