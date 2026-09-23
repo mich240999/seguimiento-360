@@ -5053,7 +5053,7 @@ function mpGsdCell_(row, idx) {
   return String(v).trim();
 }
 
-function mpGsdParseNumber_(value) {
+function mpGsdParseNumber_(value, forzarDecimal) {
   // AGENTE 2B: las fechas nativas de Excel no son montos (antes se colaba el
   // serial como precio). Se devuelven como no numéricas con mensaje claro.
   if (typeof Date !== "undefined" && value instanceof Date) return null;
@@ -5090,7 +5090,7 @@ function mpGsdParseNumber_(value) {
     // 3 dígitos ("12.5", "899.00") es decimal.
     // Excepción: si el primer grupo empieza con "0" (ej. "0.125", "0,125")
     // NUNCA es miles (nadie escribe 0 mil 125).
-    var soloMiles = partes.length > 1 && partes[0] !== "0" && partes.every(function(p, i) {
+    var soloMiles = !forzarDecimal && partes.length > 1 && partes[0] !== "0" && partes.every(function(p, i) {
       if (!/^\d+$/.test(p)) return false;
       if (i === 0) return p.length >= 1 && p.length <= 3;
       return p.length === 3;
@@ -5107,16 +5107,23 @@ function mpGsdParseNumber_(value) {
 function mpGsdParseFee_(value) {
   var text = String(value == null ? "" : value).trim();
   if (!text) return { valor: null, error: "" };
-  // AGENTE 2B: con "%" explícito ("0.5%", "3.125%") el número ya está en
-  // porcentaje y NO se convierte; sin "%", si el valor es >= 1 se toma
-  // directamente como porcentaje (ej. "3.125" → 3.125 %). Si el valor es
-  // < 1 con cero inicial explícito ("0.125") también se toma directo —
-  // ya NO se multiplica por 100 para evitar confundir 0.125 % con 12.5 %.
+  // REGLA FEE (2026-09-23): el Excel trae fracciones, no porcentajes.
+  // - Con "%" explícito ("18%", "0.18%") el número ya está en porcentaje.
+  // - Sin "%": si 0 < valor < 1 es fracción y se multiplica x100
+  //   ("0.18" -> 18 %, "0,18" -> 18 %, 0.025 -> 2.5 %).
+  // - Sin "%" y valor >= 1 se toma directo ("18" -> 18 %, "3.125" -> 3.125 %).
+  // - 0 queda en 0. Rango final válido: 0 a 100, redondeado a 3 decimales.
   var tienePorciento = text.indexOf("%") !== -1;
   var num = mpGsdParseNumber_(text);
   if (num == null) return { valor: null, error: "FEE no numérico (" + text + ")." };
+  if (!tienePorciento && num > 0 && num < 1) num = num * 100;
+  // Si la lectura por miles queda fuera de rango, se reintenta en lectura
+  // decimal directa ("3.125" -> 3.125, "12.500" -> 12.5). Solo acepta 0-100.
+  if (num < 0 || num > 100) {
+    var alt29F_ = mpGsdParseNumber_(text, true);
+    if (alt29F_ !== null && isFinite(alt29F_) && alt29F_ >= 0 && alt29F_ <= 100) num = alt29F_;
+  }
   if (num < 0 || num > 100) return { valor: null, error: "FEE fuera de rango 0-100 (" + text + ")." };
-  // Redondear a 3 decimales (soporta fees como 3.125, 0.125, 12.500).
   return { valor: Math.round(num * 1000) / 1000, error: "" };
 }
 
