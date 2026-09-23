@@ -667,6 +667,13 @@ const ADMIN_STATE = {
               escapeHtml(row.idUsuario) +
               '" data-tooltip="Editar" aria-label="Editar" title="Editar"><span class="material-symbols-rounded">edit</span></button>'
             );
+            const target29U_ = String(row.estado || "").toUpperCase() === "ACTIVO" ? "INACTIVO" : "ACTIVO";
+            const tip29U_ = String(row.estado || "").toUpperCase() === "ACTIVO" ? "Inactivar" : "Activar";
+            buttons.push(
+              '<button class="table-button has-tooltip" type="button" data-status-user="' +
+              escapeHtml(row.idUsuario) +
+              '" data-user-estado="' + target29U_ + '" data-tooltip="' + tip29U_ + '" aria-label="' + tip29U_ + '" title="' + tip29U_ + '"><span class="material-symbols-rounded">' + (String(row.estado || "").toUpperCase() === "ACTIVO" ? "toggle_off" : "toggle_on") + '</span></button>'
+            );
           }
           return '<div class="table-actions">' + buttons.join("") + "</div>";
         }
@@ -691,6 +698,12 @@ const ADMIN_STATE = {
             return item.idUsuario === button.dataset.editUser;
           })
         );
+      });
+    });
+    region.querySelectorAll("[data-status-user]").forEach(function(button) {
+      button.addEventListener("click", function() {
+        if (!ensureWritableAdministrationView()) return;
+        confirmUserStatusChange(button.dataset.statusUser, button.dataset.userEstado);
       });
     });
   }
@@ -1568,6 +1581,7 @@ const ADMIN_STATE = {
       ["Documento", [user.tipoDocumento, user.numeroDocumento].filter(Boolean).join(" ") || "—"],
       ["Rol", user.nombreRol || "—"],
       ["Proveedor", user.nombreComercialProveedor || user.razonSocialProveedor || user.nombreProveedor || "—"],
+      ["Empresa", (function() { var f = ((ADMIN_STATE.empresas || []).filter(function(e) { return String(e.idEmpresa || e.nombre || "") === String(user.idEmpresa || ""); })[0]) || null; return (f && f.nombre) || user.nombreEmpresa || (user.idEmpresa || "—"); })()],
       ["Oficina", user.nombreOficina || "—"],
       ["Grupo", user.nombreGrupo || "—"],
       ["Estado", user.estado || "—"]
@@ -3027,9 +3041,22 @@ const ADMIN_STATE = {
       { key: "estado", label: "Estado", render: statusChip },
       { key: "actions", label: "", render: function(row) {
         const id = row.idEmpresa || row.nombre;
-        return '<div class="table-actions"><button class="table-button has-tooltip" type="button" data-edit-empresa="' + escapeHtml(id) + '" data-tooltip="Editar empresa" aria-label="Editar empresa" title="Editar empresa"><span class="material-symbols-rounded">edit</span></button></div>';
+        const activa29E_ = String(row.estado || "ACTIVO").toUpperCase() !== "INACTIVO";
+        const tip29E_ = activa29E_ ? "Inactivar" : "Activar";
+        return '<div class="table-actions">' +
+          '<button class="table-button has-tooltip" type="button" data-view-empresa="' + escapeHtml(id) + '" data-tooltip="Ver detalle" aria-label="Ver detalle" title="Ver detalle"><span class="material-symbols-rounded">visibility</span></button>' +
+          '<button class="table-button has-tooltip" type="button" data-edit-empresa="' + escapeHtml(id) + '" data-tooltip="Editar empresa" aria-label="Editar empresa" title="Editar empresa"><span class="material-symbols-rounded">edit</span></button>' +
+          '<button class="table-button has-tooltip" type="button" data-status-empresa="' + escapeHtml(id) + '" data-empresa-estado="' + (activa29E_ ? "INACTIVO" : "ACTIVO") + '" data-tooltip="' + tip29E_ + '" aria-label="' + tip29E_ + '" title="' + tip29E_ + '"><span class="material-symbols-rounded">' + (activa29E_ ? "toggle_off" : "toggle_on") + '</span></button></div>';
       } }
     ], ADMIN_STATE.empresas);
+    region.querySelectorAll("[data-view-empresa]").forEach(function(button) {
+      button.addEventListener("click", function() {
+        const found = ADMIN_STATE.empresas.find(function(item) {
+          return String(item.idEmpresa || item.nombre || "") === String(button.dataset.viewEmpresa || "");
+        });
+        openEmpresaReadonlyDetail(found || null);
+      });
+    });
     region.querySelectorAll("[data-edit-empresa]").forEach(function(button) {
       button.addEventListener("click", function() {
         const found = ADMIN_STATE.empresas.find(function(item) {
@@ -3038,8 +3065,67 @@ const ADMIN_STATE = {
         openEmpresaEditor(found || null);
       });
     });
+    region.querySelectorAll("[data-status-empresa]").forEach(function(button) {
+      button.addEventListener("click", function() {
+        confirmEmpresaStatusChange(button.dataset.statusEmpresa, button.dataset.empresaEstado);
+      });
+    });
   }
 
+  function openEmpresaReadonlyDetail(empresa) {
+    if (!empresa) return;
+    const rows = [
+      ["Nombre", empresa.nombre || "—"],
+      ["Tipo", String(empresa.tipo || "—").toUpperCase()],
+      ["Canal", empresa.nombreCanal || empresa.canal || empresa.idCanal || "—"],
+      ["Proveedor vinculado", empresa.nombreProveedor || empresa.idProveedor || "Sin vínculo"],
+      ["Estado", empresa.estado || "—"]
+    ];
+    openModal({
+      eyebrow: "DETALLE DE EMPRESA",
+      title: empresa.nombre || "Empresa",
+      body: '<div class="detail-list">' + rows.map(function(row) {
+        return '<div><span>' + escapeHtml(row[0]) + '</span><strong>' +
+          escapeHtml(row[1]) + "</strong></div>";
+      }).join("") + "</div>",
+      footer: '<button class="button button--ghost" type="button" data-modal-close>Cerrar</button>'
+    });
+    bindModalCloseButtons();
+  }
+  function confirmEmpresaStatusChange(id, estado) {
+    if (!ensureWritableAdministrationView()) return;
+    openModal({
+      eyebrow: "CAMBIAR ESTADO",
+      title: String(estado || "") === "ACTIVO" ? "Activar empresa" : "Inactivar empresa",
+      body: "<p>¿Confirmas el cambio de estado de la empresa <strong>" + escapeHtml(id) + "</strong> a <strong>" + escapeHtml(estado) + "</strong>?</p>",
+      footer: '<button class="button button--ghost" type="button" data-modal-close>Cancelar</button><button id="empresaConfirmStatusButton" class="button button--primary has-tooltip" type="button" data-tooltip="Confirmar" aria-label="Confirmar" title="Confirmar"><span class="material-symbols-rounded">check</span></button>'
+    });
+    bindModalCloseButtons();
+    on("empresaConfirmStatusButton", "click", function() {
+      const button = document.getElementById("empresaConfirmStatusButton");
+      if (button) button.disabled = true;
+      secureRpc("cambiarEstadoEmpresaVendedoraAdminMotor", [{ idEmpresa: id, estado: estado }], adminRpcModuleCode())
+        .then(function() { closeModal(); toast("Estado actualizado", "La empresa fue actualizada."); loadAdminEmpresas(); })
+        .catch(function(error) { toast("No fue posible cambiar el estado", errorMessage(error), true); if (button) button.disabled = false; });
+    });
+  }
+  function confirmUserStatusChange(id, estado) {
+    if (!ensureWritableAdministrationView()) return;
+    openModal({
+      eyebrow: "CAMBIAR ESTADO",
+      title: String(estado || "") === "ACTIVO" ? "Activar usuario" : "Inactivar usuario",
+      body: "<p>¿Confirmas el cambio de estado del usuario <strong>" + escapeHtml(id) + "</strong> a <strong>" + escapeHtml(estado) + "</strong>?</p>",
+      footer: '<button class="button button--ghost" type="button" data-modal-close>Cancelar</button><button id="userConfirmStatusButton" class="button button--primary has-tooltip" type="button" data-tooltip="Confirmar" aria-label="Confirmar" title="Confirmar"><span class="material-symbols-rounded">check</span></button>'
+    });
+    bindModalCloseButtons();
+    on("userConfirmStatusButton", "click", function() {
+      const button = document.getElementById("userConfirmStatusButton");
+      if (button) button.disabled = true;
+      secureRpc("cambiarEstadoUsuarioAdminMotor", [{ idUsuario: id, estado: estado }], adminRpcModuleCode())
+        .then(function() { closeModal(); toast("Estado actualizado", "El usuario fue actualizado."); loadAdminUsers(ADMIN_STATE.userSearchText, true); })
+        .catch(function(error) { toast("No fue posible cambiar el estado", errorMessage(error), true); if (button) button.disabled = false; });
+    });
+  }
   function buildCanalOptions(selected) {
     const normalized = String(selected || "").trim();
     return (ADMIN_STATE.canales || []).map(function(item) {

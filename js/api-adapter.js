@@ -270,6 +270,34 @@
         saveStore();
         return { correcto: true, idProveedor: idProv, estado: estadoProv, mensaje: "Estado actualizado." };
       }
+      case "cambiarEstadoEmpresaVendedoraAdminMotor": {
+        const demoUsr29E_ = (s.usuarios && s.usuarios[0]) || {};
+        if (String(demoUsr29E_.rol || "").toUpperCase() !== "SUPERADMIN" && String(demoUsr29E_.rol || "").toUpperCase() !== "ADMIN") return { correcto: false, mensaje: "Solo un administrador puede cambiar el estado." };
+        const x29E_ = args[0] || {};
+        const id29E_ = String(x29E_.idEmpresa || "").trim();
+        const est29E_ = String(x29E_.estado || "").toUpperCase() === "INACTIVO" ? "INACTIVO" : "ACTIVO";
+        if (!id29E_) return { correcto: false, mensaje: "Indica la empresa." };
+        s.empresas = s.empresas || [];
+        const ex29E_ = s.empresas.filter(function(e) { return String(e.idEmpresa || e.nombre || "") === id29E_; })[0];
+        if (!ex29E_) return { correcto: false, mensaje: "Empresa no encontrada." };
+        ex29E_.estado = est29E_;
+        saveStore();
+        return { correcto: true, idEmpresa: id29E_, estado: est29E_, mensaje: "Empresa actualizada (demo)." };
+      }
+      case "cambiarEstadoUsuarioAdminMotor": {
+        const demoUsr29U_ = (s.usuarios && s.usuarios[0]) || {};
+        if (String(demoUsr29U_.rol || "").toUpperCase() !== "SUPERADMIN" && String(demoUsr29U_.rol || "").toUpperCase() !== "ADMIN") return { correcto: false, mensaje: "Solo un administrador puede cambiar el estado." };
+        const x29U_ = args[0] || {};
+        const id29U_ = String(x29U_.idUsuario || "").trim();
+        const est29U_ = String(x29U_.estado || "").toUpperCase() === "INACTIVO" ? "INACTIVO" : "ACTIVO";
+        if (!id29U_) return { correcto: false, mensaje: "Indica el usuario." };
+        if (id29U_ === String(demoUsr29U_.idUsuario || "")) return { correcto: false, mensaje: "No puedes desactivar tu propio usuario." };
+        const tu29U_ = (s.usuarios || []).filter(function(u) { return String(u.idUsuario || "") === id29U_; })[0];
+        if (!tu29U_) return { correcto: false, mensaje: "Usuario no encontrado." };
+        tu29U_.estado = est29U_;
+        saveStore();
+        return { correcto: true, idUsuario: id29U_, estado: est29U_, mensaje: "Usuario actualizado (demo)." };
+      }
 
       case "asegurarTaxonomiaMaterialesModulo": {
         return { correcto: true, tiposCreados: [], subtiposCreados: [], advertencias: [], mensaje: "Demo: catálogo sin cambios." };
@@ -910,6 +938,29 @@
         const { error: estadoProvError } = await client.from("mae_proveedores").update({ estado: estadoProvSb }).eq("id_proveedor", idProvSb);
         if (estadoProvError) throw estadoProvError;
         return { correcto: true, idProveedor: idProvSb, estado: estadoProvSb, mensaje: "Estado actualizado." };
+      }
+      case "cambiarEstadoEmpresaVendedoraAdminMotor": {
+        const usrPuente29E_ = ((localCache && localCache.usuarios && localCache.usuarios[0]) || {});
+        if (String(usrPuente29E_.rol || "").toUpperCase() !== "SUPERADMIN" && String(usrPuente29E_.rol || "").toUpperCase() !== "ADMIN") throw new Error("Solo un administrador puede cambiar el estado.");
+        const xPuente29E_ = args[0] || {};
+        const idPuente29E_ = String(xPuente29E_.idEmpresa || "").trim();
+        const estPuente29E_ = String(xPuente29E_.estado || "").toUpperCase() === "INACTIVO" ? "INACTIVO" : "ACTIVO";
+        if (!idPuente29E_) throw new Error("Indica la empresa.");
+        const { error: estEmpError } = await client.from("ven_empresas").update({ estado: estPuente29E_ }).eq("id_empresa", idPuente29E_);
+        if (estEmpError) throw estEmpError;
+        return { correcto: true, idEmpresa: idPuente29E_, estado: estPuente29E_, mensaje: "Empresa actualizada." };
+      }
+      case "cambiarEstadoUsuarioAdminMotor": {
+        const usrPuente29U_ = ((localCache && localCache.usuarios && localCache.usuarios[0]) || {});
+        if (String(usrPuente29U_.rol || "").toUpperCase() !== "SUPERADMIN" && String(usrPuente29U_.rol || "").toUpperCase() !== "ADMIN") throw new Error("Solo un administrador puede cambiar el estado.");
+        const xPuente29U_ = args[0] || {};
+        const idPuente29U_ = String(xPuente29U_.idUsuario || "").trim();
+        const estPuente29U_ = String(xPuente29U_.estado || "").toUpperCase() === "INACTIVO" ? "INACTIVO" : "ACTIVO";
+        if (!idPuente29U_) throw new Error("Indica el usuario.");
+        if (idPuente29U_ === String(usrPuente29U_.idUsuario || "")) throw new Error("No puedes desactivar tu propio usuario.");
+        const { error: estUsrError } = await client.from("seg_usuarios").update({ estado: estPuente29U_ }).eq("id_usuario", idPuente29U_);
+        if (estUsrError) throw estUsrError;
+        return { correcto: true, idUsuario: idPuente29U_, estado: estPuente29U_, mensaje: "Usuario actualizado." };
       }
       case "exportarVentasContadoModulo": {
         const cellExp = function(v) { var t = String(v === null || v === undefined ? "" : v); return '"' + t.replace(/"/g, '""') + '"'; };
