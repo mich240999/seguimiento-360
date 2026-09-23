@@ -74,7 +74,7 @@ const PROVIDERS_STATE = {
       if (element) element.hidden = !providerPermission(mapping[id]);
     });
     const channelBulkButton = document.getElementById("providersChannelBulkButton");
-    if (channelBulkButton) channelBulkButton.hidden = !(providerPermission("IMPORTAR") || providerPermission("EDITAR"));
+    if (channelBulkButton) channelBulkButton.hidden = true;
   }
 
   function refreshProvidersWorkspace(silent) {
