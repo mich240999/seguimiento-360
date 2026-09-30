@@ -3127,11 +3127,14 @@ const MP_STATE = {
             if (key && !existentes[key]) existentes[key] = m;
           });
         });
+        var normCanalPre29P_ = function(v) { var t = String(v || "").trim().toUpperCase(); if (t === "IA" || t === "CANAL-IA") return "CANAL-IA"; if (t === "ALO" || t === "CANAL-ALO") return "CANAL-ALO"; return t; };
+        var canalUp29P_ = normCanalPre29P_(defaults.idCanal || mpBulkCanalValue_("mpBulkPriceCanal") || "IA");
         const preciosVigentes = {};
         ((respuestas[1] && respuestas[1].registros) || []).forEach(function(p) {
           if (String(p.fechaInicio || "").slice(0, 10) !== vigencia.inicio) return;
           if (String(p.fechaFin || "").slice(0, 10) !== vigencia.fin) return;
           if (p.idOficina || p.idGrupo) return;
+          if (normCanalPre29P_(p.idCanal || p.id_canal || p.canal) !== canalUp29P_) return;
           const key = [mpGsdNorm_(p.idMaterial), mpGsdNorm_(p.idProveedor), mpGsdNorm_(p.idNegocio)].join("|");
           if (!preciosVigentes[key]) preciosVigentes[key] = p;
         });

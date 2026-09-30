@@ -1149,8 +1149,15 @@
           if (idCanalEmpSb_ === "IA") idCanalEmpSb_ = "CANAL-IA";
           else if (idCanalEmpSb_ === "ALO") idCanalEmpSb_ = "CANAL-ALO";
           if (idCanalEmpSb_ && idCanalEmpSb_.indexOf("CANAL-") !== 0) {
-            var chEmpSb_ = await client.from("ven_canales").select("id_canal").or("codigo.eq." + idCanalEmpSb_ + ",id_canal.eq." + idCanalEmpSb_).maybeSingle();
-            if (!chEmpSb_.error && chEmpSb_.data && chEmpSb_.data.id_canal) idCanalEmpSb_ = String(chEmpSb_.data.id_canal).trim();
+            try {
+              var foldEmpSb29C_ = function(s) { try { return String(s || "").normalize("NFD").replace(/[^a-z0-9]+/gi, "").toLowerCase(); } catch (_) { return String(s || "").toLowerCase(); } };
+              var chEmpSb_ = await client.from("ven_canales").select("id_canal,codigo,nombre");
+              if (!chEmpSb_.error) {
+                var fEmpSb29C_ = foldEmpSb29C_(idCanalEmpSb_);
+                var hitEmpSb_ = ((chEmpSb_.data) || []).filter(function(c) { return foldEmpSb29C_(c.codigo) === fEmpSb29C_ || foldEmpSb29C_(c.id_canal) === fEmpSb29C_ || foldEmpSb29C_(c.nombre) === fEmpSb29C_; })[0] || null;
+                if (hitEmpSb_ && hitEmpSb_.id_canal) idCanalEmpSb_ = String(hitEmpSb_.id_canal).trim();
+              }
+            } catch (_) {}
           }
           if (!idCanalEmpSb_) throw new Error("Selecciona el canal de la empresa.");
           var vexEmpSb_ = await client.from("ven_canales").select("id_canal").eq("id_canal", idCanalEmpSb_).maybeSingle();
