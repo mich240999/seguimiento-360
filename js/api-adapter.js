@@ -453,7 +453,7 @@
           if (demoRol29A_ !== "SUPERADMIN" && demoProvU29A_ && demoProvsV29A_.length && demoProvsV29A_.indexOf(demoProvU29A_) === -1) return { correcto: false, mensaje: "Solo una cuenta del proveedor de esta venta puede validar el abono." };
           v.estadoAbono = "ABONO_CONFIRMADO";
           v.abonoAprobadoId = (s.usuarios[0] && s.usuarios[0].idUsuario) || "";
-          v.abonoAprobadoNombre = (s.usuarios[0] && s.usuarios[0].nombre) || "";
+          v.          abonoAprobadoNombre = ((s.usuarios[0] && [s.usuarios[0].nombre, s.usuarios[0].apellidos].filter(Boolean).join(" ")) || "");
           saveStore();
           return { correcto: true, mensaje: "Abono confirmado." };
         }
@@ -479,11 +479,11 @@
           const demoUser = s.usuarios[0] || {};
           if (String(entregaPayload.estadoEntrega || "").toUpperCase() === "PROGRAMADA" || String(entregaPayload.estadoEntrega || "").toUpperCase() === "EN_RUTA") {
             v.programadoId = demoUser.idUsuario || "";
-            v.programadoNombre = demoUser.nombre || demoUser.correo || "";
+            v.programadoNombre = ([demoUser.nombre, demoUser.apellidos].filter(Boolean).join(" ") || demoUser.correo || "");
           }
           if (String(entregaPayload.estadoEntrega || "").toUpperCase() === "ENTREGADA") {
             v.entregadoId = demoUser.idUsuario || "";
-            v.entregadoNombre = demoUser.nombre || demoUser.correo || "";
+            v.entregadoNombre = ([demoUser.nombre, demoUser.apellidos].filter(Boolean).join(" ") || demoUser.correo || "");
           }
           v.gestionEntrega = Object.assign(v.gestionEntrega || {}, entregaPayload);
           v.gestionesEntrega = v.gestionesEntrega || [];
@@ -917,8 +917,8 @@
         const usuarioGestion = ((localCache && localCache.usuarios && localCache.usuarios[0]) || (typeof s !== "undefined" && s.usuarios && s.usuarios[0]) || {});
         const actualizacionVentaGestion = { estado_entrega: estadoGestion };
         if (estadoGestion === "ENTREGADA") actualizacionVentaGestion.estado_general = "ENTREGADA";
-        if (estadoGestion === "PROGRAMADA" || estadoGestion === "EN_RUTA") { actualizacionVentaGestion.programado_id = usuarioGestion.idUsuario || null; actualizacionVentaGestion.programado_nombre = usuarioGestion.nombre || usuarioGestion.correo || ""; }
-        if (estadoGestion === "ENTREGADA") { actualizacionVentaGestion.entregado_id = usuarioGestion.idUsuario || null; actualizacionVentaGestion.entregado_nombre = usuarioGestion.nombre || usuarioGestion.correo || ""; }
+        if (estadoGestion === "PROGRAMADA" || estadoGestion === "EN_RUTA") { actualizacionVentaGestion.programado_id = usuarioGestion.idUsuario || null;         actualizacionVentaGestion.programado_nombre = ([usuarioGestion.nombre, usuarioGestion.apellidos].filter(Boolean).join(" ") || usuarioGestion.correo || ""); }
+        if (estadoGestion === "ENTREGADA") { actualizacionVentaGestion.entregado_id = usuarioGestion.idUsuario || null;         actualizacionVentaGestion.entregado_nombre = ([usuarioGestion.nombre, usuarioGestion.apellidos].filter(Boolean).join(" ") || usuarioGestion.correo || ""); }
         const { error: ventaGestionError } = await client.from("vta_ventas_contado").update(actualizacionVentaGestion).eq("id_venta", idVentaGestion);
         if (ventaGestionError) throw ventaGestionError;
         return { correcto: true, mensaje: "Gestión de entrega actualizada." };
@@ -1257,6 +1257,7 @@
       idProveedor: r.id_proveedor,
       idOficina: r.id_oficina,
       idGrupo: r.id_grupo,
+      apellidos: r.apellidos || "",
       idEmpresa: r.id_empresa || "",
       estado: r.estado
     };

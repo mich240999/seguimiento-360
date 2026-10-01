@@ -1651,6 +1651,7 @@ const ADMIN_STATE = {
           '<small id="userDocumentHelp" class="field-help">Selecciona primero el tipo de documento.</small>' +
         '</label>' +
         fieldInput("nombre", "Nombre completo", user.nombre, true) +
+        fieldInput("apellidos", "Apellidos", user.apellidos || "", false) +
         fieldInput("correo", "Correo", user.correo, true, "email") +
         fieldInput("telefono", "Teléfono", user.telefono) +
         (user.idUsuario ? '<label class="field field--full"><span>Nueva contraseña <small>(opcional)</small></span><input name="nuevaContrasena" type="password" minlength="8" autocomplete="new-password"><small class="field-help">Solo SUPERADMIN puede cambiarla. El usuario podrá cambiarla nuevamente desde su perfil.</small></label>' : '') +

@@ -90,18 +90,30 @@ Deno.serve(async (request) => {
     id_usuario_actualizacion: caller.id_usuario
   };
   const idEmpresaNueva = String((input as any).idEmpresa || "").trim();
+  const apellidosNuevo = String((input as any).apellidos || "").trim();
+  if (apellidosNuevo) (baseProfile as any).apellidos = apellidosNuevo;
   let profileError: { message?: string } | null = null;
   if (idEmpresaNueva) {
     const withEmpresa = await admin.from("seg_usuarios").insert({ ...baseProfile, id_empresa: idEmpresaNueva });
-    if (withEmpresa.error && String(withEmpresa.error.message || "").indexOf("id_empresa") !== -1) {
-      const fallback = await admin.from("seg_usuarios").insert(baseProfile);
+    if (withEmpresa.error && /id_empresa|apellidos/.test(String(withEmpresa.error.message || ""))) {
+      const perfilBase29A_: Record<string, unknown> = { ...baseProfile };
+      delete perfilBase29A_.id_empresa;
+      delete perfilBase29A_.apellidos;
+      const fallback = await admin.from("seg_usuarios").insert(perfilBase29A_);
       profileError = fallback.error;
     } else {
       profileError = withEmpresa.error;
     }
   } else {
     const plain = await admin.from("seg_usuarios").insert(baseProfile);
-    profileError = plain.error;
+    if (plain.error && /apellidos/.test(String(plain.error.message || ""))) {
+      const perfilBase29B_: Record<string, unknown> = { ...baseProfile };
+      delete perfilBase29B_.apellidos;
+      const retry = await admin.from("seg_usuarios").insert(perfilBase29B_);
+      profileError = retry.error;
+    } else {
+      profileError = plain.error;
+    }
   }
   if (profileError) {
     await admin.auth.admin.deleteUser(invited.user.id);
