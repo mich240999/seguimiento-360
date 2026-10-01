@@ -4130,7 +4130,7 @@ const SALES_STATE = {
         '<div class="empty-state">' +
           '<span class="material-symbols-rounded">inventory_2</span>' +
           '<strong>Sin ofertas</strong>' +
-          '<p>'+escapeHtml(message||"No hay ofertas vigentes para estos filtros.")+'</p>' +
+          '<p>'+escapeHtml(message||"No hay ofertas vigentes para estos filtros. Verifica el negocio, la oficina, el grupo y la vigencia de tus listas de precios.")+'</p>' +
         '</div>';
       return;
     }
