@@ -1619,6 +1619,8 @@ const VENTAS_CONTADO_SGT360 = Object.freeze({
     { codigo: "ANULAR", nombre: "Anular venta o material", tipo: "ACCION", padre: "VER_DETALLE", orden: 60 },
     { codigo: "CONFIRMAR_ABONO", nombre: "Validar abono", tipo: "ACCION", padre: "VISUALIZAR_MODULO", orden: 70 },
     { codigo: "GESTIONAR_ENTREGA", nombre: "Gestionar entrega", tipo: "ACCION", padre: "VISUALIZAR_MODULO", orden: 80 },
+    { codigo: "PROGRAMAR_ENTREGA", nombre: "Programar entrega", tipo: "ACCION", padre: "VISUALIZAR_MODULO", orden: 82 },
+    { codigo: "CONFIRMAR_ENTREGA", nombre: "Confirmar entrega (despacho)", tipo: "ACCION", padre: "VISUALIZAR_MODULO", orden: 84 },
     { codigo: "GESTIONAR_PRUEBAS", nombre: "Gestionar ventas de prueba", tipo: "ACCION", padre: "VISUALIZAR_MODULO", orden: 90 }
   ]),
   TIPOS_REGISTRO: Object.freeze({
@@ -10995,6 +10997,24 @@ function obtenerPermisoVentasContadoPaso29W_(
           directo.alcance || "PROPIO"
         )
     };
+  }
+
+  // Puente de entrega: otorgar PROGRAMAR_ENTREGA o CONFIRMAR_ENTREGA
+  // (los permisos que se muestran en las matrices de rol/usuario)
+  // también autoriza GESTIONAR_ENTREGA, que es el recurso histórico
+  // que exigen guardarGestionEntrega y la bandeja de entregas.
+  if (codigo === "GESTIONAR_ENTREGA") {
+    const puente = ["PROGRAMAR_ENTREGA", "CONFIRMAR_ENTREGA"].map(function(clave) {
+      return matriz[clave];
+    }).filter(function(item) {
+      return item && item.permitido === true;
+    })[0];
+    if (puente) {
+      return {
+        permitido: true,
+        alcance: normalizarTexto(puente.alcance || "PROPIO")
+      };
+    }
   }
 
   const administrar =
