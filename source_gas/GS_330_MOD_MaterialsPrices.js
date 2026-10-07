@@ -2131,6 +2131,45 @@ function guardarListaOficialPrecioModulo(datos) {
   };
 }
 
+/** Actualiza la vigencia de una lista oficial (sobrescribe, no solo expande).
+ *  Usado por la carga masiva GSD por canal (IA/ALO): al volver a cargar la
+ *  lista existente se sincroniza fecha_inicio/fecha_fin con las fechas
+ *  cargadas. Sin este paso la fecha de vigencia nunca cambiaba. */
+function actualizarVigenciaListaPrecioModulo(datos) {
+  const usuario = obtenerUsuarioActual();
+  datos = datos || {};
+  exigirPermisoMaterialesPrecios_("EDITAR_LISTA_OFICIAL", usuario);
+  const idLista = String(datos.idListaPrecio || "").trim();
+  if (!idLista) throw new Error("Indica la lista.");
+  const existente = buscarPorCampoPrecio_(MP_MODULO_SGT360.HOJAS.LISTAS, "ID_LISTA_PRECIO", idLista);
+  if (!existente) throw new Error("La lista no existe.");
+  const ini = String(datos.fechaInicio || "").trim().slice(0, 10);
+  const fin = String(datos.fechaFin || "").trim().slice(0, 10);
+  if (ini && fin && fin < ini) throw new Error("La fecha fin no puede ser menor que la fecha inicio.");
+  const actualIni = String(existente.FECHA_INICIO || "").slice(0, 10);
+  const actualFin = String(existente.FECHA_FIN || "").slice(0, 10);
+  const cambios = {};
+  if (ini && ini !== actualIni) cambios.FECHA_INICIO = normalizarFechaEntradaPrecio_(ini);
+  if (fin && fin !== actualFin) cambios.FECHA_FIN = normalizarFechaEntradaPrecio_(fin);
+  if (!Object.keys(cambios).length) {
+    return { correcto: true, idListaPrecio: idLista, sinCambios: true, mensaje: "Vigencia sin cambios." };
+  }
+  cambios.ID_LISTA_PRECIO = idLista;
+  cambios.FECHA_ACTUALIZACION = new Date();
+  cambios.ID_USUARIO_ACTUALIZACION = usuario.idUsuario || "";
+  guardarObjetoMotor_(MOTOR_SGT360.BASES.OPERATION, MP_MODULO_SGT360.HOJAS.LISTAS, "ID_LISTA_PRECIO", cambios);
+  marcarRevisionDatosMotor_(MOTOR_SGT360.BASES.OPERATION, MP_MODULO_SGT360.HOJAS.LISTAS);
+  invalidarCacheOpcionesMaterialesPrecios_();
+  const actualizado = buscarPorCampoPrecio_(MP_MODULO_SGT360.HOJAS.LISTAS, "ID_LISTA_PRECIO", idLista) || {};
+  return {
+    correcto: true,
+    idListaPrecio: idLista,
+    fechaInicio: String(actualizado.FECHA_INICIO || cambios.FECHA_INICIO || ""),
+    fechaFin: String(actualizado.FECHA_FIN || cambios.FECHA_FIN || ""),
+    mensaje: "Vigencia actualizada."
+  };
+}
+
 /** Guarda precio de material en una lista oficial. */
 function actualizarVigenciaListaPrecioIndividual_(idListaPrecio, datosValidados, fechaInicio, fechaFin) {
   const id = String(idListaPrecio || "").trim();

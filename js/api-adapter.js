@@ -665,6 +665,9 @@
         return { correcto: true, idListaPrecio: idListaFeeDemo_, registros: [], paginacion: { pagina: 1, totalPaginas: 1, total: 0 }, mensaje: "Demo sin listas persistidas: sin materiales para la lista indicada." };
       }
 
+      case "actualizarVigenciaListaPrecioModulo": {
+        return { correcto: true, sinCambios: true, mensaje: "Demo: sin cambios." };
+      }
       case "guardarListaOficialPrecioModulo": {
         var lDemo_ = args[0] || {};
         var idProvLDemo_ = String(lDemo_.idProveedor || "").trim();
@@ -1216,6 +1219,23 @@
           return true;
         });
         return { correcto: true, idListaPrecio: idListaFeeSb_, registros: rowsFeeSb_, paginacion: { pagina: 1, totalPaginas: 1, total: rowsFeeSb_.length } };
+      }
+      case "actualizarVigenciaListaPrecioModulo": {
+        var xvSb_ = args[0] || {};
+        var idLSb_ = String(xvSb_.idListaPrecio || "").trim();
+        if (!idLSb_) throw new Error("Indica la lista.");
+        var curSb_ = await client.from("pre_listas_precios").select("id_lista_precio,fecha_inicio,fecha_fin").eq("id_lista_precio", idLSb_).maybeSingle();
+        if (curSb_.error) throw curSb_.error;
+        if (!curSb_.data) throw new Error("La lista no existe.");
+        var iniSb_ = String(xvSb_.fechaInicio || "").trim().slice(0, 10), finSb_ = String(xvSb_.fechaFin || "").trim().slice(0, 10);
+        if (iniSb_ && finSb_ && finSb_ < iniSb_) throw new Error("La fecha fin no puede ser menor que la fecha inicio.");
+        var updSb_ = {};
+        if (iniSb_ && String(curSb_.data.fecha_inicio || "").slice(0, 10) !== iniSb_) updSb_.fecha_inicio = iniSb_;
+        if (finSb_ && String(curSb_.data.fecha_fin || "").slice(0, 10) !== finSb_) updSb_.fecha_fin = finSb_;
+        if (!Object.keys(updSb_).length) return { correcto: true, idListaPrecio: idLSb_, sinCambios: true, mensaje: "Vigencia sin cambios." };
+        var savSb_ = await client.from("pre_listas_precios").update(updSb_).eq("id_lista_precio", idLSb_);
+        if (savSb_.error) throw savSb_.error;
+        return { correcto: true, idListaPrecio: idLSb_, fechaInicio: updSb_.fecha_inicio || curSb_.data.fecha_inicio, fechaFin: updSb_.fecha_fin || curSb_.data.fecha_fin, mensaje: "Vigencia actualizada." };
       }
       case "guardarListaOficialPrecioModulo": {
         try {

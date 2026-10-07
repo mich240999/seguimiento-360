@@ -3495,6 +3495,16 @@ const MP_STATE = {
     let actualizados = 0;
     let errores = 0;
     const detalle = [];
+    var vigOk29V_ = 0;
+    var vigErr29V_ = [];
+    // Vigencia objetivo de esta carga (todas las filas comparten el mes de carga).
+    var vigenciaCarga29V_ = null;
+    try {
+      var _pp0 = (items && items[0] && items[0].precio) || {};
+      var _fi0 = String(_pp0.fechaInicio || "").slice(0, 10);
+      var _ff0 = String(_pp0.fechaFin || "").slice(0, 10);
+      if (_fi0 && _ff0) vigenciaCarga29V_ = { inicio: _fi0, fin: _ff0 };
+    } catch (_) { vigenciaCarga29V_ = null; }
     // Caché nombre normalizado -> idListaPrecio de la lista destino (o promesa en vuelo).
     var listaCanalCache_ = {};
 
@@ -3619,6 +3629,26 @@ const MP_STATE = {
       });
     });
 
+    // 1b) Sincroniza la vigencia de cada lista destino con las fechas cargadas.
+    // Antes la lista IA/ALO existente se reutilizaba sin tocar fecha_inicio/fecha_fin,
+    // por eso la fecha de vigencia no cambiaba al volver a cargar.
+    ordenDestinos.forEach(function(clave) {
+      chain = chain.then(function() {
+        var idListaVig = listasResueltas[clave];
+        if (!idListaVig || !vigenciaCarga29V_) return null;
+        return secureRpc("actualizarVigenciaListaPrecioModulo", [{
+          idListaPrecio: idListaVig,
+          fechaInicio: vigenciaCarga29V_.inicio,
+          fechaFin: vigenciaCarga29V_.fin
+        }], "MATERIALES_PRECIOS").then(function(rVig) {
+          if (rVig && rVig.sinCambios) return null;
+          vigOk29V_ += 1;
+        }).catch(function(errVig) {
+          vigErr29V_.push({ lista: idListaVig, error: errorMessage(errVig) });
+        });
+      });
+    });
+
     // 2) Por cada fila validada: graba el material y hace upsert del detalle
     // EN SU LISTA (match por id_material dentro de la lista: actualiza
     // precio/fee o inserta). Cada precio se guarda UNA sola vez.
@@ -3673,12 +3703,16 @@ const MP_STATE = {
         creados: creados,
         actualizados: actualizados,
         errores: errores,
-        mensaje: "Carga GSD confirmada en lista única por canal (" + canonicoCanal + "). Solo se grabaron las filas validadas.",
+        mensaje: "Carga GSD confirmada en lista única por canal (" + canonicoCanal + ")" +
+          (vigenciaCarga29V_ ? " con vigencia " + vigenciaCarga29V_.inicio + " → " + vigenciaCarga29V_.fin : "") +
+          ". Solo se grabaron las filas validadas.",
         detalleValidacion: detalle,
         puedeConfirmar: false,
         tokenPreview: null
       });
       toast("Carga de precios confirmada", "Creados: " + creados + " · Actualizados: " + actualizados + " · Errores: " + errores);
+      if (vigOk29V_) toast("Vigencia actualizada", "La vigencia de " + vigOk29V_ + " lista(s) se extendió con las fechas cargadas.");
+      if (vigErr29V_.length) toast("Vigencia no actualizada", String(vigErr29V_[0].error || ""), true);
     });
   }
 
