@@ -189,22 +189,19 @@ window.__C360_LOADER_CONFIG__ = {
       border-color: rgba(255,255,255,.18) !important;
     }
 
-    /* No aplicar el acabado a elementos que deben conservar su color funcional. */
-    .app-main button,
-    .app-main .btn,
-    .app-main .badge,
-    .app-main .status,
-    .app-main .chip,
-    .app-main .alert,
-    .app-main .toast,
-    .app-main .progress,
-    .app-main .sidebar,
-    .app-main nav {
-      backdrop-filter: none;
-      -webkit-backdrop-filter: none;
+    /* FONDO BASE de la app y todo el contenido en modo oscuro */
+    body.dark-mode,
+    body.dark-mode .app-main,
+    body.dark-mode .app-shell .main-content,
+    body.dark-mode .main-content,
+    body.dark-mode [class*="content"],
+    body.dark-mode .view-panel,
+    body.dark-mode .app-content {
+      background: #0a141b !important;
     }
 
-    /* Modo oscuro: vidrio oscuro en vez de blanco (todos los contenedores) */
+    /* FORZAR OSCURIDAD ABSOLUTA en TODOS los contenedores dentro de app-main,
+       incluyendo estilos hardcodeados con fondos claros (#fff, #f8fbff, #f7f9fc...) */
     body.dark-mode .app-main .card,
     body.dark-mode .app-main .panel,
     body.dark-mode .app-main .module-card,
@@ -235,22 +232,47 @@ window.__C360_LOADER_CONFIG__ = {
     body.dark-mode .app-main .table-container,
     body.dark-mode .app-main .modal-content,
     body.dark-mode .app-main .sales-card,
-    body.dark-mode .app-main .sales-list-head {
-      background: rgba(16,30,39,.85) !important;
-      border-color: rgba(255,255,255,.12) !important;
-      box-shadow: 0 18px 50px rgba(0,54,78,.30), 0 1px 0 rgba(255,255,255,.06) inset !important;
-      backdrop-filter: blur(20px) saturate(100%) !important;
-      -webkit-backdrop-filter: blur(20px) saturate(100%) !important;
-    }
-
-    /* Toolbars y barras de filtros (incluye sales-main-toolbar y sales-filter-bar) */
+    body.dark-mode .app-main .sales-list-head,
+    body.dark-mode .app-main #salesListRegion,
+    body.dark-mode .app-main .sales-filter-bar,
+    body.dark-mode .app-main .sales-tabs-bar,
+    body.dark-mode .app-main .sales29-catalog-toolbar,
+    body.dark-mode .app-main .mp-table-wrap,
+    body.dark-mode .app-main .mp-panel,
+    body.dark-mode .app-main .mp-upload-hero,
+    body.dark-mode .app-main .mp-upload-summary div,
+    body.dark-mode .app-main .mp-inline-loader,
+    body.dark-mode .app-main .mp-progress,
+    body.dark-mode .app-main .mp-scope-card,
+    body.dark-mode .app-main .mp-help-card,
+    body.dark-mode .app-main .mp-file-field input[type="file"],
+    body.dark-mode .app-main .detail-list > div,
+    body.dark-mode .app-main .preview-role-metric,
+    body.dark-mode .app-main .preview-module-head,
+    body.dark-mode .app-main .accordion-item,
+    body.dark-mode .app-main .builder-card,
+    body.dark-mode .app-main .setting-card,
+    body.dark-mode .app-main .organization-card,
+    body.dark-mode .app-main .import-file-card,
+    body.dark-mode .app-main .metric-card,
+    body.dark-mode .app-main .module-card,
+    body.dark-mode .app-main .permission-module,
+    body.dark-mode .app-main .permission-module-header,
+    body.dark-mode .app-main .modal-card,
+    body.dark-mode .app-main .side-sheet,
+    body.dark-mode .app-main .toast,
+    body.dark-mode .app-main .data-table td,
+    body.dark-mode .app-main .search-field,
+    body.dark-mode .app-main .field input,
+    body.dark-mode .app-main .field select,
+    body.dark-mode .app-main .field textarea,
+    body.dark-mode .app-main .select-field select,
     body.dark-mode .app-main .toolbar,
     body.dark-mode .app-main .sales-main-toolbar,
     body.dark-mode .app-main .sales-tabs-bar,
     body.dark-mode .app-main .sales-filter-bar,
     body.dark-mode .app-main .table-filter,
     body.dark-mode .app-main .filter-bar,
-    body.dark-mode .app-main .search-field,
     body.dark-mode .app-main .sales29-catalog-toolbar,
     body.dark-mode .toolbar,
     body.dark-mode .sales-main-toolbar,
@@ -258,8 +280,31 @@ window.__C360_LOADER_CONFIG__ = {
     body.dark-mode .sales-filter-bar,
     body.dark-mode .table-filter,
     body.dark-mode .filter-bar {
-      background: rgba(16,30,39,.95) !important;
-      border-color: rgba(255,255,255,.18) !important;
+      background: rgba(16,30,39,.88) !important;
+      border-color: rgba(255,255,255,.12) !important;
+      color: #e8f0f6 !important;
+    }
+
+    /* Cazar cualquier elemento con estilo inline de fondo claro dentro de app-main */
+    body.dark-mode .app-main [style*="background:#fff"],
+    body.dark-mode .app-main [style*="background: #fff"],
+    body.dark-mode .app-main [style*="background-color:#fff"],
+    body.dark-mode .app-main [style*="background-color: #fff"],
+    body.dark-mode .app-main [style*="background:#f8f"],
+    body.dark-mode .app-main [style*="background: #f8f"],
+    body.dark-mode .app-main [style*="background:#f7f"],
+    body.dark-mode .app-main [style*="background: #f7f"],
+    body.dark-mode .app-main [style*="background:#f5f"],
+    body.dark-mode .app-main [style*="background: #f5f"],
+    body.dark-mode .app-main [style*="background:#f0f"],
+    body.dark-mode .app-main [style*="background: #f0f"],
+    body.dark-mode .app-main [style*="background:#f9f"],
+    body.dark-mode .app-main [style*="background: #f9f"],
+    body.dark-mode .app-main [style*="background:#faf"],
+    body.dark-mode .app-main [style*="background: #faf"],
+    body.dark-mode .app-main [style*="background:#e5e"],
+    body.dark-mode .app-main [style*="background: #e5e"] {
+      background: rgba(16,30,39,.88) !important;
     }
 
     /* Tablas y encabezados oscuros */
@@ -271,16 +316,23 @@ window.__C360_LOADER_CONFIG__ = {
     body.dark-mode .table-header,
     body.dark-mode .card-header,
     body.dark-mode .panel-header {
-      background: rgba(16,30,39,.6) !important;
+      background: rgba(16,30,39,.65) !important;
       color: #e8f0f6 !important;
     }
 
-    /* Fondo base de la app en modo oscuro */
-    body.dark-mode .app-main,
-    body.dark-mode .app-shell .main-content,
-    body.dark-mode .main-content,
-    body.dark-mode [class*="content"] {
-      background: #0f1a23 !important;
+    /* No aplicar el acabado a elementos que deben conservar su color funcional. */
+    .app-main button,
+    .app-main .btn,
+    .app-main .badge,
+    .app-main .status,
+    .app-main .chip,
+    .app-main .alert,
+    .app-main .toast,
+    .app-main .progress,
+    .app-main .sidebar,
+    .app-main nav {
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
     }
   `;
   document.head.appendChild(style);
