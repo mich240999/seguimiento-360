@@ -143,6 +143,52 @@ window.__C360_LOADER_CONFIG__ = {
       -webkit-backdrop-filter: blur(14px);
     }
 
+    /* Unificación oscura de contenedores, toolbars y tablas en modo oscuro */
+    body.dark-mode .app-main .toolbar,
+    body.dark-mode .app-main .table-container,
+    body.dark-mode .app-main .table-wrap,
+    body.dark-mode .app-main .card,
+    body.dark-mode .app-main .panel,
+    body.dark-mode .app-main .module-card,
+    body.dark-mode .app-main .section-card,
+    body.dark-mode .app-main .content-card,
+    body.dark-mode .app-main .data-card,
+    body.dark-mode .app-main .table-card,
+    body.dark-mode .app-main .stats-card,
+    body.dark-mode .app-main .kpi-card,
+    body.dark-mode .app-main .form-card,
+    body.dark-mode .app-main .list-card,
+    body.dark-mode .app-main .empty-state,
+    body.dark-mode .app-main .dashboard-card,
+    body.dark-mode .app-main .surface,
+    body.dark-mode .app-main .surface-soft,
+    body.dark-mode .app-main .module-surface,
+    body.dark-mode .app-main .content-surface,
+    body.dark-mode .app-main .white-surface,
+    body.dark-mode .app-main .box,
+    body.dark-mode .app-main .section,
+    body.dark-mode .app-main .module,
+    body.dark-mode .app-main .widget,
+    body.dark-mode .app-main .tile,
+    body.dark-mode .app-main .dialog-content,
+    body.dark-mode .app-main .drawer-content,
+    body.dark-mode .app-main .dropdown-menu {
+      background: rgba(16,30,39,.82) !important;
+      border-color: rgba(255,255,255,.12) !important;
+      box-shadow: 0 18px 50px rgba(0,54,78,.30), 0 1px 0 rgba(255,255,255,.06) inset !important;
+      backdrop-filter: blur(20px) saturate(100%) !important;
+      -webkit-backdrop-filter: blur(20px) saturate(100%) !important;
+    }
+
+    /* Filtros y pestañas sin tonos claros desentonantes */
+    body.dark-mode .app-main .toolbar,
+    body.dark-mode .app-main .table-filter,
+    body.dark-mode .app-main .filter-bar,
+    body.dark-mode .app-main .search-field {
+      background: rgba(16,30,39,.92) !important;
+      border-color: rgba(255,255,255,.18) !important;
+    }
+
     /* No aplicar el acabado a elementos que deben conservar su color funcional. */
     .app-main button,
     .app-main .btn,
