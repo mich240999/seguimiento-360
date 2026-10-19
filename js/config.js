@@ -204,7 +204,7 @@ window.__C360_LOADER_CONFIG__ = {
       -webkit-backdrop-filter: none;
     }
 
-    /* Modo oscuro: vidrio oscuro en vez de blanco. */
+    /* Modo oscuro: vidrio oscuro en vez de blanco (todos los contenedores) */
     body.dark-mode .app-main .card,
     body.dark-mode .app-main .panel,
     body.dark-mode .app-main .module-card,
@@ -228,21 +228,59 @@ window.__C360_LOADER_CONFIG__ = {
     body.dark-mode .app-main .module,
     body.dark-mode .app-main .widget,
     body.dark-mode .app-main .tile,
-    body.dark-mode .app-main .toolbar:not(.sales-main-toolbar),
-    body.dark-mode .app-main .table-container,
-    body.dark-mode .app-main .table-wrap,
-    body.dark-mode .app-main .modal-content,
     body.dark-mode .app-main .dialog-content,
     body.dark-mode .app-main .drawer-content,
-    body.dark-mode .app-main .dropdown-menu {
-      background: rgba(16,30,39,.72) !important;
-      border-color: rgba(31,54,68,.9) !important;
+    body.dark-mode .app-main .dropdown-menu,
+    body.dark-mode .app-main .table-wrap,
+    body.dark-mode .app-main .table-container,
+    body.dark-mode .app-main .modal-content,
+    body.dark-mode .app-main .sales-card,
+    body.dark-mode .app-main .sales-list-head {
+      background: rgba(16,30,39,.85) !important;
+      border-color: rgba(255,255,255,.12) !important;
+      box-shadow: 0 18px 50px rgba(0,54,78,.30), 0 1px 0 rgba(255,255,255,.06) inset !important;
+      backdrop-filter: blur(20px) saturate(100%) !important;
+      -webkit-backdrop-filter: blur(20px) saturate(100%) !important;
     }
+
+    /* Toolbars y barras de filtros (incluye sales-main-toolbar y sales-filter-bar) */
+    body.dark-mode .app-main .toolbar,
+    body.dark-mode .app-main .sales-main-toolbar,
+    body.dark-mode .app-main .sales-tabs-bar,
+    body.dark-mode .app-main .sales-filter-bar,
+    body.dark-mode .app-main .table-filter,
+    body.dark-mode .app-main .filter-bar,
+    body.dark-mode .app-main .search-field,
+    body.dark-mode .app-main .sales29-catalog-toolbar,
+    body.dark-mode .toolbar,
+    body.dark-mode .sales-main-toolbar,
+    body.dark-mode .sales-tabs-bar,
+    body.dark-mode .sales-filter-bar,
+    body.dark-mode .table-filter,
+    body.dark-mode .filter-bar {
+      background: rgba(16,30,39,.95) !important;
+      border-color: rgba(255,255,255,.18) !important;
+    }
+
+    /* Tablas y encabezados oscuros */
     body.dark-mode .app-main table thead,
     body.dark-mode .app-main .table-header,
     body.dark-mode .app-main .card-header,
-    body.dark-mode .app-main .panel-header {
-      background: rgba(16,30,39,.58) !important;
+    body.dark-mode .app-main .panel-header,
+    body.dark-mode table thead,
+    body.dark-mode .table-header,
+    body.dark-mode .card-header,
+    body.dark-mode .panel-header {
+      background: rgba(16,30,39,.6) !important;
+      color: #e8f0f6 !important;
+    }
+
+    /* Fondo base de la app en modo oscuro */
+    body.dark-mode .app-main,
+    body.dark-mode .app-shell .main-content,
+    body.dark-mode .main-content,
+    body.dark-mode [class*="content"] {
+      background: #0f1a23 !important;
     }
   `;
   document.head.appendChild(style);
