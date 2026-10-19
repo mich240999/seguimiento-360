@@ -250,7 +250,14 @@ window.__C360_LOADER_CONFIG__ = {
     body.dark-mode .app-main .preview-role-metric,
     body.dark-mode .app-main .preview-module-head,
     body.dark-mode .app-main .accordion-item,
+    body.dark-mode .app-main .accordion-trigger,
+    body.dark-mode .app-main .accordion-panel,
+    body.dark-mode .app-main .admin-accordion,
+    body.dark-mode .app-main .admin-section-group,
+    body.dark-mode .app-main .admin-section-items,
+    body.dark-mode .app-main .admin-section-heading,
     body.dark-mode .app-main .builder-card,
+    body.dark-mode .app-main .builder-card-head,
     body.dark-mode .app-main .setting-card,
     body.dark-mode .app-main .organization-card,
     body.dark-mode .app-main .import-file-card,
@@ -280,6 +287,23 @@ window.__C360_LOADER_CONFIG__ = {
     body.dark-mode .sales-filter-bar,
     body.dark-mode .table-filter,
     body.dark-mode .filter-bar {
+      background: rgba(16,30,39,.88) !important;
+      border-color: rgba(255,255,255,.12) !important;
+      color: #e8f0f6 !important;
+    }
+
+    /* Catch-all: cualquier contenedor dentro de app-main cuya clase contenga
+       card/panel/section/group/item/head/trigger/wrap/container/content se oscurece */
+    body.dark-mode .app-main [class*="card"],
+    body.dark-mode .app-main [class*="panel"],
+    body.dark-mode .app-main [class*="section"],
+    body.dark-mode .app-main [class*="group"],
+    body.dark-mode .app-main [class*="item"],
+    body.dark-mode .app-main [class*="head"],
+    body.dark-mode .app-main [class*="trigger"],
+    body.dark-mode .app-main [class*="wrap"],
+    body.dark-mode .app-main [class*="container"],
+    body.dark-mode .app-main [class*="content"] {
       background: rgba(16,30,39,.88) !important;
       border-color: rgba(255,255,255,.12) !important;
       color: #e8f0f6 !important;
